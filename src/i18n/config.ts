@@ -11,6 +11,7 @@ const resources = {
       },
       header: {
         title: "Image Converter",
+        github: "GitHub",
       },
       navigation: {
         top: "トップ",
@@ -127,6 +128,7 @@ const resources = {
       },
       header: {
         title: "Image Converter",
+        github: "GitHub",
       },
       navigation: {
         top: "Top",
