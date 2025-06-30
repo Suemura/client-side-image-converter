@@ -24,6 +24,7 @@ const resources = {
           "画像を簡単に変換しましょう。フォーマット変換、リサイズ、最適化を強力なオンラインツールで行えます。",
         startConverting: "変換を開始",
         tryCropTool: "クロップツールを試す",
+        viewOnGithub: "GitHubで見る",
         features: {
           formatConversion: {
             title: "フォーマット変換",
@@ -141,6 +142,7 @@ const resources = {
           "Transform your images with ease. Convert between formats, resize, and optimize your images with our powerful online tool.",
         startConverting: "Start Converting",
         tryCropTool: "Try Crop Tool",
+        viewOnGithub: "View on GitHub",
         features: {
           formatConversion: {
             title: "Format Conversion",
