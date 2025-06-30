@@ -1,5 +1,6 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
 
@@ -21,6 +22,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   onClearFiles,
   acceptedTypes = ["image/jpeg", "image/png", "image/bmp", "image/tiff"],
 }) => {
+  const { t } = useTranslation();
   const [thumbnails, setThumbnails] = useState<FileThumbnail[]>([]);
   const [isGeneratingThumbnails, setIsGeneratingThumbnails] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -273,14 +275,15 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
     >
       <div className="flex items-center justify-between pb-3">
         <h4 className="font-medium" style={{ color: "var(--foreground)" }}>
-          選択されたファイル ({files.length}個)
+          {t("fileUpload.selectedFiles")} ({files.length}
+          {t("common.files")})
         </h4>
         <div style={{ display: "flex", gap: "8px" }}>
           <Button variant="secondary" size="small" onClick={handleClick}>
-            追加
+            {t("fileUpload.add")}
           </Button>
           <Button variant="secondary" size="small" onClick={onClearFiles}>
-            リストをクリア
+            {t("fileUpload.clearList")}
           </Button>
         </div>
       </div>
@@ -311,7 +314,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
               color: "var(--primary)",
             }}
           >
-            ファイルをここにドロップ
+            {t("fileUpload.dropFilesHere")}
           </p>
         </div>
       )}
@@ -360,6 +363,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
                 }}
               >
                 {thumbnail.thumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={thumbnail.thumbnailUrl}
                     alt={`${thumbnail.file.name} thumbnail`}

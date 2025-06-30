@@ -2,12 +2,15 @@
 
 import type React from "react";
 import { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
+import Image from "next/image";
 
 export default function CropPage() {
+  const { t } = useTranslation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -86,7 +89,7 @@ export default function CropPage() {
               textAlign: "center",
             }}
           >
-            Image Cropping Tool
+            {t("crop.title")}
           </h1>
           <p
             style={{
@@ -98,7 +101,7 @@ export default function CropPage() {
               margin: "0 auto 3rem",
             }}
           >
-            Crop and resize your images to perfect dimensions
+            {t("crop.subtitle")}
           </p>
 
           {!selectedFile ? (
@@ -179,7 +182,7 @@ export default function CropPage() {
                     marginBottom: "1rem",
                   }}
                 >
-                  Preview
+                  {t("crop.preview")}
                 </h3>
                 <div
                   style={{
@@ -188,7 +191,7 @@ export default function CropPage() {
                     marginBottom: "2rem",
                   }}
                 >
-                  <img
+                  <Image
                     src={previewUrl}
                     alt="Preview"
                     style={{
@@ -213,10 +216,12 @@ export default function CropPage() {
                     onClick={handleDownload}
                     disabled={isProcessing}
                   >
-                    {isProcessing ? "Processing..." : "Download Cropped Image"}
+                    {isProcessing
+                      ? t("crop.processing")
+                      : t("crop.downloadCroppedImage")}
                   </Button>
                   <Button variant="secondary" onClick={handleReset}>
-                    Select New Image
+                    {t("crop.selectNewImage")}
                   </Button>
                 </div>
               </div>
@@ -239,7 +244,7 @@ export default function CropPage() {
                     marginBottom: "1rem",
                   }}
                 >
-                  Image Details
+                  {t("crop.imageDetails")}
                 </h4>
                 <div
                   style={{
@@ -251,14 +256,14 @@ export default function CropPage() {
                   }}
                 >
                   <div>
-                    <strong>File Name:</strong> {selectedFile.name}
+                    <strong>{t("crop.fileName")}:</strong> {selectedFile.name}
                   </div>
                   <div>
-                    <strong>File Size:</strong>{" "}
+                    <strong>{t("crop.fileSize")}:</strong>{" "}
                     {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                   </div>
                   <div>
-                    <strong>File Type:</strong> {selectedFile.type}
+                    <strong>{t("crop.fileType")}:</strong> {selectedFile.type}
                   </div>
                 </div>
               </div>

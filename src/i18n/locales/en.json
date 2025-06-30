@@ -1,0 +1,109 @@
+{
+  "app": {
+    "title": "Image Converter",
+    "description": "Convert images to various formats"
+  },
+  "header": {
+    "title": "Image Converter"
+  },
+  "navigation": {
+    "top": "Top",
+    "crop": "Crop",
+    "convert": "Convert"
+  },
+  "home": {
+    "title": "Welcome to Image Converter",
+    "subtitle": "Transform your images with ease. Convert between formats, resize, and optimize your images with our powerful online tool.",
+    "startConverting": "Start Converting",
+    "tryCropTool": "Try Crop Tool",
+    "features": {
+      "formatConversion": {
+        "title": "Format Conversion",
+        "description": "Convert between JPEG, PNG, WebP and other popular image formats with high quality preservation."
+      },
+      "imageCropping": {
+        "title": "Image Cropping",
+        "description": "Crop and resize your images to perfect dimensions with our intuitive cropping tool."
+      },
+      "batchProcessing": {
+        "title": "Batch Processing",
+        "description": "Process multiple images at once and download them as a convenient ZIP file."
+      }
+    }
+  },
+  "convert": {
+    "title": "Conversion Settings",
+    "targetFormat": "Target Format",
+    "qualitySettings": "Quality Settings",
+    "quality": "Quality (%)",
+    "imageSize": "Image Size (Optional)",
+    "width": "Width (px)",
+    "height": "Height (px)",
+    "maintainAspectRatio": "Maintain aspect ratio",
+    "convert": "Convert",
+    "converting": "Converting...",
+    "pleaseSelectFiles": "Please select files to convert",
+    "conversionError": "An error occurred during conversion."
+  },
+  "crop": {
+    "title": "Image Cropping Tool",
+    "subtitle": "Crop and resize your images to perfect dimensions",
+    "preview": "Preview",
+    "processing": "Processing...",
+    "downloadCroppedImage": "Download Cropped Image",
+    "selectNewImage": "Select New Image",
+    "imageDetails": "Image Details",
+    "fileName": "File Name",
+    "fileSize": "File Size",
+    "fileType": "File Type"
+  },
+  "fileUpload": {
+    "dropFiles": "Drop files here",
+    "dropMoreFiles": "Drop more files to add",
+    "clickToSelect": "Or click to select files",
+    "filesSelected": "files selected",
+    "selectedFiles": "Selected Files",
+    "add": "Add",
+    "clearList": "Clear List",
+    "dragDropLabel": "Drag & drop files or click to select",
+    "dropFilesHere": "Drop files here",
+    "viewDetails": "View details for"
+  },
+  "fileDetails": {
+    "title": "File Details",
+    "basicInfo": "Basic Information",
+    "fileName": "File Name",
+    "fileSize": "File Size",
+    "fileFormat": "File Format",
+    "lastModified": "Last Modified",
+    "imageSize": "Image Size",
+    "exifInfo": "EXIF Information",
+    "unknown": "Unknown",
+    "loading": "Loading...",
+    "cannotPreview": "Cannot preview",
+    "close": "Close"
+  },
+  "progress": {
+    "converting": "Converting...",
+    "pleaseWait": "Converting files. Please wait..."
+  },
+  "results": {
+    "title": "Conversion Results",
+    "files": "files",
+    "downloadZip": "Download as ZIP",
+    "creating": "Creating...",
+    "clear": "Clear",
+    "originalSize": "Original Size",
+    "convertedSize": "Converted Size",
+    "compressionRatio": "Compression Ratio",
+    "download": "Download"
+  },
+  "common": {
+    "files": "",
+    "bytes": "Bytes",
+    "kb": "KB",
+    "mb": "MB",
+    "gb": "GB",
+    "px": "px"
+  }
+}

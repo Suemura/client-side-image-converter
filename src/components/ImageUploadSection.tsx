@@ -1,4 +1,5 @@
 import type React from "react";
+import { useTranslation } from "react-i18next";
 import { FileUploadArea } from "./FileUploadArea";
 
 interface ImageUploadSectionProps {
@@ -12,6 +13,8 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
   onFilesSelected,
   onClearFiles,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col w-80">
       <h2
@@ -21,7 +24,7 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
           letterSpacing: "-0.02em",
         }}
       >
-        Drag & Drop Images
+        {t("fileUpload.dragDropLabel")}
       </h2>
 
       <FileUploadArea

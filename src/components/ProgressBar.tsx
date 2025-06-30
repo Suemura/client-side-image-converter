@@ -1,5 +1,6 @@
 // ファイルパス: /Users/suemura/Documents/GitHub/web-image-converter/src/components/ProgressBar.tsx
 import type React from "react";
+import { useTranslation } from "react-i18next";
 
 interface ProgressBarProps {
   current: number;
@@ -12,6 +13,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   total,
   isVisible,
 }) => {
+  const { t } = useTranslation();
+
   if (!isVisible || total === 0) {
     return null;
   }
@@ -44,7 +47,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
               color: "var(--foreground)",
             }}
           >
-            変換中...
+            {t("progress.converting")}
           </h4>
           <span style={{ fontSize: "14px", color: "var(--muted-foreground)" }}>
             {current} / {total} ({percentage}%)
@@ -80,7 +83,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           textAlign: "center",
         }}
       >
-        ファイルを変換しています。しばらくお待ちください...
+        {t("progress.pleaseWait")}
       </p>
     </div>
   );

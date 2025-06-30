@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { LayoutContainer } from "../components/LayoutContainer";
 import { MainContent } from "../components/MainContent";
 
 export default function Home() {
+  const { t } = useTranslation();
+
   return (
     <LayoutContainer>
       <Header />
@@ -33,7 +36,7 @@ export default function Home() {
               letterSpacing: "-0.02em",
             }}
           >
-            Welcome to Image Converter
+            {t("home.title")}
           </h1>
           <p
             style={{
@@ -43,18 +46,17 @@ export default function Home() {
               lineHeight: "1.6",
             }}
           >
-            Transform your images with ease. Convert between formats, resize,
-            and optimize your images with our powerful online tool.
+            {t("home.subtitle")}
           </p>
           <div style={{ display: "flex", gap: "1rem", marginTop: "2rem" }}>
             <Link href="/convert">
               <Button variant="primary" size="large">
-                Start Converting
+                {t("home.startConverting")}
               </Button>
             </Link>
             <Link href="/crop">
               <Button variant="secondary" size="large">
-                Try Crop Tool
+                {t("home.tryCropTool")}
               </Button>
             </Link>
           </div>
@@ -87,7 +89,7 @@ export default function Home() {
                   marginBottom: "1rem",
                 }}
               >
-                Format Conversion
+                {t("home.features.formatConversion.title")}
               </h3>
               <p
                 style={{
@@ -95,8 +97,7 @@ export default function Home() {
                   lineHeight: "1.6",
                 }}
               >
-                Convert between JPEG, PNG, WebP and other popular image formats
-                with high quality preservation.
+                {t("home.features.formatConversion.description")}
               </p>
             </div>
 
@@ -117,7 +118,7 @@ export default function Home() {
                   marginBottom: "1rem",
                 }}
               >
-                Image Cropping
+                {t("home.features.imageCropping.title")}
               </h3>
               <p
                 style={{
@@ -125,8 +126,7 @@ export default function Home() {
                   lineHeight: "1.6",
                 }}
               >
-                Crop and resize your images to perfect dimensions with our
-                intuitive cropping tool.
+                {t("home.features.imageCropping.description")}
               </p>
             </div>
 
@@ -147,7 +147,7 @@ export default function Home() {
                   marginBottom: "1rem",
                 }}
               >
-                Batch Processing
+                {t("home.features.batchProcessing.title")}
               </h3>
               <p
                 style={{
@@ -155,8 +155,7 @@ export default function Home() {
                   lineHeight: "1.6",
                 }}
               >
-                Process multiple images at once and download them as a
-                convenient ZIP file.
+                {t("home.features.batchProcessing.description")}
               </p>
             </div>
           </div>

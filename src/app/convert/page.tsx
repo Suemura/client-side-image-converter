@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ConversionResults } from "../../components/ConversionResults";
 import {
   ConversionSettings,
@@ -17,6 +18,7 @@ import {
 } from "../../utils/imageConverter";
 
 export default function Home() {
+  const { t } = useTranslation();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [conversionSettings, setConversionSettings] =
     useState<ConversionSettingsType>({
@@ -49,7 +51,7 @@ export default function Home() {
 
   const handleConvert = useCallback(async () => {
     if (selectedFiles.length === 0) {
-      alert("Please select files to convert");
+      alert(t("convert.pleaseSelectFiles"));
       return;
     }
 
@@ -75,12 +77,12 @@ export default function Home() {
       setConversionResults(results);
     } catch (error) {
       console.error("Conversion error:", error);
-      alert("変換中にエラーが発生しました。");
+      alert(t("convert.conversionError"));
     } finally {
       setIsConverting(false);
       setConversionProgress({ current: 0, total: 0 });
     }
-  }, [selectedFiles, conversionSettings]);
+  }, [selectedFiles, conversionSettings, t]);
 
   const handleClearResults = useCallback(() => {
     setConversionResults([]);

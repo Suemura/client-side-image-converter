@@ -1,5 +1,6 @@
 import type React from "react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface FileDropZoneProps {
   onFilesSelected: (files: File[]) => void;
@@ -12,6 +13,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
   acceptedTypes = ["image/jpeg", "image/png", "image/bmp", "image/tiff"],
   currentFiles = [],
 }) => {
+  const { t } = useTranslation();
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,7 +110,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
         onDrop={handleDrop}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
-        aria-label="ファイルをドラッグ&ドロップまたはクリックして選択"
+        aria-label={t("fileUpload.dragDropLabel")}
       >
         <div
           className="flex flex-col items-center gap-2"
@@ -123,8 +125,8 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
             }}
           >
             {currentFiles.length === 0
-              ? "Drop files here"
-              : "Drop more files to add"}
+              ? t("fileUpload.dropFiles")
+              : t("fileUpload.dropMoreFiles")}
           </p>
           <p
             className="text-sm font-normal text-center"
@@ -133,7 +135,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
               maxWidth: "480px",
             }}
           >
-            Or click to select files
+            {t("fileUpload.clickToSelect")}
           </p>
           {currentFiles.length > 0 && (
             <p
@@ -143,7 +145,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
                 maxWidth: "480px",
               }}
             >
-              {currentFiles.length} files selected
+              {currentFiles.length} {t("fileUpload.filesSelected")}
             </p>
           )}
         </div>

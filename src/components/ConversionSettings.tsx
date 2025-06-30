@@ -1,4 +1,5 @@
 import type React from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 import { Input } from "./Input";
 import { RadioButtonGroup } from "./RadioButtonGroup";
@@ -26,6 +27,8 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
   isConverting = false,
   hasFiles = false,
 }) => {
+  const { t } = useTranslation();
+
   const formatOptions = [
     { label: "JPEG", value: "jpeg" },
     { label: "PNG", value: "png" },
@@ -79,7 +82,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
           letterSpacing: "-0.02em",
         }}
       >
-        Conversion Settings
+        {t("convert.title")}
       </h2>
 
       <h3
@@ -89,7 +92,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
           letterSpacing: "-0.015em",
         }}
       >
-        Target Format
+        {t("convert.targetFormat")}
       </h3>
 
       <RadioButtonGroup
@@ -106,7 +109,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
           letterSpacing: "-0.015em",
         }}
       >
-        Quality Settings
+        {t("convert.qualitySettings")}
       </h3>
 
       <div
@@ -114,7 +117,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
         style={{ maxWidth: "480px", flexWrap: "wrap" }}
       >
         <Input
-          label="Quality (%)"
+          label={t("convert.quality")}
           value={settings.quality.toString()}
           onChange={handleQualityChange}
           placeholder="90"
@@ -129,7 +132,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
           letterSpacing: "-0.015em",
         }}
       >
-        Image Size (Optional)
+        {t("convert.imageSize")}
       </h3>
 
       <div
@@ -137,17 +140,17 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
         style={{ maxWidth: "480px", flexWrap: "wrap" }}
       >
         <Input
-          label="Width (px)"
+          label={t("convert.width")}
           value={settings.width?.toString() || ""}
           onChange={handleWidthChange}
-          placeholder="Auto"
+          placeholder={t("convert.auto")}
           type="number"
         />
         <Input
-          label="Height (px)"
+          label={t("convert.height")}
           value={settings.height?.toString() || ""}
           onChange={handleHeightChange}
-          placeholder="Auto"
+          placeholder={t("convert.auto")}
           type="number"
         />
       </div>
@@ -172,7 +175,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
             }}
           />
           <span style={{ fontSize: "14px", color: "var(--foreground)" }}>
-            Maintain aspect ratio
+            {t("convert.maintainAspectRatio")}
           </span>
         </label>
       </div>
@@ -184,7 +187,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
           onClick={onConvert}
           disabled={!hasFiles || isConverting}
         >
-          {isConverting ? "Converting..." : "Convert"}
+          {isConverting ? t("convert.converting") : t("convert.convert")}
         </Button>
       </div>
     </div>

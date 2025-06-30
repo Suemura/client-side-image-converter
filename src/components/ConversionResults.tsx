@@ -1,10 +1,10 @@
 // ファイルパス: /Users/suemura/Documents/GitHub/web-image-converter/src/components/ConversionResults.tsx
 import type React from "react";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ConversionResult } from "../utils/imageConverter";
 import { ImageConverter } from "../utils/imageConverter";
 import { Button } from "./Button";
-
 interface ConversionResultsProps {
   results: ConversionResult[];
   onClear: () => void;
@@ -14,6 +14,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   results,
   onClear,
 }) => {
+  const { t } = useTranslation();
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownloadSingle = useCallback((result: ConversionResult) => {
@@ -76,7 +77,8 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
             color: "var(--foreground)",
           }}
         >
-          変換結果 ({results.length}ファイル)
+          {t("results.title")} ({results.length}
+          {t("results.files")})
         </h3>
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           <Button
@@ -84,10 +86,10 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
             onClick={handleDownloadZip}
             disabled={isDownloading}
           >
-            {isDownloading ? "作成中..." : "Zipでダウンロード"}
+            {isDownloading ? t("results.creating") : t("results.downloadZip")}
           </Button>
           <Button variant="secondary" onClick={onClear}>
-            クリア
+            {t("results.clear")}
           </Button>
         </div>
       </div>
@@ -112,7 +114,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
               marginBottom: "4px",
             }}
           >
-            元のサイズ
+            {t("results.originalSize")}
           </p>
           <p
             style={{
@@ -132,7 +134,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
               marginBottom: "4px",
             }}
           >
-            変換後サイズ
+            {t("results.convertedSize")}
           </p>
           <p
             style={{
@@ -152,7 +154,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
               marginBottom: "4px",
             }}
           >
-            圧縮率
+            {t("results.compressionRatio")}
           </p>
           <p
             style={{
@@ -203,6 +205,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                       backgroundColor: "white",
                     }}
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={result.url}
                       alt={result.filename}
@@ -263,7 +266,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                 size="small"
                 onClick={() => handleDownloadSingle(result)}
               >
-                ダウンロード
+                {t("results.download")}
               </Button>
             </div>
           );

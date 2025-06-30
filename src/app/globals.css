@@ -5,7 +5,7 @@
   --border-dashed: #d4dce2;
   --muted-foreground: #5c748a;
   --primary: #dce8f3;
-  --font-family: "Manrope", "Noto Sans", sans-serif;
+  --font-family: var(--font-manrope), var(--font-noto-sans), sans-serif;
 }
 
 html,

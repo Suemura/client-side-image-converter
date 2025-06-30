@@ -1,5 +1,6 @@
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
 
@@ -14,6 +15,7 @@ interface FileThumbnail {
 }
 
 export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
+  const { t } = useTranslation();
   const [thumbnails, setThumbnails] = useState<FileThumbnail[]>([]);
   const [isGeneratingThumbnails, setIsGeneratingThumbnails] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -117,10 +119,11 @@ export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
     >
       <div className="flex items-center justify-between pb-3">
         <h4 className="font-medium" style={{ color: "var(--foreground)" }}>
-          選択されたファイル ({files.length}個)
+          {t("fileUpload.selectedFiles")} ({files.length}
+          {t("common.files")})
         </h4>
         <Button variant="secondary" size="small" onClick={onClearFiles}>
-          リストをクリア
+          {t("fileUpload.clearList")}
         </Button>
       </div>
 
@@ -144,7 +147,7 @@ export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
               e.currentTarget.style.backgroundColor = "#f9fafb";
             }}
             onClick={() => handleFileClick(thumbnail.file)}
-            aria-label={`${thumbnail.file.name}の詳細を表示`}
+            aria-label={`${t("fileUpload.viewDetails")} ${thumbnail.file.name}`}
           >
             <div className="flex items-center gap-3 flex-1">
               <div
@@ -165,6 +168,7 @@ export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
                 }}
               >
                 {thumbnail.thumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={thumbnail.thumbnailUrl}
                     alt={`${thumbnail.file.name} thumbnail`}

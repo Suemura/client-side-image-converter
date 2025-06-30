@@ -1,7 +1,8 @@
 import EXIF from "exif-js";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
-
+import { useTranslation } from "react-i18next";
+import NextImage from "next/image";
 interface FileDetailModalProps {
   file: File;
   isOpen: boolean;
@@ -17,6 +18,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [imageUrl, setImageUrl] = useState<string>("");
   const [exifData, setExifData] = useState<ExifData>({});
   const [imageSize, setImageSize] = useState<{
@@ -101,7 +103,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
 
     // 画像のサイズを取得
     if (file.type.startsWith("image/")) {
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         setImageSize({ width: img.width, height: img.height });
       };
@@ -198,7 +200,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
           }}
         >
           {file.type.startsWith("image/") && imageUrl ? (
-            <img
+            <NextImage
               src={imageUrl}
               alt={file.name}
               style={{
@@ -217,7 +219,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
                 color: "var(--muted-foreground)",
               }}
             >
-              読み込み中...
+              {t("fileDetails.loading")}
             </div>
           ) : (
             <div
@@ -246,7 +248,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
                 {file.type.split("/")[1]?.toUpperCase() || "FILE"}
               </div>
               <p style={{ fontSize: "18px", fontWeight: "500" }}>
-                プレビューできません
+                {t("fileDetails.cannotPreview")}
               </p>
             </div>
           )}
@@ -271,7 +273,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
               cursor: "pointer",
               fontSize: "18px",
             }}
-            aria-label="閉じる"
+            aria-label={t("fileDetails.close")}
           >
             ×
           </button>
@@ -295,7 +297,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
               color: "var(--foreground)",
             }}
           >
-            ファイル詳細
+            {t("fileDetails.title")}
           </h3>
 
           {/* 基本情報 */}
@@ -308,11 +310,11 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
                 color: "var(--foreground)",
               }}
             >
-              基本情報
+              {t("fileDetails.basicInfo")}
             </h4>
             <div style={{ fontSize: "14px", lineHeight: "1.6" }}>
               <div style={{ marginBottom: "4px" }}>
-                <strong>ファイル名:</strong>
+                <strong>{t("fileDetails.fileName")}:</strong>
                 <br />
                 <span
                   style={{
@@ -324,28 +326,28 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
                 </span>
               </div>
               <div style={{ marginBottom: "4px" }}>
-                <strong>ファイルサイズ:</strong>{" "}
+                <strong>{t("fileDetails.fileSize")}:</strong>{" "}
                 <span style={{ color: "var(--muted-foreground)" }}>
                   {formatFileSize(file.size)}
                 </span>
               </div>
               <div style={{ marginBottom: "4px" }}>
-                <strong>ファイル形式:</strong>{" "}
+                <strong>{t("fileDetails.fileFormat")}:</strong>{" "}
                 <span style={{ color: "var(--muted-foreground)" }}>
-                  {file.type || "不明"}
+                  {file.type || t("fileDetails.unknown")}
                 </span>
               </div>
               <div style={{ marginBottom: "4px" }}>
-                <strong>最終更新:</strong>{" "}
+                <strong>{t("fileDetails.lastModified")}:</strong>{" "}
                 <span style={{ color: "var(--muted-foreground)" }}>
                   {formatDateTime(file.lastModified)}
                 </span>
               </div>
               {imageSize && (
                 <div style={{ marginBottom: "4px" }}>
-                  <strong>画像サイズ:</strong>{" "}
+                  <strong>{t("fileDetails.imageSize")}:</strong>{" "}
                   <span style={{ color: "var(--muted-foreground)" }}>
-                    {imageSize.width} × {imageSize.height} px
+                    {imageSize.width} × {imageSize.height} {t("common.px")}
                   </span>
                 </div>
               )}
@@ -363,14 +365,14 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
                   color: "var(--foreground)",
                 }}
               >
-                EXIF情報
+                {t("fileDetails.exifInfo")}
               </h4>
               <div style={{ fontSize: "14px", lineHeight: "1.6" }}>
                 {Object.entries(exifData).map(([key, value]) => (
                   <div key={key} style={{ marginBottom: "4px" }}>
                     <strong>{key}:</strong>{" "}
                     <span style={{ color: "var(--muted-foreground)" }}>
-                      {value?.toString() || "不明"}
+                      {value?.toString() || t("fileDetails.unknown")}
                     </span>
                   </div>
                 ))}
