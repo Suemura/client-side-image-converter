@@ -1,11 +1,16 @@
 # 🔒 Privacy-First Web Image Converter
 
-Next.js App Routerを使用した完全にプライバシー重視の画像変換Webアプリケーションです。
+Next.js App Router を使用した完全にプライバシー重視の画像変換 Web アプリケーションです。
 すべての画像処理はブラウザ内で実行されるため、画像がサーバーに送信されることは一切ありません。
+
+## 🔗 デモサイト
+
+https://fa17565a.web-image-converter.pages.dev
 
 ## 🛡️ プライバシーの特徴
 
 ### **完全なローカル処理**
+
 - **サーバー送信なし**: 画像は一切サーバーに送信されません
 - **オフライン動作**: 一度読み込めば、インターネット接続なしで動作します
 
@@ -23,4 +28,78 @@ npm run lint
 
 # コードフォーマット
 npx biome format src/ --write
+```
+
+## 🌐 多言語対応
+
+このアプリケーションは以下の言語をサポートしています：
+
+- 🇯🇵 日本語（デフォルト）
+- 🇺🇸 英語
+
+ヘッダーの言語切り替えボタンから、リアルタイムで言語を変更できます。
+
+## 🚀 デプロイ
+
+### Cloudflare Pages へのデプロイ
+
+このアプリケーションは Cloudflare Pages に静的サイトとしてデプロイできます。
+
+#### デプロイ手順
+
+1. **依存関係のインストール**
+
+   ```bash
+   npm install
+   ```
+
+2. **静的サイトとしてビルド**
+
+   ```bash
+   npm run build
+   ```
+
+3. **Cloudflare にログイン**
+
+   ```bash
+   npx wrangler login
+   ```
+
+4. **デプロイ実行**
+
+   ```bash
+   npm run deploy
+   ```
+
+   または直接：
+
+   ```bash
+   npx wrangler pages deploy out --project-name web-image-converter
+   ```
+
+5. **ローカルプレビュー（オプション）**
+   ```bash
+   npm run preview
+   ```
+
+## 📋 利用可能なスクリプト
+
+```bash
+# 開発サーバー起動
+npm run dev
+
+# 本番用ビルド
+npm run build
+
+# 本番サーバー起動（ビルド後）
+npm start
+
+# リンティング
+npm run lint
+
+# Cloudflare Pagesデプロイ
+npm run deploy
+
+# ローカルでデプロイ版プレビュー
+npm run preview
 ```
