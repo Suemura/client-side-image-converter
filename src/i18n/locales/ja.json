@@ -49,7 +49,7 @@
     "qualityDescription": "品質: 低い値ほどファイルサイズが小さくなりますが、画質が劣化します"
   },
   "crop": {
-    "title": "Image Cropping Tool",
+    "title": "画像クロップツール",
     "subtitle": "画像を完璧なサイズにクロップ・リサイズ",
     "preview": "プレビュー",
     "processing": "処理中...",
@@ -58,7 +58,14 @@
     "imageDetails": "画像詳細",
     "fileName": "ファイル名",
     "fileSize": "ファイルサイズ",
-    "fileType": "ファイル形式"
+    "fileType": "ファイル形式",
+    "selectCropArea": "クロップ領域を選択",
+    "dragToSelectArea": "ドラッグしてクロップ領域を選択してください",
+    "startCropping": "クロップ開始",
+    "croppingInProgress": "クロップ中...",
+    "filesSelected": "ファイル選択済み",
+    "cropSettings": "クロップ設定",
+    "previewAndCrop": "プレビューとクロップ"
   },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",

@@ -1,0 +1,56 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.imageContainer {
+  position: relative;
+  display: inline-block;
+  border: 1px solid var(--border-dashed);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f8f9fa;
+}
+
+.image {
+  display: block;
+  max-width: 100%;
+  max-height: 500px;
+  height: auto;
+  cursor: crosshair;
+  user-select: none;
+}
+
+.cropOverlay {
+  position: absolute;
+  border: 2px solid #007acc;
+  background-color: rgba(0, 122, 204, 0.1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cropOverlay::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
+  border: 1px dashed rgba(0, 122, 204, 0.8);
+}
+
+.instructions {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  z-index: 2;
+  pointer-events: none;
+}
