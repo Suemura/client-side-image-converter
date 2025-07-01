@@ -45,10 +45,25 @@
   border: 1px solid var(--border-dashed);
   border-radius: 8px;
   background-color: #f8f9fa;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 769px) {
+  .resultItem {
+    flex-wrap: nowrap;
+  }
 }
 
 .imagePreview {
   flex-shrink: 0;
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.imagePreview:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .thumbnail {
@@ -57,6 +72,8 @@
   object-fit: cover;
   border-radius: 4px;
   border: 1px solid var(--border-dashed);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
 }
 
 .fileInfo {

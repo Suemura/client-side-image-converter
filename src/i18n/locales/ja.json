@@ -65,7 +65,10 @@
     "croppingInProgress": "クロップ中...",
     "filesSelected": "ファイル選択済み",
     "cropSettings": "クロップ設定",
-    "previewAndCrop": "プレビューとクロップ"
+    "previewAndCrop": "プレビューとクロップ",
+    "backToUpload": "戻る",
+    "downloadAll": "すべてダウンロード",
+    "previewImage": "画像をプレビュー"
   },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",
@@ -107,7 +110,11 @@
     "originalSize": "元のサイズ",
     "convertedSize": "変換後サイズ",
     "compressionRatio": "圧縮率",
-    "download": "ダウンロード"
+    "download": "ダウンロード",
+    "preview": "プレビュー",
+    "originalImage": "元画像",
+    "convertedImage": "変換後画像",
+    "croppedImage": "クロップ後画像"
   },
   "comparison": {
     "original": "変換前",

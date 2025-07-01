@@ -2,6 +2,7 @@ import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
+import { FileDetailModal } from "../../../components/FileDetailModal";
 import type { CropResult } from "../../../utils/imageCropper";
 import styles from "./CropResults.module.css";
 
@@ -17,18 +18,20 @@ export const CropResults: React.FC<CropResultsProps> = ({
   const { t } = useTranslation();
   const [isDownloading, setIsDownloading] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<Record<number, string>>({});
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // プレビュー用のURLを生成
+  // プレビュー用のURLを生成とクロップ結果をFileオブジェクトに変換
   useEffect(() => {
     const urls: Record<number, string> = {};
     const successResults = results.filter(r => r.success);
-    
+
     for (let i = 0; i < successResults.length; i++) {
       urls[i] = URL.createObjectURL(successResults[i].croppedBlob);
     }
-    
+
     setPreviewUrls(urls);
-    
+
     // クリーンアップ
     return () => {
       Object.values(urls).forEach(url => URL.revokeObjectURL(url));
@@ -46,6 +49,25 @@ export const CropResults: React.FC<CropResultsProps> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }, []);
+
+  // BlobからFileオブジェクトを作成
+  const createFileFromBlob = useCallback((blob: Blob, fileName: string): File => {
+    return new File([blob], fileName, { type: blob.type });
+  }, []);
+
+  const handleThumbnailClick = useCallback((result: CropResult) => {
+    if (!result.success) return;
+
+    // クロップ結果のBlobからFileオブジェクトを作成
+    const croppedFile = createFileFromBlob(result.croppedBlob, result.fileName);
+    setSelectedFile(croppedFile);
+    setIsModalOpen(true);
+  }, [createFileFromBlob]);
+
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    setSelectedFile(null);
   }, []);
 
   const downloadAll = useCallback(async () => {
@@ -85,7 +107,7 @@ export const CropResults: React.FC<CropResultsProps> = ({
           onClick={downloadAll}
           disabled={isDownloading || successResults.length === 0}
         >
-          {isDownloading ? t("results.creating") : "すべてダウンロード"}
+          {isDownloading ? t("results.creating") : t("crop.downloadAll")}
         </Button>
         <Button variant="secondary" onClick={onClear}>
           {t("results.clear")}
@@ -95,12 +117,49 @@ export const CropResults: React.FC<CropResultsProps> = ({
       <div className={styles.results}>
         {successResults.map((result, index) => (
           <div key={index} className={styles.resultItem}>
-            <div className={styles.imagePreview}>
+            <div
+              className={styles.imagePreview}
+              onClick={() => handleThumbnailClick(result)}
+              style={{
+                cursor: "pointer",
+                position: "relative"
+              }}
+              onMouseEnter={(e) => {
+                const overlay = e.currentTarget.querySelector('.hover-overlay') as HTMLElement;
+                if (overlay) overlay.style.opacity = '1';
+              }}
+              onMouseLeave={(e) => {
+                const overlay = e.currentTarget.querySelector('.hover-overlay') as HTMLElement;
+                if (overlay) overlay.style.opacity = '0';
+              }}
+            >
               <img
                 src={previewUrls[index]}
                 alt={result.fileName}
                 className={styles.thumbnail}
               />
+              <div
+                className="hover-overlay"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: "rgba(0, 0, 0, 0.5)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontSize: "0.75rem",
+                  opacity: 0,
+                  transition: "opacity 0.2s",
+                  borderRadius: "4px",
+                  pointerEvents: "none"
+                }}
+              >
+                {t("results.preview")}
+              </div>
             </div>
             <div className={styles.fileInfo}>
               <div className={styles.fileName}>{result.fileName}</div>
@@ -108,12 +167,14 @@ export const CropResults: React.FC<CropResultsProps> = ({
                 {(result.croppedBlob.size / 1024).toFixed(1)} KB
               </div>
             </div>
-            <Button
-              variant="secondary"
-              onClick={() => downloadSingle(result)}
-            >
-              ダウンロード
-            </Button>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <Button
+                variant="secondary"
+                onClick={() => downloadSingle(result)}
+              >
+                {t("results.download")}
+              </Button>
+            </div>
           </div>
         ))}
 
@@ -129,6 +190,15 @@ export const CropResults: React.FC<CropResultsProps> = ({
           </div>
         ))}
       </div>
+
+      {/* FileDetailModalを使用したプレビュー */}
+      {selectedFile && (
+        <FileDetailModal
+          file={selectedFile}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 };

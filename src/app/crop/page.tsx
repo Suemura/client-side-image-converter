@@ -234,7 +234,7 @@ export default function CropPage() {
                     {t("crop.startCropping")}
                   </Button>
                   <Button variant="secondary" onClick={handleBackToUpload}>
-                    戻る
+                    {t("crop.backToUpload")}
                   </Button>
                 </div>
               </div>

@@ -22,8 +22,6 @@ export class ImageCropper {
     cropArea: CropArea
   ): Promise<CropResult> {
     try {
-      console.log("Cropping with area:", cropArea);
-      
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
 
@@ -33,17 +31,15 @@ export class ImageCropper {
 
       // 画像を読み込み
       const img = await this.loadImage(file);
-      console.log("Image loaded:", img.width, "x", img.height);
 
       // クロップ領域の妥当性をチェック
       if (cropArea.width <= 0 || cropArea.height <= 0) {
         throw new Error("Invalid crop area dimensions");
       }
-      
-      if (cropArea.x < 0 || cropArea.y < 0 || 
-          cropArea.x + cropArea.width > img.width || 
+
+      if (cropArea.x < 0 || cropArea.y < 0 ||
+          cropArea.x + cropArea.width > img.width ||
           cropArea.y + cropArea.height > img.height) {
-        console.warn("Crop area exceeds image bounds, adjusting...");
         // 境界内に調整
         const adjustedCropArea = {
           x: Math.max(0, Math.min(cropArea.x, img.width - 1)),
@@ -51,16 +47,12 @@ export class ImageCropper {
           width: Math.min(cropArea.width, img.width - Math.max(0, cropArea.x)),
           height: Math.min(cropArea.height, img.height - Math.max(0, cropArea.y))
         };
-        console.log("Adjusted crop area:", adjustedCropArea);
         cropArea = adjustedCropArea;
       }
 
       // クロップ領域のサイズでcanvasを設定
       canvas.width = cropArea.width;
       canvas.height = cropArea.height;
-
-      console.log("Canvas size:", canvas.width, "x", canvas.height);
-      console.log("Drawing from:", cropArea.x, cropArea.y, cropArea.width, cropArea.height);
 
       // 画像をクロップしてcanvasに描画
       ctx.drawImage(

@@ -31,7 +31,7 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
         height: imageRef.current.naturalHeight,
       });
       setImageLoaded(true);
-      
+
       // 画像読み込み後に適切な初期クロップ領域を設定
       if (!initialCropArea) {
         const displayWidth = imageRef.current.offsetWidth;
@@ -39,16 +39,16 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
         const centerX = displayWidth / 4;
         const centerY = displayHeight / 4;
         const defaultSize = Math.min(displayWidth, displayHeight) / 2;
-        
+
         const defaultCropArea = {
           x: centerX,
           y: centerY,
           width: defaultSize,
           height: defaultSize
         };
-        
+
         setCropArea(defaultCropArea);
-        
+
         // 実際の画像座標に変換してコールバックを呼び出し
         setTimeout(() => {
           const scaleX = imageRef.current!.naturalWidth / displayWidth;
@@ -113,7 +113,6 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
 
       // 最小サイズをチェック
       if (cropArea.width < 10 || cropArea.height < 10) {
-        console.log("Crop area too small, using default size");
         return;
       }
 
@@ -125,10 +124,6 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
         width: Math.round(cropArea.width * scaleX),
         height: Math.round(cropArea.height * scaleY),
       };
-
-      console.log("Display crop area:", cropArea);
-      console.log("Scale factors:", { scaleX, scaleY });
-      console.log("Actual crop area:", actualCropArea);
 
       onCropAreaChange(actualCropArea);
     }
