@@ -1,6 +1,6 @@
 import type React from "react";
 import { useTranslation } from "react-i18next";
-import { FileUploadArea } from "./FileUploadArea";
+import { FileUploadArea } from "../../../components/FileUploadArea";
 
 interface ImageUploadSectionProps {
   files: File[];

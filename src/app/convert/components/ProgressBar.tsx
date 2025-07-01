@@ -1,4 +1,3 @@
-// ファイルパス: /Users/suemura/Documents/GitHub/web-image-converter/src/components/ProgressBar.tsx
 import type React from "react";
 import { useTranslation } from "react-i18next";
 

@@ -2,20 +2,20 @@
 
 import React, { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { ConversionResults } from "../../components/ConversionResults";
-import {
-  ConversionSettings,
-  type ConversionSettings as ConversionSettingsType,
-} from "../../components/ConversionSettings";
 import { Header } from "../../components/Header";
-import { ImageUploadSection } from "../../components/ImageUploadSection";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
-import { ProgressBar } from "../../components/ProgressBar";
 import {
   type ConversionResult,
   ImageConverter,
 } from "../../utils/imageConverter";
+import { ConversionResults } from "./components/ConversionResults";
+import {
+  ConversionSettings,
+  type ConversionSettings as ConversionSettingsType,
+} from "./components/ConversionSettings";
+import { ImageUploadSection } from "./components/ImageUploadSection";
+import { ProgressBar } from "./components/ProgressBar";
 
 export default function Home() {
   const { t } = useTranslation();

@@ -52,7 +52,7 @@ export const LanguageSwitch: React.FC = () => {
           border: "1px solid var(--border-light, #e5e5e5)",
         }}
       />
-      
+
       {/* 言語ラベル */}
       <div
         style={{
@@ -81,7 +81,9 @@ export const LanguageSwitch: React.FC = () => {
         </span>
         <span
           style={{
-            color: !isJapanese ? "var(--foreground)" : "var(--muted-foreground)",
+            color: !isJapanese
+              ? "var(--foreground)"
+              : "var(--muted-foreground)",
             transition: "color 0.3s ease",
             display: "flex",
             alignItems: "center",

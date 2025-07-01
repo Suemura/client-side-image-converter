@@ -1,8 +1,8 @@
 import type React from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "./Button";
-import { Input } from "./Input";
-import { RadioButtonGroup } from "./RadioButtonGroup";
+import { Button } from "../../../components/Button";
+import { Input } from "../../../components/Input";
+import { RadioButtonGroup } from "../../../components/RadioButtonGroup";
 
 export interface ConversionSettings {
   targetFormat: "jpeg" | "png" | "webp";

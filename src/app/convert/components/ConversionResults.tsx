@@ -1,10 +1,10 @@
-// ファイルパス: /Users/suemura/Documents/GitHub/web-image-converter/src/components/ConversionResults.tsx
 import type React from "react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ConversionResult } from "../utils/imageConverter";
-import { ImageConverter } from "../utils/imageConverter";
-import { Button } from "./Button";
+import { Button } from "../../../components/Button";
+import type { ConversionResult } from "../../../utils/imageConverter";
+import { ImageConverter } from "../../../utils/imageConverter";
+
 interface ConversionResultsProps {
   results: ConversionResult[];
   onClear: () => void;

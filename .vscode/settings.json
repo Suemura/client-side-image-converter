@@ -31,5 +31,9 @@
   "cSpell.words": ["suemura", "masato", "webimageconverter", "biome"],
   "editor.defaultFormatter": "biomejs.biome",
   "editor.formatOnPaste": true,
-  "editor.formatOnType": true
+  "editor.formatOnType": true,
+  "i18n-ally.localesPaths": [
+    "src/i18n",
+    "src/i18n/locales"
+  ]
 }

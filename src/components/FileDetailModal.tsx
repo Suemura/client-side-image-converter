@@ -2,7 +2,7 @@ import EXIF from "exif-js";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import NextImage from "next/image";
+
 interface FileDetailModalProps {
   file: File;
   isOpen: boolean;
@@ -200,7 +200,8 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
           }}
         >
           {file.type.startsWith("image/") && imageUrl ? (
-            <NextImage
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={imageUrl}
               alt={file.name}
               style={{
