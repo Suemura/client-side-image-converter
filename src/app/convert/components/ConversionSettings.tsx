@@ -70,12 +70,8 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
     (quality: string) => {
       setLocalQuality(quality);
 
-      // 空文字列の場合はデフォルト値90を設定
+      // 空文字列の場合はローカル状態のみ更新し、onSettingsChangeは呼ばない
       if (quality === "") {
-        onSettingsChange({
-          ...settings,
-          quality: 90,
-        });
         return;
       }
 
