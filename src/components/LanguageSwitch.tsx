@@ -1,5 +1,6 @@
 import type React from "react";
 import { useTranslation } from "react-i18next";
+import styles from "./LanguageSwitch.module.css";
 
 export const LanguageSwitch: React.FC = () => {
   const { i18n } = useTranslation();
@@ -14,19 +15,7 @@ export const LanguageSwitch: React.FC = () => {
   return (
     <div
       onClick={toggleLanguage}
-      style={{
-        position: "relative",
-        display: "inline-flex",
-        alignItems: "center",
-        backgroundColor: "var(--border)",
-        borderRadius: "20px",
-        padding: "2px",
-        cursor: "pointer",
-        transition: "all 0.3s ease",
-        width: "80px",
-        height: "32px",
-        border: "1px solid var(--border)",
-      }}
+      className={styles.container}
       role="button"
       tabIndex={0}
       aria-label={`Switch to ${isJapanese ? "English" : "Japanese"}`}
@@ -39,56 +28,24 @@ export const LanguageSwitch: React.FC = () => {
     >
       {/* 背景のスライドエリア */}
       <div
-        style={{
-          position: "absolute",
-          top: "2px",
-          left: isJapanese ? "2px" : "42px",
-          width: "36px",
-          height: "26px",
-          backgroundColor: "white",
-          borderRadius: "18px",
-          transition: "all 0.3s ease",
-          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-          border: "1px solid var(--border-light, #e5e5e5)",
-        }}
+        className={`${styles.slider} ${
+          isJapanese ? styles.sliderJapanese : styles.sliderEnglish
+        }`}
       />
 
       {/* 言語ラベル */}
-      <div
-        style={{
-          position: "relative",
-          display: "flex",
-          width: "100%",
-          height: "100%",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 8px",
-          fontSize: "11px",
-          fontWeight: "600",
-          zIndex: 1,
-        }}
-      >
+      <div className={styles.labelContainer}>
         <span
-          style={{
-            color: isJapanese ? "var(--foreground)" : "var(--muted-foreground)",
-            transition: "color 0.3s ease",
-            display: "flex",
-            alignItems: "center",
-            gap: "2px",
-          }}
+          className={`${styles.languageLabel} ${
+            isJapanese ? styles.labelActive : styles.labelInactive
+          }`}
         >
           🇯🇵
         </span>
         <span
-          style={{
-            color: !isJapanese
-              ? "var(--foreground)"
-              : "var(--muted-foreground)",
-            transition: "color 0.3s ease",
-            display: "flex",
-            alignItems: "center",
-            gap: "2px",
-          }}
+          className={`${styles.languageLabel} ${
+            !isJapanese ? styles.labelActive : styles.labelInactive
+          }`}
         >
           🇺🇸
         </span>

@@ -77,36 +77,68 @@ export class ImageConverter {
           ctx.drawImage(img, 0, 0, width, height);
 
           // 変換
-          const quality = options.quality / 100;
-          const mimeType = `image/${options.format}`;
+          if (options.format === "png") {
+            // PNG専用の品質制御
+            ImageConverter.convertToPngWithQuality(
+              canvas,
+              options.quality,
+              (blob: Blob | null) => {
+                if (!blob) {
+                  reject(new Error("PNG画像の変換に失敗しました"));
+                  return;
+                }
 
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) {
-                reject(new Error("画像の変換に失敗しました"));
-                return;
-              }
+                const url = URL.createObjectURL(blob);
+                const originalFilename = file.name;
+                const nameWithoutExt =
+                  originalFilename.substring(
+                    0,
+                    originalFilename.lastIndexOf("."),
+                  ) || originalFilename;
+                const filename = `${nameWithoutExt}.${options.format}`;
 
-              const url = URL.createObjectURL(blob);
-              const originalFilename = file.name;
-              const nameWithoutExt =
-                originalFilename.substring(
-                  0,
-                  originalFilename.lastIndexOf("."),
-                ) || originalFilename;
-              const filename = `${nameWithoutExt}.${options.format}`;
+                resolve({
+                  blob,
+                  url,
+                  originalSize: file.size,
+                  convertedSize: blob.size,
+                  filename,
+                });
+              },
+            );
+          } else {
+            // JPEG/WebP用の標準品質制御
+            const quality = options.quality / 100;
+            const mimeType = `image/${options.format}`;
 
-              resolve({
-                blob,
-                url,
-                originalSize: file.size,
-                convertedSize: blob.size,
-                filename,
-              });
-            },
-            mimeType,
-            quality,
-          );
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  reject(new Error("画像の変換に失敗しました"));
+                  return;
+                }
+
+                const url = URL.createObjectURL(blob);
+                const originalFilename = file.name;
+                const nameWithoutExt =
+                  originalFilename.substring(
+                    0,
+                    originalFilename.lastIndexOf("."),
+                  ) || originalFilename;
+                const filename = `${nameWithoutExt}.${options.format}`;
+
+                resolve({
+                  blob,
+                  url,
+                  originalSize: file.size,
+                  convertedSize: blob.size,
+                  filename,
+                });
+              },
+              mimeType,
+              quality,
+            );
+          }
         } catch (error) {
           reject(error);
         }
@@ -231,5 +263,52 @@ export class ImageConverter {
     convertedSize: number,
   ): number {
     return Math.round(((originalSize - convertedSize) / originalSize) * 100);
+  }
+
+  static convertToPngWithQuality(
+    canvas: HTMLCanvasElement,
+    quality: number,
+    callback: (blob: Blob | null) => void,
+  ): void {
+    // PNG品質制御: Canvas APIの標準的なPNG出力を使用
+    // 品質値に基づいて出力戦略を変更
+    if (quality >= 95) {
+      // 高品質: 標準PNG出力
+      canvas.toBlob(callback, "image/png");
+    } else if (quality >= 70) {
+      // 中品質: 少し圧縮
+      canvas.toBlob(callback, "image/png", 0.92);
+    } else {
+      // 低品質: より積極的な圧縮のため、一度JPEGに変換してからPNGに
+      const tempCanvas = document.createElement("canvas");
+      const tempCtx = tempCanvas.getContext("2d");
+      if (!tempCtx) {
+        canvas.toBlob(callback, "image/png");
+        return;
+      }
+
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+
+      // JPEGで圧縮してから再度Canvasに描画
+      canvas.toBlob(
+        (jpegBlob) => {
+          if (!jpegBlob) {
+            canvas.toBlob(callback, "image/png");
+            return;
+          }
+
+          const img = new Image();
+          img.onload = () => {
+            tempCtx.drawImage(img, 0, 0);
+            tempCanvas.toBlob(callback, "image/png");
+            URL.revokeObjectURL(img.src);
+          };
+          img.src = URL.createObjectURL(jpegBlob);
+        },
+        "image/jpeg",
+        quality / 100,
+      );
+    }
   }
 }

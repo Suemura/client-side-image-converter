@@ -1,0 +1,80 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  max-width: 960px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: bold;
+  padding: 20px 16px 12px 16px;
+  text-align: left;
+  color: var(--foreground);
+  letter-spacing: -0.02em;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: bold;
+  padding: 16px 16px 8px 16px;
+  color: var(--foreground);
+  letter-spacing: -0.015em;
+}
+
+.warningBox {
+  padding: 8px 16px;
+  margin: 0 16px 8px 16px;
+  background-color: #fff7ed;
+  border: 1px solid #f97316;
+  border-radius: 8px;
+}
+
+.warningText {
+  font-size: 14px;
+  color: #ea580c;
+  margin: 0;
+}
+
+.inputGroup {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  padding: 12px 16px;
+  max-width: 480px;
+  flex-wrap: wrap;
+}
+
+.helpText {
+  padding: 4px 16px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.checkboxContainer {
+  padding: 8px 16px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.checkboxText {
+  font-size: 14px;
+  color: var(--foreground);
+}
+
+.buttonContainer {
+  display: flex;
+  padding: 12px 16px;
+  justify-content: end;
+}

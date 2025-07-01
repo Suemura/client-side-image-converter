@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
+import styles from "./FileUploadArea.module.css";
 
 interface FileUploadAreaProps {
   files: File[];
@@ -198,25 +199,11 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
 
   // ファイルが0個の場合：ドロップゾーンを表示
   if (files.length === 0) {
-    const dropZoneStyles = {
-      display: "flex",
-      flexDirection: "column" as const,
-      alignItems: "center",
-      gap: "1.5rem",
-      borderRadius: "0.75rem",
-      border: "2px dashed var(--border-dashed)",
-      padding: "3.5rem 1.5rem",
-      cursor: "pointer",
-      backgroundColor: isDragOver ? "#f0f9ff" : "transparent",
-      borderColor: isDragOver ? "var(--primary)" : "var(--border-dashed)",
-      transition: "all 0.2s ease",
-    };
-
     return (
-      <div className="flex flex-col p-4">
+      <div className={styles.container}>
         <button
           type="button"
-          style={dropZoneStyles}
+          className={`${styles.dropZone} ${isDragOver ? styles.dropZoneActive : ""}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -224,29 +211,9 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
           onKeyDown={handleKeyDown}
           aria-label="ファイルをドラッグ&ドロップまたはクリックして選択"
         >
-          <div
-            className="flex flex-col items-center gap-2"
-            style={{ maxWidth: "480px" }}
-          >
-            <p
-              className="text-lg font-bold text-center"
-              style={{
-                color: "var(--foreground)",
-                letterSpacing: "-0.015em",
-                maxWidth: "480px",
-              }}
-            >
-              Drop files here
-            </p>
-            <p
-              className="text-sm font-normal text-center"
-              style={{
-                color: "var(--foreground)",
-                maxWidth: "480px",
-              }}
-            >
-              Or click to select files
-            </p>
+          <div className={styles.dropZoneContent}>
+            <p className={styles.dropZoneTitle}>Drop files here</p>
+            <p className={styles.dropZoneSubtitle}>Or click to select files</p>
           </div>
           <input
             ref={fileInputRef}
@@ -254,7 +221,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
             multiple
             accept={acceptedTypes.join(",")}
             onChange={handleFileInput}
-            style={{ display: "none" }}
+            className={styles.hiddenInput}
           />
         </button>
       </div>
@@ -264,21 +231,17 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   // ファイルが1個以上の場合：ファイルリストを表示（ドラッグ&ドロップ機能付き）
   return (
     <div
-      className="p-4"
-      style={{
-        borderTop: "1px solid var(--border-dashed)",
-        position: "relative",
-      }}
+      className={styles.fileListContainer}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="flex items-center justify-between pb-3">
-        <h4 className="font-medium" style={{ color: "var(--foreground)" }}>
+      <div className={styles.fileListHeader}>
+        <h4 className={styles.fileListTitle}>
           {t("fileUpload.selectedFiles")} ({files.length}
           {t("common.files")})
         </h4>
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div className={styles.buttonGroup}>
           <Button variant="secondary" size="small" onClick={handleClick}>
             {t("fileUpload.add")}
           </Button>
@@ -290,123 +253,49 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
 
       {/* ドラッグオーバー時のオーバーレイ */}
       {isDragOver && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(59, 130, 246, 0.1)",
-            border: "2px dashed var(--primary)",
-            borderRadius: "12px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 10,
-            pointerEvents: "none",
-          }}
-        >
-          <p
-            style={{
-              fontSize: "18px",
-              fontWeight: "600",
-              color: "var(--primary)",
-            }}
-          >
+        <div className={styles.dragOverlay}>
+          <p className={styles.dragOverlayText}>
             {t("fileUpload.dropFilesHere")}
           </p>
         </div>
       )}
 
-      <div
-        className="flex flex-col gap-2"
-        style={{
-          maxHeight: "200px",
-          overflow: "auto",
-        }}
-      >
+      <div className={styles.fileList}>
         {thumbnails.map((thumbnail, index) => (
           <button
             type="button"
             key={`${thumbnail.file.name}-${thumbnail.file.size}-${index}`}
-            className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors w-full text-left"
-            style={{
-              backgroundColor: "#f9fafb",
-              border: "1px solid var(--border-dashed)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#f3f4f6";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#f9fafb";
-            }}
+            className={styles.fileItem}
             onClick={() => handleFileClick(thumbnail.file)}
             aria-label={`${thumbnail.file.name}の詳細を表示`}
           >
-            <div className="flex items-center gap-3 flex-1">
+            <div className={styles.fileItemContent}>
               <div
-                className="flex items-center justify-center rounded"
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  backgroundColor: thumbnail.thumbnailUrl
-                    ? "transparent"
-                    : "var(--primary)",
-                  color: "var(--foreground)",
-                  fontSize: "12px",
-                  fontWeight: "500",
-                  overflow: "hidden",
-                  border: thumbnail.thumbnailUrl
-                    ? "1px solid var(--border-dashed)"
-                    : "none",
-                }}
+                className={`${styles.thumbnail} ${
+                  thumbnail.thumbnailUrl
+                    ? styles.thumbnailWithImage
+                    : styles.thumbnailWithoutImage
+                }`}
               >
                 {thumbnail.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={thumbnail.thumbnailUrl}
                     alt={`${thumbnail.file.name} thumbnail`}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      borderRadius: "3px",
-                    }}
+                    className={styles.thumbnailImage}
                   />
                 ) : isGeneratingThumbnails &&
                   thumbnail.file.type.startsWith("image/") ? (
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: "#f0f0f0",
-                      borderRadius: "3px",
-                      fontSize: "10px",
-                      color: "var(--muted-foreground)",
-                    }}
-                  >
-                    ...
-                  </div>
+                  <div className={styles.thumbnailLoading}>...</div>
                 ) : (
                   thumbnail.file.type.split("/")[1]?.toUpperCase() || "FILE"
                 )}
               </div>
-              <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
-                <p
-                  className="text-sm font-medium truncate"
-                  style={{ color: "var(--foreground)" }}
-                  title={thumbnail.file.name}
-                >
+              <div className={styles.fileInfo}>
+                <p className={styles.fileName} title={thumbnail.file.name}>
                   {thumbnail.file.name}
                 </p>
-                <p
-                  className="text-sm"
-                  style={{ color: "var(--muted-foreground)" }}
-                >
+                <p className={styles.fileSize}>
                   {formatFileSize(thumbnail.file.size)}
                 </p>
               </div>
@@ -422,7 +311,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
         multiple
         accept={acceptedTypes.join(",")}
         onChange={handleFileInput}
-        style={{ display: "none" }}
+        className={styles.hiddenInput}
       />
 
       {/* ファイル詳細モーダル */}

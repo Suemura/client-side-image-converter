@@ -1,6 +1,7 @@
 import type React from "react";
 import { useTranslation } from "react-i18next";
 import { FileUploadArea } from "../../../components/FileUploadArea";
+import styles from "./ImageUploadSection.module.css";
 
 interface ImageUploadSectionProps {
   files: File[];
@@ -16,16 +17,8 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col w-80">
-      <h2
-        className="text-28 font-bold px-4 text-left pb-3 pt-5"
-        style={{
-          color: "var(--foreground)",
-          letterSpacing: "-0.02em",
-        }}
-      >
-        {t("fileUpload.dragDropLabel")}
-      </h2>
+    <div className={styles.container}>
+      <h2 className={styles.title}>{t("fileUpload.dragDropLabel")}</h2>
 
       <FileUploadArea
         files={files}
@@ -33,12 +26,7 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
         onClearFiles={onClearFiles}
       />
 
-      <p
-        className="text-sm font-normal pb-3 pt-1 px-4"
-        style={{
-          color: "var(--muted-foreground)",
-        }}
-      >
+      <p className={styles.supportedFormats}>
         Supported formats: JPG, PNG, BMP, TIFF
       </p>
     </div>

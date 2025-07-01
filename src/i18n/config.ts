@@ -57,6 +57,14 @@ const resources = {
         pleaseSelectFiles: "変換するファイルを選択してください",
         conversionError: "変換中にエラーが発生しました。",
         auto: "自動",
+        pngQualityNotice:
+          "PNG形式は可逆圧縮のため、品質設定は適用されません。常に最高品質で出力されます。",
+        pngQualityExperimental:
+          "PNG形式での品質制御を実験的にサポートしています。低い値ではファイルサイズが小さくなりますが、画質が劣化する場合があります。",
+        pngQualityHelp:
+          "PNG品質: 95以上=標準PNG、70-94=中圧縮、70未満=高圧縮（画質劣化あり）",
+        qualityDescription:
+          "品質: 低い値ほどファイルサイズが小さくなりますが、画質が劣化します",
       },
       crop: {
         title: "Image Cropping Tool",
@@ -175,6 +183,14 @@ const resources = {
         pleaseSelectFiles: "Please select files to convert",
         conversionError: "An error occurred during conversion.",
         auto: "Auto",
+        pngQualityNotice:
+          "PNG format uses lossless compression, so quality settings are not applied. Output is always at maximum quality.",
+        pngQualityExperimental:
+          "Experimental PNG quality control is supported. Lower values result in smaller file sizes but may reduce image quality.",
+        pngQualityHelp:
+          "PNG Quality: 95+=Standard PNG, 70-94=Medium compression, <70=High compression (quality loss)",
+        qualityDescription:
+          "Quality: Lower values result in smaller file sizes but reduced image quality",
       },
       crop: {
         title: "Image Cropping Tool",

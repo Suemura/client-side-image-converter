@@ -1,5 +1,6 @@
 import type React from "react";
 import { useTranslation } from "react-i18next";
+import styles from "./ProgressBar.module.css";
 
 interface ProgressBarProps {
   current: number;
@@ -21,69 +22,25 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const percentage = Math.round((current / total) * 100);
 
   return (
-    <div
-      style={{
-        backgroundColor: "white",
-        borderRadius: "16px",
-        border: "1px solid var(--border-dashed)",
-        padding: "24px",
-        marginTop: "24px",
-      }}
-    >
-      <div style={{ marginBottom: "12px" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "8px",
-          }}
-        >
-          <h4
-            style={{
-              fontSize: "16px",
-              fontWeight: "600",
-              color: "var(--foreground)",
-            }}
-          >
-            {t("progress.converting")}
-          </h4>
-          <span style={{ fontSize: "14px", color: "var(--muted-foreground)" }}>
+    <div className={styles.container}>
+      <div className={styles.progressContent}>
+        <div className={styles.progressHeader}>
+          <h4 className={styles.title}>{t("progress.converting")}</h4>
+          <span className={styles.progressText}>
             {current} / {total} ({percentage}%)
           </span>
         </div>
 
         {/* プログレスバー */}
-        <div
-          style={{
-            width: "100%",
-            height: "8px",
-            backgroundColor: "#f3f4f6",
-            borderRadius: "4px",
-            overflow: "hidden",
-          }}
-        >
+        <div className={styles.progressBarContainer}>
           <div
-            style={{
-              width: `${percentage}%`,
-              height: "100%",
-              backgroundColor: "var(--primary)",
-              borderRadius: "4px",
-              transition: "width 0.3s ease-in-out",
-            }}
+            className={styles.progressBarFill}
+            style={{ width: `${percentage}%` }}
           />
         </div>
       </div>
 
-      <p
-        style={{
-          fontSize: "14px",
-          color: "var(--muted-foreground)",
-          textAlign: "center",
-        }}
-      >
-        {t("progress.pleaseWait")}
-      </p>
+      <p className={styles.waitMessage}>{t("progress.pleaseWait")}</p>
     </div>
   );
 };

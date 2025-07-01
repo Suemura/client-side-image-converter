@@ -1,0 +1,193 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.dropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  border-radius: 12px;
+  border: 2px dashed var(--border-dashed);
+  padding: 56px 24px;
+  cursor: pointer;
+  background-color: transparent;
+  transition: all 0.2s ease;
+}
+
+.dropZoneActive {
+  background-color: #f0f9ff;
+  border-color: var(--primary);
+}
+
+.dropZoneContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 480px;
+}
+
+.dropZoneTitle {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  color: var(--foreground);
+  letter-spacing: -0.015em;
+  max-width: 480px;
+}
+
+.dropZoneSubtitle {
+  font-size: 14px;
+  font-weight: normal;
+  text-align: center;
+  color: var(--foreground);
+  max-width: 480px;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.fileListContainer {
+  padding: 16px;
+  border-top: 1px solid var(--border-dashed);
+  position: relative;
+}
+
+.fileListHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+
+.fileListTitle {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.dragOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(59, 130, 246, 0.1);
+  border: 2px dashed var(--primary);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.dragOverlayText {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.fileList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.fileItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+  text-align: left;
+  background-color: #f9fafb;
+  border: 1px solid var(--border-dashed);
+}
+
+.fileItem:hover {
+  background-color: #f3f4f6;
+}
+
+.fileItemContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.thumbnail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+}
+
+.thumbnailWithImage {
+  background-color: transparent;
+  border: 1px solid var(--border-dashed);
+}
+
+.thumbnailWithoutImage {
+  background-color: var(--primary);
+  border: none;
+}
+
+.thumbnailImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.thumbnailLoading {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f0f0;
+  border-radius: 3px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+.fileInfo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.fileName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileSize {
+  font-size: 14px;
+  color: var(--muted-foreground);
+}

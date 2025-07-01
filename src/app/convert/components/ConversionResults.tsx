@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
 import type { ConversionResult } from "../../../utils/imageConverter";
 import { ImageConverter } from "../../../utils/imageConverter";
+import styles from "./ConversionResults.module.css";
 
 interface ConversionResultsProps {
   results: ConversionResult[];
@@ -53,34 +54,13 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   );
 
   return (
-    <div
-      style={{
-        backgroundColor: "white",
-        borderRadius: "16px",
-        border: "1px solid var(--border-dashed)",
-        padding: "24px",
-        marginTop: "24px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "16px",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "18px",
-            fontWeight: "600",
-            color: "var(--foreground)",
-          }}
-        >
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h3 className={styles.title}>
           {t("results.title")} ({results.length}
           {t("results.files")})
         </h3>
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        <div className={styles.buttonGroup}>
           <Button
             variant="primary"
             onClick={handleDownloadZip}
@@ -95,73 +75,27 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
       </div>
 
       {/* 統計情報 */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "16px",
-          marginBottom: "24px",
-          padding: "16px",
-          backgroundColor: "#f9fafb",
-          borderRadius: "8px",
-        }}
-      >
+      <div className={styles.statsContainer}>
         <div>
-          <p
-            style={{
-              fontSize: "12px",
-              color: "var(--muted-foreground)",
-              marginBottom: "4px",
-            }}
-          >
-            {t("results.originalSize")}
-          </p>
-          <p
-            style={{
-              fontSize: "16px",
-              fontWeight: "600",
-              color: "var(--foreground)",
-            }}
-          >
+          <p className={styles.statLabel}>{t("results.originalSize")}</p>
+          <p className={styles.statValue}>
             {ImageConverter.formatFileSize(totalOriginalSize)}
           </p>
         </div>
         <div>
-          <p
-            style={{
-              fontSize: "12px",
-              color: "var(--muted-foreground)",
-              marginBottom: "4px",
-            }}
-          >
-            {t("results.convertedSize")}
-          </p>
-          <p
-            style={{
-              fontSize: "16px",
-              fontWeight: "600",
-              color: "var(--foreground)",
-            }}
-          >
+          <p className={styles.statLabel}>{t("results.convertedSize")}</p>
+          <p className={styles.statValue}>
             {ImageConverter.formatFileSize(totalConvertedSize)}
           </p>
         </div>
         <div>
+          <p className={styles.statLabel}>{t("results.compressionRatio")}</p>
           <p
-            style={{
-              fontSize: "12px",
-              color: "var(--muted-foreground)",
-              marginBottom: "4px",
-            }}
-          >
-            {t("results.compressionRatio")}
-          </p>
-          <p
-            style={{
-              fontSize: "16px",
-              fontWeight: "600",
-              color: overallCompressionRatio > 0 ? "#059669" : "#dc2626",
-            }}
+            className={
+              overallCompressionRatio > 0
+                ? styles.statValuePositive
+                : styles.statValueNegative
+            }
           >
             {overallCompressionRatio > 0 ? "-" : "+"}
             {Math.abs(overallCompressionRatio)}%
@@ -170,7 +104,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
       </div>
 
       {/* ファイルリスト */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      <div className={styles.fileList}>
         {results.map((result, index) => {
           const compressionRatio = ImageConverter.calculateCompressionRatio(
             result.originalSize,
@@ -180,77 +114,34 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
           return (
             <div
               key={`${result.filename}-${index}`}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "12px",
-                backgroundColor: "#f9fafb",
-                borderRadius: "8px",
-                border: "1px solid var(--border-dashed)",
-              }}
+              className={styles.fileItem}
             >
-              <div style={{ flex: 1 }}>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
-                >
+              <div className={styles.fileContent}>
+                <div className={styles.fileInfoContainer}>
                   {/* プレビュー画像 */}
-                  <div
-                    style={{
-                      width: "48px",
-                      height: "48px",
-                      borderRadius: "6px",
-                      overflow: "hidden",
-                      border: "1px solid var(--border-dashed)",
-                      backgroundColor: "white",
-                    }}
-                  >
+                  <div className={styles.previewImage}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={result.url}
                       alt={result.filename}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
+                      className={styles.previewImageImg}
                     />
                   </div>
 
                   {/* ファイル情報 */}
                   <div>
-                    <p
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        color: "var(--foreground)",
-                        marginBottom: "2px",
-                      }}
-                    >
-                      {result.filename}
-                    </p>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: "12px",
-                          color: "var(--muted-foreground)",
-                        }}
-                      >
+                    <p className={styles.fileName}>{result.filename}</p>
+                    <div className={styles.fileSizeInfo}>
+                      <span className={styles.fileSizeText}>
                         {ImageConverter.formatFileSize(result.originalSize)} →{" "}
                         {ImageConverter.formatFileSize(result.convertedSize)}
                       </span>
                       <span
-                        style={{
-                          fontSize: "12px",
-                          fontWeight: "500",
-                          color: compressionRatio > 0 ? "#059669" : "#dc2626",
-                        }}
+                        className={
+                          compressionRatio > 0
+                            ? styles.compressionRatioPositive
+                            : styles.compressionRatioNegative
+                        }
                       >
                         {compressionRatio > 0 ? "-" : "+"}
                         {Math.abs(compressionRatio)}%

@@ -1,8 +1,10 @@
 import type React from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
 import { Input } from "../../../components/Input";
 import { RadioButtonGroup } from "../../../components/RadioButtonGroup";
+import styles from "./ConversionSettings.module.css";
 
 export interface ConversionSettings {
   targetFormat: "jpeg" | "png" | "webp";
@@ -29,6 +31,28 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
 }) => {
   const { t } = useTranslation();
 
+  // ローカル状態で入力値を管理
+  const [localQuality, setLocalQuality] = useState(settings.quality.toString());
+  const [localWidth, setLocalWidth] = useState(
+    settings.width?.toString() || "",
+  );
+  const [localHeight, setLocalHeight] = useState(
+    settings.height?.toString() || "",
+  );
+
+  // 外部のsettingsが変更された時にローカル状態を同期
+  useEffect(() => {
+    setLocalQuality(settings.quality.toString());
+  }, [settings.quality]);
+
+  useEffect(() => {
+    setLocalWidth(settings.width?.toString() || "");
+  }, [settings.width]);
+
+  useEffect(() => {
+    setLocalHeight(settings.height?.toString() || "");
+  }, [settings.height]);
+
   const formatOptions = [
     { label: "JPEG", value: "jpeg" },
     { label: "PNG", value: "png" },
@@ -42,29 +66,54 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
     });
   };
 
-  const handleQualityChange = (quality: string) => {
-    const numericQuality = Number.parseInt(quality) || 90;
-    onSettingsChange({
-      ...settings,
-      quality: Math.min(100, Math.max(1, numericQuality)),
-    });
-  };
+  const handleQualityChange = useCallback(
+    (quality: string) => {
+      setLocalQuality(quality);
 
-  const handleWidthChange = (width: string) => {
-    const numericWidth = Number.parseInt(width) || undefined;
-    onSettingsChange({
-      ...settings,
-      width: numericWidth,
-    });
-  };
+      // 空文字列の場合はデフォルト値90を設定
+      if (quality === "") {
+        onSettingsChange({
+          ...settings,
+          quality: 90,
+        });
+        return;
+      }
 
-  const handleHeightChange = (height: string) => {
-    const numericHeight = Number.parseInt(height) || undefined;
-    onSettingsChange({
-      ...settings,
-      height: numericHeight,
-    });
-  };
+      const numericQuality = Number.parseInt(quality, 10);
+      // 有効な数値の場合のみ更新
+      if (!Number.isNaN(numericQuality)) {
+        onSettingsChange({
+          ...settings,
+          quality: Math.min(100, Math.max(1, numericQuality)),
+        });
+      }
+    },
+    [settings, onSettingsChange],
+  );
+
+  const handleWidthChange = useCallback(
+    (width: string) => {
+      setLocalWidth(width);
+      const numericWidth = Number.parseInt(width, 10) || undefined;
+      onSettingsChange({
+        ...settings,
+        width: numericWidth,
+      });
+    },
+    [settings, onSettingsChange],
+  );
+
+  const handleHeightChange = useCallback(
+    (height: string) => {
+      setLocalHeight(height);
+      const numericHeight = Number.parseInt(height, 10) || undefined;
+      onSettingsChange({
+        ...settings,
+        height: numericHeight,
+      });
+    },
+    [settings, onSettingsChange],
+  );
 
   const handleAspectRatioToggle = () => {
     onSettingsChange({
@@ -74,26 +123,10 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
   };
 
   return (
-    <div className="flex flex-col flex-1" style={{ maxWidth: "960px" }}>
-      <h2
-        className="text-28 font-bold px-4 text-left pb-3 pt-5"
-        style={{
-          color: "var(--foreground)",
-          letterSpacing: "-0.02em",
-        }}
-      >
-        {t("convert.title")}
-      </h2>
+    <div className={styles.container}>
+      <h2 className={styles.title}>{t("convert.title")}</h2>
 
-      <h3
-        className="text-lg font-bold px-4 pb-2 pt-4"
-        style={{
-          color: "var(--foreground)",
-          letterSpacing: "-0.015em",
-        }}
-      >
-        {t("convert.targetFormat")}
-      </h3>
+      <h3 className={styles.sectionTitle}>{t("convert.targetFormat")}</h3>
 
       <RadioButtonGroup
         name="targetFormat"
@@ -102,121 +135,66 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
         onChange={handleFormatChange}
       />
 
-      <h3
-        className="text-lg font-bold px-4 pb-2 pt-4"
-        style={{
-          color: "var(--foreground)",
-          letterSpacing: "-0.015em",
-        }}
-      >
-        {t("convert.qualitySettings")}
-      </h3>
+      <h3 className={styles.sectionTitle}>{t("convert.qualitySettings")}</h3>
 
       {settings.targetFormat === "png" && (
-        <div
-          className="px-4 py-2 mb-2"
-          style={{
-            backgroundColor: "#f0f9ff",
-            border: "1px solid #0ea5e9",
-            borderRadius: "8px",
-            marginLeft: "16px",
-            marginRight: "16px",
-          }}
-        >
-          <p
-            style={{
-              fontSize: "14px",
-              color: "#0369a1",
-              margin: 0,
-            }}
-          >
-            💡 {t("convert.pngQualityNotice")}
+        <div className={styles.warningBox}>
+          <p className={styles.warningText}>
+            💡 {t("convert.pngQualityExperimental")}
           </p>
         </div>
       )}
 
-      <div
-        className="flex items-end gap-4 px-4 py-3"
-        style={{ maxWidth: "480px", flexWrap: "wrap" }}
-      >
+      <div className={styles.inputGroup}>
         <Input
           label={t("convert.quality")}
-          value={settings.quality.toString()}
+          value={localQuality}
           onChange={handleQualityChange}
           placeholder="90"
           type="number"
-          disabled={settings.targetFormat === "png"}
         />
       </div>
 
-      {settings.targetFormat !== "png" && (
-        <div
-          className="px-4 py-1"
-          style={{
-            fontSize: "12px",
-            color: "var(--muted-foreground)",
-          }}
-        >
-          {t("convert.qualityDescription")}
-        </div>
-      )}
+      <div className={styles.helpText}>
+        {settings.targetFormat === "png"
+          ? t("convert.pngQualityHelp")
+          : t("convert.qualityDescription")}
+      </div>
 
-      <h3
-        className="text-lg font-bold px-4 pb-2 pt-4"
-        style={{
-          color: "var(--foreground)",
-          letterSpacing: "-0.015em",
-        }}
-      >
-        {t("convert.imageSize")}
-      </h3>
+      <h3 className={styles.sectionTitle}>{t("convert.imageSize")}</h3>
 
-      <div
-        className="flex items-end gap-4 px-4 py-3"
-        style={{ maxWidth: "480px", flexWrap: "wrap" }}
-      >
+      <div className={styles.inputGroup}>
         <Input
           label={t("convert.width")}
-          value={settings.width?.toString() || ""}
+          value={localWidth}
           onChange={handleWidthChange}
           placeholder={t("convert.auto")}
           type="number"
         />
         <Input
           label={t("convert.height")}
-          value={settings.height?.toString() || ""}
+          value={localHeight}
           onChange={handleHeightChange}
           placeholder={t("convert.auto")}
           type="number"
         />
       </div>
 
-      <div className="px-4 py-2">
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            cursor: "pointer",
-          }}
-        >
+      <div className={styles.checkboxContainer}>
+        <label className={styles.checkboxLabel}>
           <input
             type="checkbox"
             checked={settings.maintainAspectRatio}
             onChange={handleAspectRatioToggle}
-            style={{
-              width: "16px",
-              height: "16px",
-              accentColor: "var(--primary)",
-            }}
+            className={styles.checkbox}
           />
-          <span style={{ fontSize: "14px", color: "var(--foreground)" }}>
+          <span className={styles.checkboxText}>
             {t("convert.maintainAspectRatio")}
           </span>
         </label>
       </div>
 
-      <div className="flex px-4 py-3 justify-end">
+      <div className={styles.buttonContainer}>
         <Button
           variant="primary"
           size="medium"
