@@ -112,6 +112,29 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
         {t("convert.qualitySettings")}
       </h3>
 
+      {settings.targetFormat === "png" && (
+        <div
+          className="px-4 py-2 mb-2"
+          style={{
+            backgroundColor: "#f0f9ff",
+            border: "1px solid #0ea5e9",
+            borderRadius: "8px",
+            marginLeft: "16px",
+            marginRight: "16px",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#0369a1",
+              margin: 0,
+            }}
+          >
+            💡 {t("convert.pngQualityNotice")}
+          </p>
+        </div>
+      )}
+
       <div
         className="flex items-end gap-4 px-4 py-3"
         style={{ maxWidth: "480px", flexWrap: "wrap" }}
@@ -122,8 +145,21 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
           onChange={handleQualityChange}
           placeholder="90"
           type="number"
+          disabled={settings.targetFormat === "png"}
         />
       </div>
+
+      {settings.targetFormat !== "png" && (
+        <div
+          className="px-4 py-1"
+          style={{
+            fontSize: "12px",
+            color: "var(--muted-foreground)",
+          }}
+        >
+          {t("convert.qualityDescription")}
+        </div>
+      )}
 
       <h3
         className="text-lg font-bold px-4 pb-2 pt-4"

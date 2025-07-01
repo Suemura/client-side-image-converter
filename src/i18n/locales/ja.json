@@ -43,7 +43,10 @@
     "convert": "変換",
     "converting": "変換中...",
     "pleaseSelectFiles": "変換するファイルを選択してください",
-    "conversionError": "変換中にエラーが発生しました。"
+    "conversionError": "変換中にエラーが発生しました。",
+    "auto": "自動",
+    "pngQualityNotice": "PNG形式は可逆圧縮のため、品質設定は適用されません。常に最高品質で出力されます。",
+    "qualityDescription": "品質: 低い値ほどファイルサイズが小さくなりますが、画質が劣化します"
   },
   "crop": {
     "title": "Image Cropping Tool",

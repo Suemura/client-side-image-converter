@@ -7,6 +7,7 @@ interface InputProps {
   placeholder?: string;
   type?: "text" | "number" | "email";
   required?: boolean;
+  disabled?: boolean;
   className?: string;
 }
 
@@ -17,6 +18,7 @@ export const Input: React.FC<InputProps> = ({
   placeholder = "",
   type = "text",
   required = false,
+  disabled = false,
   className = "",
 }) => {
   const inputStyles = {
@@ -27,14 +29,16 @@ export const Input: React.FC<InputProps> = ({
     resize: "none" as const,
     overflow: "hidden",
     borderRadius: "0.75rem",
-    color: "var(--foreground)",
+    color: disabled ? "var(--muted-foreground)" : "var(--foreground)",
     border: "1px solid var(--border-dashed)",
-    backgroundColor: "#f9fafb",
+    backgroundColor: disabled ? "#f3f4f6" : "#f9fafb",
     height: "3.5rem",
     padding: "15px",
     fontSize: "1rem",
     fontWeight: "400",
     fontFamily: "inherit",
+    cursor: disabled ? "not-allowed" : "text",
+    opacity: disabled ? 0.6 : 1,
   };
 
   return (
@@ -52,6 +56,7 @@ export const Input: React.FC<InputProps> = ({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
+        disabled={disabled}
         style={inputStyles}
         className="focus-outline-0"
       />

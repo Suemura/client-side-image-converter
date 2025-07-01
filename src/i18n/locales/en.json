@@ -43,7 +43,10 @@
     "convert": "Convert",
     "converting": "Converting...",
     "pleaseSelectFiles": "Please select files to convert",
-    "conversionError": "An error occurred during conversion."
+    "conversionError": "An error occurred during conversion.",
+    "auto": "Auto",
+    "pngQualityNotice": "PNG format uses lossless compression, so quality settings are not applied. Output is always at maximum quality.",
+    "qualityDescription": "Quality: Lower values result in smaller file sizes but reduced image quality"
   },
   "crop": {
     "title": "Image Cropping Tool",
