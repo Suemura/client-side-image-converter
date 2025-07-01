@@ -392,7 +392,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
                     color: "var(--foreground)",
                   }}
                 >
-                  EXIF情報
+                  {t("fileDetails.exifInfo")}
                 </h4>
                 <p
                   style={{
@@ -401,7 +401,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
                     fontStyle: "italic",
                   }}
                 >
-                  EXIF情報が見つかりませんでした
+                  {t("fileDetails.exifInfoNotFound")}
                 </p>
               </div>
             )}

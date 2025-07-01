@@ -81,6 +81,7 @@
     "lastModified": "Last Modified",
     "imageSize": "Image Size",
     "exifInfo": "EXIF Information",
+    "exifInfoNotFound": "EXIF information not found",
     "unknown": "Unknown",
     "loading": "Loading...",
     "cannotPreview": "Cannot preview",
@@ -100,6 +101,11 @@
     "convertedSize": "Converted Size",
     "compressionRatio": "Compression Ratio",
     "download": "Download"
+  },
+  "comparison": {
+    "original": "Original",
+    "converted": "Converted",
+    "instruction": "Drag the divider to compare before and after images"
   },
   "common": {
     "files": "",

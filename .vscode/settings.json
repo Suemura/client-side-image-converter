@@ -28,7 +28,7 @@
   },
   "editor.tabSize": 2,
   "editor.indentSize": "tabSize",
-  "cSpell.words": ["suemura", "masato", "webimageconverter", "biome"],
+  "cSpell.words": ["biome", "exif", "masato", "suemura", "webimageconverter"],
   "editor.defaultFormatter": "biomejs.biome",
   "editor.formatOnPaste": true,
   "editor.formatOnType": true,

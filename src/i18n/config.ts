@@ -99,6 +99,7 @@ const resources = {
         lastModified: "最終更新",
         imageSize: "画像サイズ",
         exifInfo: "EXIF情報",
+        exifInfoNotFound: "EXIF情報が見つかりませんでした",
         unknown: "不明",
         loading: "読み込み中...",
         cannotPreview: "プレビューできません",
@@ -118,6 +119,11 @@ const resources = {
         convertedSize: "変換後サイズ",
         compressionRatio: "圧縮率",
         download: "ダウンロード",
+      },
+      comparison: {
+        original: "変換前",
+        converted: "変換後",
+        instruction: "境界線をドラッグして変換前後の画像を比較",
       },
       common: {
         files: "個",
@@ -225,6 +231,7 @@ const resources = {
         lastModified: "Last Modified",
         imageSize: "Image Size",
         exifInfo: "EXIF Information",
+        exifInfoNotFound: "EXIF information not found",
         unknown: "Unknown",
         loading: "Loading...",
         cannotPreview: "Cannot preview",
@@ -244,6 +251,11 @@ const resources = {
         convertedSize: "Converted Size",
         compressionRatio: "Compression Ratio",
         download: "Download",
+      },
+      comparison: {
+        original: "Original",
+        converted: "Converted",
+        instruction: "Drag the divider to compare before and after images",
       },
       common: {
         files: "",

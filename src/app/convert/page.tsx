@@ -115,6 +115,7 @@ export default function Home() {
         />
         <ConversionResults
           results={conversionResults}
+          originalFiles={selectedFiles}
           onClear={handleClearResults}
         />
       </MainContent>
