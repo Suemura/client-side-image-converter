@@ -4,7 +4,8 @@
     "description": "画像を様々なフォーマットに変換"
   },
   "header": {
-    "title": "Image Converter"
+    "title": "Image Converter",
+    "github": "GitHub"
   },
   "navigation": {
     "top": "トップ",
@@ -16,6 +17,7 @@
     "subtitle": "画像を簡単に変換しましょう。フォーマット変換、リサイズ、最適化を強力なオンラインツールで行えます。",
     "startConverting": "変換を開始",
     "tryCropTool": "クロップツールを試す",
+    "viewOnGithub": "GitHubで見る",
     "features": {
       "formatConversion": {
         "title": "フォーマット変換",
@@ -46,10 +48,12 @@
     "conversionError": "変換中にエラーが発生しました。",
     "auto": "自動",
     "pngQualityNotice": "PNG形式は可逆圧縮のため、品質設定は適用されません。常に最高品質で出力されます。",
+    "pngQualityExperimental": "PNG形式での品質制御を実験的にサポートしています。低い値ではファイルサイズが小さくなりますが、画質が劣化する場合があります。",
+    "pngQualityHelp": "PNG品質: 95以上=標準PNG、70-94=中圧縮、70未満=高圧縮（画質劣化あり）",
     "qualityDescription": "品質: 低い値ほどファイルサイズが小さくなりますが、画質が劣化します"
   },
   "crop": {
-    "title": "画像クロップツール",
+    "title": "Image Cropping Tool",
     "subtitle": "画像を完璧なサイズにクロップ・リサイズ",
     "preview": "プレビュー",
     "processing": "処理中...",
@@ -78,7 +82,7 @@
     "selectedFiles": "選択されたファイル",
     "add": "追加",
     "clearList": "リストをクリア",
-    "dragDropLabel": "ファイルをドラッグ&ドロップまたはクリックして選択",
+    "dragDropLabel": "画像をドラッグ&ドロップ",
     "dropFilesHere": "ファイルをここにドロップ",
     "viewDetails": "の詳細を表示"
   },
