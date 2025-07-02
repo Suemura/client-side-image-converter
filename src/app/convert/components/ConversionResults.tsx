@@ -143,20 +143,21 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     <div className={styles.container}>
       <div className={styles.header}>
         <h3 className={styles.title}>
-          {t("results.title")} ({fileCount}{t("results.files")})
+          {t("results.title")} ({fileCount}{t("results.fileUnit")})
         </h3>
-        <div className={styles.buttonGroup}>
-          <Button
-            variant="primary"
-            onClick={handleDownloadZip}
-            disabled={isDownloading}
-          >
-            {isDownloading ? t("results.creating") : t("results.downloadZip")}
-          </Button>
-          <Button variant="secondary" onClick={onClear}>
-            {t("results.clear")}
-          </Button>
-        </div>
+      </div>
+
+      <div className={styles.buttonGroup}>
+        <Button
+          variant="primary"
+          onClick={handleDownloadZip}
+          disabled={isDownloading}
+        >
+          {isDownloading ? t("results.creating") : t("results.downloadZip")}
+        </Button>
+        <Button variant="secondary" onClick={onClear}>
+          {t("results.clear")}
+        </Button>
       </div>
 
       {/* 統計情報（コンバージョンモードのみ） */}

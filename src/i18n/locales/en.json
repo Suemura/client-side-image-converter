@@ -57,6 +57,8 @@
     "subtitle": "Crop and resize your images to perfect dimensions",
     "preview": "Preview",
     "processing": "Processing...",
+    "processedFiles": "Processed Files",
+    "processingPlaceholder": "Results will appear here after cropping",
     "downloadCroppedImage": "Download Cropped Image",
     "selectNewImage": "Select New Image",
     "imageDetails": "Image Details",
@@ -65,14 +67,17 @@
     "fileType": "File Type",
     "selectCropArea": "Select Crop Area",
     "dragToSelectArea": "Drag to select crop area",
+    "selectImageFirst": "Please select images first",
     "startCropping": "Start Cropping",
+    "reCrop": "Re-Crop",
     "croppingInProgress": "Cropping in progress...",
-    "filesSelected": "Files Selected",
+    "filesSelected": "Selected Files",
     "cropSettings": "Crop Settings",
     "previewAndCrop": "Preview and Crop",
     "backToUpload": "Back",
     "downloadAll": "Download All",
-    "previewImage": "Preview Image"
+    "previewImage": "Preview Image",
+    "batchCropDescription": "Select multiple images to crop them together"
   },
   "fileUpload": {
     "dropFiles": "Drop files here",
@@ -108,6 +113,7 @@
   "results": {
     "title": "Conversion Results",
     "files": "files",
+    "fileUnit": "file(s)",
     "downloadZip": "Download as ZIP",
     "creating": "Creating...",
     "clear": "Clear",

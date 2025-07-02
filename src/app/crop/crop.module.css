@@ -1,39 +1,43 @@
 .cropPageContainer {
   display: grid;
-  grid-template-columns: 300px 1fr 300px;
-  gap: 2rem;
+  grid-template-columns: 1fr 2fr 4fr 2fr 1fr;
+  gap: 1.5rem;
   align-items: start;
   width: 100%;
-  max-width: 1400px;
+  max-width: 1600px;
   min-height: 600px;
+  margin: 0 auto;
 }
 
 .cropColumn {
   background-color: white;
   border-radius: 12px;
   border: 1px solid var(--border-dashed);
-  padding: 1.5rem;
+  padding: 1.25rem;
+  overflow: hidden;
 }
 
 .cropColumnCenter {
   background-color: white;
   border-radius: 12px;
   border: 1px solid var(--border-dashed);
-  padding: 2rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   min-height: 600px;
 }
 
 .cropColumnTitle {
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--foreground);
   margin-bottom: 1rem;
+  word-wrap: break-word;
+  hyphens: auto;
 }
 
 .cropCenterTitle {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--foreground);
   margin-bottom: 1rem;
@@ -88,7 +92,10 @@
   color: var(--muted-foreground);
   font-size: 0.875rem;
   text-align: center;
-  padding: 2rem 0;
+  padding: 2rem 1rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+  hyphens: auto;
 }
 
 .centerButton {
@@ -129,13 +136,21 @@
 /* レスポンシブデザイン */
 @media (max-width: 1200px) {
   .cropPageContainer {
+    grid-template-columns: 0.5fr 2fr 4fr 2fr 0.5fr;
+    gap: 1rem;
+    max-width: 1200px;
+  }
+}
+
+@media (max-width: 900px) {
+  .cropPageContainer {
     grid-template-columns: 1fr;
     gap: 1.5rem;
+    max-width: 600px;
   }
 
   .cropColumn,
   .cropColumnCenter {
-    max-width: 600px;
     margin: 0 auto;
   }
 }

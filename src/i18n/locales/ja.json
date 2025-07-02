@@ -57,6 +57,8 @@
     "subtitle": "画像を完璧なサイズにクロップ・リサイズ",
     "preview": "プレビュー",
     "processing": "処理中...",
+    "processedFiles": "処理済みファイル",
+    "processingPlaceholder": "クロップ処理後にここに結果が表示されます",
     "downloadCroppedImage": "クロップした画像をダウンロード",
     "selectNewImage": "新しい画像を選択",
     "imageDetails": "画像詳細",
@@ -65,14 +67,17 @@
     "fileType": "ファイル形式",
     "selectCropArea": "クロップ領域を選択",
     "dragToSelectArea": "ドラッグしてクロップ領域を選択してください",
+    "selectImageFirst": "まずは画像を選択してください",
     "startCropping": "クロップ開始",
+    "reCrop": "再クロップ",
     "croppingInProgress": "クロップ中...",
-    "filesSelected": "ファイル選択済み",
+    "filesSelected": "選択中のファイル",
     "cropSettings": "クロップ設定",
     "previewAndCrop": "プレビューとクロップ",
     "backToUpload": "戻る",
     "downloadAll": "すべてダウンロード",
-    "previewImage": "画像をプレビュー"
+    "previewImage": "画像をプレビュー",
+    "batchCropDescription": "複数の画像を選択してまとめてクロップできます"
   },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",
@@ -108,6 +113,7 @@
   "results": {
     "title": "変換結果",
     "files": "ファイル",
+    "fileUnit": "ファイル",
     "downloadZip": "Zipでダウンロード",
     "creating": "作成中...",
     "clear": "クリア",
