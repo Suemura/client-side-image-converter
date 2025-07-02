@@ -4,25 +4,26 @@ import type React from "react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { FileList } from "../../components/FileList";
 import { FileUploadArea } from "../../components/FileUploadArea";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { ImageCropper, type CropArea, type CropResult } from "../../utils/imageCropper";
 import { ProgressBar } from "../convert/components/ProgressBar";
-import { CropResults } from "./components/CropResults";
+import { ConversionResults } from "../convert/components/ConversionResults";
 import { CropSelector } from "./components/CropSelector";
+import styles from "./crop.module.css";
 
 export default function CropPage() {
   const { t } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
   const [currentStep, setCurrentStep] = useState<"upload" | "select" | "processing" | "results">("upload");
-  const [cropArea, setCropArea] = useState<CropArea>({ x: 100, y: 100, width: 300, height: 300 });
+  const [cropArea, setCropArea] = useState<CropArea | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressCurrent, setProgressCurrent] = useState(0);
-  const [progressTotal, setProgressTotal] = useState(0);
-  const [cropResults, setCropResults] = useState<CropResult[]>([]);
+  const [progressTotal, setProgressTotal] = useState(0);  const [cropResults, setCropResults] = useState<CropResult[]>([]);
 
   const handleFilesSelected = useCallback((selectedFiles: File[]) => {
     const imageFiles = selectedFiles.filter(file => file.type.startsWith("image/"));
@@ -50,7 +51,7 @@ export default function CropPage() {
   }, []);
 
   const handleStartCropping = useCallback(async () => {
-    if (files.length === 0) return;
+    if (files.length === 0 || !cropArea) return;
 
     setIsProcessing(true);
     setCurrentStep("processing");
@@ -68,7 +69,8 @@ export default function CropPage() {
       );
 
       setCropResults(results);
-      setCurrentStep("results");
+      // 結果表示時も3カラム構成を維持するため、selectステップのままにする
+      setCurrentStep("select");
     } catch (error) {
       console.error("Crop error:", error);
     } finally {
@@ -82,9 +84,10 @@ export default function CropPage() {
 
   const handleClearResults = useCallback(() => {
     setCropResults([]);
-    setCurrentStep("upload");
-    handleClearFiles();
-  }, [handleClearFiles]);
+    // 3カラム構成を維持するため、uploadステップには戻らない
+    // setCurrentStep("upload");
+    // handleClearFiles();
+  }, []);
 
   return (
     <LayoutContainer>
@@ -142,118 +145,96 @@ export default function CropPage() {
           )}
 
           {currentStep === "select" && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "2rem",
-                alignItems: "center",
-              }}
-            >
-              <div
-                style={{
-                  backgroundColor: "white",
-                  borderRadius: "12px",
-                  border: "1px solid var(--border-dashed)",
-                  padding: "2rem",
-                  width: "100%",
-                  maxWidth: "800px",
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: "1.25rem",
-                    fontWeight: "600",
-                    color: "var(--foreground)",
-                    marginBottom: "1rem",
-                    textAlign: "center",
-                  }}
-                >
+            <div className={styles.cropPageContainer}>
+              {/* 左カラム: 変換前ファイルリスト */}
+              <div className={styles.cropColumn}>
+                <FileList
+                  files={files}
+                  onClearFiles={handleClearFiles}
+                />
+                <div style={{ marginTop: "1rem" }}>
+                  <Button variant="secondary" onClick={handleBackToUpload}>
+                    {t("crop.backToUpload")}
+                  </Button>
+                </div>
+              </div>
+
+              {/* 中央カラム: クロップ操作 */}
+              <div className={styles.cropColumnCenter}>
+                <h3 className={styles.cropCenterTitle}>
                   {t("crop.selectCropArea")}
                 </h3>
-                <p
-                  style={{
-                    color: "var(--muted-foreground)",
-                    fontSize: "0.875rem",
-                    textAlign: "center",
-                    marginBottom: "2rem",
-                  }}
-                >
+                <p className={styles.centerDescription}>
                   {t("crop.dragToSelectArea")}
                 </p>
 
                 <CropSelector
                   imageUrl={previewUrl}
                   onCropAreaChange={handleCropAreaChange}
-                  initialCropArea={cropArea}
+                  initialCropArea={cropArea || undefined}
                 />
+
+                <div className={styles.centerButton}>
+                  {!isProcessing && cropResults.length === 0 && (
+                    <Button
+                      variant="primary"
+                      onClick={handleStartCropping}
+                      disabled={files.length === 0 || !cropArea}
+                    >
+                      {t("crop.startCropping")}
+                    </Button>
+                  )}
+                  {!isProcessing && cropResults.length > 0 && (
+                    <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
+                      <Button
+                        variant="primary"
+                        onClick={handleStartCropping}
+                        disabled={files.length === 0 || !cropArea}
+                      >
+                        再クロップ
+                      </Button>
+                      <Button variant="secondary" onClick={handleBackToUpload}>
+                        新しい画像を選択
+                      </Button>
+                    </div>
+                  )}
+                  {isProcessing && (
+                    <div className={styles.processingText}>
+                      処理中...
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div
-                style={{
-                  backgroundColor: "white",
-                  borderRadius: "12px",
-                  border: "1px solid var(--border-dashed)",
-                  padding: "1.5rem",
-                  width: "100%",
-                  maxWidth: "600px",
-                }}
-              >
-                <h4
-                  style={{
-                    fontSize: "1.125rem",
-                    fontWeight: "600",
-                    color: "var(--foreground)",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  {t("crop.filesSelected")}
-                </h4>
-                <div
-                  style={{
-                    color: "var(--muted-foreground)",
-                    fontSize: "0.875rem",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  {files.length}個のファイルが選択されています
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "1rem",
-                    justifyContent: "center",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <Button
-                    variant="primary"
-                    onClick={handleStartCropping}
-                    disabled={files.length === 0}
-                  >
-                    {t("crop.startCropping")}
-                  </Button>
-                  <Button variant="secondary" onClick={handleBackToUpload}>
-                    {t("crop.backToUpload")}
-                  </Button>
-                </div>
+              {/* 右カラム: 処理済みファイルリスト */}
+              <div className={styles.cropColumn}>
+                {isProcessing && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <ProgressBar
+                      current={progressCurrent}
+                      total={progressTotal}
+                      isVisible={true}
+                    />
+                  </div>
+                )}
+                {cropResults.length > 0 ? (
+                  <ConversionResults
+                    cropResults={cropResults}
+                    onClear={handleClearResults}
+                    showComparison={false}
+                  />
+                ) : (
+                  <>
+                    <h4 className={styles.cropColumnTitle}>
+                      処理済みファイル
+                    </h4>
+                    <div className={styles.placeholder}>
+                      クロップ処理後にここに結果が表示されます
+                    </div>
+                  </>
+                )}
               </div>
             </div>
-          )}
-
-          {currentStep === "processing" && (
-            <ProgressBar
-              current={progressCurrent}
-              total={progressTotal}
-              isVisible={true}
-            />
-          )}
-
-          {currentStep === "results" && (
-            <CropResults
-              results={cropResults}
-              onClear={handleClearResults}
-            />
           )}
         </div>
       </MainContent>

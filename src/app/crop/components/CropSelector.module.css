@@ -19,7 +19,6 @@
   max-width: 100%;
   max-height: 500px;
   height: auto;
-  cursor: crosshair;
   user-select: none;
 }
 
@@ -27,8 +26,9 @@
   position: absolute;
   border: 2px solid #007acc;
   background-color: rgba(0, 122, 204, 0.1);
-  pointer-events: none;
+  pointer-events: auto;
   z-index: 1;
+  cursor: move;
 }
 
 .cropOverlay::before {
@@ -39,6 +39,73 @@
   right: -1px;
   bottom: -1px;
   border: 1px dashed rgba(0, 122, 204, 0.8);
+  pointer-events: none;
+}
+
+/* リサイズハンドル */
+.resizeHandle {
+  position: absolute;
+  background-color: #007acc;
+  border: 2px solid white;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
+/* 四隅のハンドル */
+.resizeHandle.nw {
+  top: -6px;
+  left: -6px;
+  cursor: nw-resize;
+}
+
+.resizeHandle.ne {
+  top: -6px;
+  right: -6px;
+  cursor: ne-resize;
+}
+
+.resizeHandle.se {
+  bottom: -6px;
+  right: -6px;
+  cursor: se-resize;
+}
+
+.resizeHandle.sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: sw-resize;
+}
+
+/* 辺のハンドル */
+.resizeHandle.n {
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: n-resize;
+}
+
+.resizeHandle.e {
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: e-resize;
+}
+
+.resizeHandle.s {
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: s-resize;
+}
+
+.resizeHandle.w {
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: w-resize;
 }
 
 .instructions {
@@ -51,6 +118,6 @@
   padding: 0.5rem 1rem;
   border-radius: 4px;
   font-size: 0.875rem;
-  z-index: 2;
+  z-index: 3;
   pointer-events: none;
 }

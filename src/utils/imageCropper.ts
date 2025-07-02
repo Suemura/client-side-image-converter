@@ -47,25 +47,65 @@ export class ImageCropper {
           width: Math.min(cropArea.width, img.width - Math.max(0, cropArea.x)),
           height: Math.min(cropArea.height, img.height - Math.max(0, cropArea.y))
         };
-        cropArea = adjustedCropArea;
+
+        // 調整後も有効な領域であることを確認
+        if (adjustedCropArea.width <= 0 || adjustedCropArea.height <= 0) {
+          // 全体画像を使用
+          adjustedCropArea.x = 0;
+          adjustedCropArea.y = 0;
+          adjustedCropArea.width = img.width;
+          adjustedCropArea.height = img.height;
+        }        cropArea = adjustedCropArea;
       }
 
-      // クロップ領域のサイズでcanvasを設定
+      // 最終的な検証
+      // NaNや無限大の値をチェック
+      if (!Number.isFinite(cropArea.x) || !Number.isFinite(cropArea.y) ||
+          !Number.isFinite(cropArea.width) || !Number.isFinite(cropArea.height)) {
+        throw new Error(`Non-finite values in crop area: x=${cropArea.x}, y=${cropArea.y}, width=${cropArea.width}, height=${cropArea.height}`);
+      }
+
+      if (cropArea.width <= 0 || cropArea.height <= 0 ||
+          cropArea.x < 0 || cropArea.y < 0 ||
+          cropArea.x >= img.width || cropArea.y >= img.height) {
+        throw new Error(`Invalid final crop area: x=${cropArea.x}, y=${cropArea.y}, width=${cropArea.width}, height=${cropArea.height}, imageSize=${img.width}x${img.height}`);
+      }
+
+      // クロップ領域が画像を超えていないかチェック
+      if (cropArea.x + cropArea.width > img.width || cropArea.y + cropArea.height > img.height) {
+        console.warn('Crop area extends beyond image, adjusting...');
+        cropArea = {
+          x: cropArea.x,
+          y: cropArea.y,
+          width: Math.min(cropArea.width, img.width - cropArea.x),
+          height: Math.min(cropArea.height, img.height - cropArea.y)
+        };
+        console.log('Adjusted crop area:', cropArea);
+      }      // クロップ領域のサイズでcanvasを設定
       canvas.width = cropArea.width;
       canvas.height = cropArea.height;
 
       // 画像をクロップしてcanvasに描画
-      ctx.drawImage(
-        img,
-        cropArea.x,
-        cropArea.y,
-        cropArea.width,
-        cropArea.height,
-        0,
-        0,
-        cropArea.width,
-        cropArea.height
-      );
+      // 描画前にcanvasをクリア
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      try {
+        ctx.drawImage(
+          img,
+          cropArea.x,
+          cropArea.y,
+          cropArea.width,
+          cropArea.height,
+          0,
+          0,
+          cropArea.width,
+          cropArea.height
+        );
+
+      } catch (drawError) {
+        console.error('Error drawing image:', drawError);
+        throw new Error(`Failed to draw image: ${drawError}`);
+      }
 
       // canvasからBlobを生成
       const croppedBlob = await new Promise<Blob>((resolve, reject) => {
