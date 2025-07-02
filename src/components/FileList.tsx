@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
+import { formatFileSize, truncateFileName } from "../utils/fileName";
 
 interface FileListProps {
   files: File[];
@@ -20,14 +21,6 @@ export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
   const [isGeneratingThumbnails, setIsGeneratingThumbnails] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
-  };
 
   const generateThumbnail = useCallback(
     (file: File): Promise<string | null> => {
@@ -202,11 +195,11 @@ export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
               </div>
               <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
                 <p
-                  className="text-sm font-medium truncate"
+                  className="text-sm font-medium"
                   style={{ color: "var(--foreground)" }}
                   title={thumbnail.file.name}
                 >
-                  {thumbnail.file.name}
+                  {truncateFileName(thumbnail.file.name, 20)}
                 </p>
                 <p
                   className="text-sm"

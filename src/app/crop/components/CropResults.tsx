@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
 import { FileDetailModal } from "../../../components/FileDetailModal";
 import type { CropResult } from "../../../utils/imageCropper";
+import { truncateFileName } from "../../../utils/fileName";
 import styles from "./CropResults.module.css";
 
 interface CropResultsProps {
@@ -162,19 +163,20 @@ export const CropResults: React.FC<CropResultsProps> = ({
               </div>
             </div>
             <div className={styles.fileInfo}>
-              <div className={styles.fileName}>{result.fileName}</div>
+              <div className={styles.fileName} title={result.fileName}>
+                {result.fileName.length > 15 ? truncateFileName(result.fileName, 15) : result.fileName}
+              </div>
               <div className={styles.fileSize}>
                 {(result.croppedBlob.size / 1024).toFixed(1)} KB
               </div>
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <Button
-                variant="secondary"
-                onClick={() => downloadSingle(result)}
-              >
-                {t("results.download")}
-              </Button>
-            </div>
+            <Button
+              variant="secondary"
+              onClick={() => downloadSingle(result)}
+              aria-label={t("results.download")}
+            >
+              ↓
+            </Button>
           </div>
         ))}
 
@@ -182,7 +184,9 @@ export const CropResults: React.FC<CropResultsProps> = ({
           <div key={`error-${index}`} className={styles.errorItem}>
             <div className={styles.errorIcon}>⚠️</div>
             <div className={styles.fileInfo}>
-              <div className={styles.fileName}>{result.originalFile.name}</div>
+              <div className={styles.fileName} title={result.originalFile.name}>
+                {truncateFileName(result.originalFile.name, 15)}
+              </div>
               <div className={styles.errorMessage}>
                 {result.error || "処理に失敗しました"}
               </div>

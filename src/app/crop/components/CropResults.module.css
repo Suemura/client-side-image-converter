@@ -46,6 +46,7 @@
   border-radius: 8px;
   background-color: #f8f9fa;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 @media (min-width: 769px) {
@@ -79,12 +80,17 @@
 .fileInfo {
   flex-grow: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .fileName {
   font-weight: 600;
   color: var(--foreground);
   margin-bottom: 0.25rem;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 100%;
+  cursor: help;
   word-break: break-all;
 }
 

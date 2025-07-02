@@ -7,6 +7,7 @@ import { ImageComparisonModal } from "../../../components/ImageComparisonModal";
 import type { ConversionResult } from "../../../utils/imageConverter";
 import type { CropResult } from "../../../utils/imageCropper";
 import { ImageConverter } from "../../../utils/imageConverter";
+import { truncateFileName } from "../../../utils/fileName";
 import styles from "./ConversionResults.module.css";
 
 interface ConversionResultsProps {
@@ -29,6 +30,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   const [selectedResult, setSelectedResult] = useState<ConversionResult | null>(null);
   const [selectedCropResult, setSelectedCropResult] = useState<CropResult | null>(null);
   const [originalImageUrls, setOriginalImageUrls] = useState<Record<string, string>>({});
+  const [cropPreviewUrls, setCropPreviewUrls] = useState<Record<string, string>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // シンプルな条件チェック
@@ -62,6 +64,27 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
       }
     };
   }, [originalFiles, isConversionMode, isCropMode]);
+
+  // クロップ結果のプレビューURL生成（クロップモードのみ）
+  useEffect(() => {
+    if (!isCropMode || !cropResults) {
+      setCropPreviewUrls({});
+      return;
+    }
+
+    const urls: Record<string, string> = {};
+    cropResults.forEach((result, index) => {
+      if (result.success && result.croppedBlob) {
+        urls[`${result.fileName}-${index}`] = URL.createObjectURL(result.croppedBlob);
+      }
+    });
+    setCropPreviewUrls(urls);
+
+    // クリーンアップ
+    return () => {
+      Object.values(urls).forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [cropResults, isCropMode]);
 
   const handleDownloadSingle = useCallback((result: ConversionResult) => {
     ImageConverter.downloadFile(result);
@@ -210,7 +233,13 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                     style={{ cursor: "pointer" }}
                     aria-label={`${result.fileName}の詳細を表示`}
                   >
-                    {result.success ? (
+                    {result.success && cropPreviewUrls[`${result.fileName}-${index}`] ? (
+                      <img
+                        src={cropPreviewUrls[`${result.fileName}-${index}`]}
+                        alt={result.fileName}
+                        className={styles.previewImageImg}
+                      />
+                    ) : result.success ? (
                       <div className={styles.previewImagePlaceholder}>
                         📷
                       </div>
@@ -223,7 +252,9 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
 
                   {/* ファイル情報 */}
                   <div>
-                    <p className={styles.fileName}>{result.fileName}</p>
+                    <p className={styles.fileName} title={result.fileName}>
+                      {truncateFileName(result.fileName, 15)}
+                    </p>
                     <div className={styles.fileSizeInfo}>
                       {result.success ? (
                         <span className={styles.fileSizeText}>
@@ -245,8 +276,9 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                   variant="secondary"
                   size="small"
                   onClick={() => handleCropDownload(result)}
+                  aria-label={t("results.download")}
                 >
-                  {t("results.download")}
+                  ↓
                 </Button>
               )}
             </div>
@@ -309,8 +341,9 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                   variant="secondary"
                   size="small"
                   onClick={() => handleDownloadSingle(result)}
+                  aria-label={t("results.download")}
                 >
-                  {t("results.download")}
+                  ↓
                 </Button>
               </div>
             );
