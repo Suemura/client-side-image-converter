@@ -132,7 +132,7 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     const imageHeight = imageRef.current.offsetHeight;
 
     // より厳密な制約処理
-    let constrainedArea = {
+    const constrainedArea = {
       x: Math.max(0, newCropArea.x),
       y: Math.max(0, newCropArea.y),
       width: Math.max(10, newCropArea.width),
@@ -179,64 +179,6 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     setDragStart(position);
   }, [getRelativePosition]);
 
-  const handleMouseMove = useCallback(
-    (event: React.MouseEvent) => {
-      if (!isDragging || !activeHandle) return;
-
-      const position = getRelativePosition(event);
-      const deltaX = position.x - dragStart.x;
-      const deltaY = position.y - dragStart.y;
-
-      let newCropArea = { ...cropArea };
-
-      switch (activeHandle) {
-        case 'move':
-          newCropArea.x = cropArea.x + deltaX;
-          newCropArea.y = cropArea.y + deltaY;
-          break;
-        case 'nw':
-          newCropArea.x = cropArea.x + deltaX;
-          newCropArea.y = cropArea.y + deltaY;
-          newCropArea.width = cropArea.width - deltaX;
-          newCropArea.height = cropArea.height - deltaY;
-          break;
-        case 'n':
-          newCropArea.y = cropArea.y + deltaY;
-          newCropArea.height = cropArea.height - deltaY;
-          break;
-        case 'ne':
-          newCropArea.y = cropArea.y + deltaY;
-          newCropArea.width = cropArea.width + deltaX;
-          newCropArea.height = cropArea.height - deltaY;
-          break;
-        case 'e':
-          newCropArea.width = cropArea.width + deltaX;
-          break;
-        case 'se':
-          newCropArea.width = cropArea.width + deltaX;
-          newCropArea.height = cropArea.height + deltaY;
-          break;
-        case 's':
-          newCropArea.height = cropArea.height + deltaY;
-          break;
-        case 'sw':
-          newCropArea.x = cropArea.x + deltaX;
-          newCropArea.width = cropArea.width - deltaX;
-          newCropArea.height = cropArea.height + deltaY;
-          break;
-        case 'w':
-          newCropArea.x = cropArea.x + deltaX;
-          newCropArea.width = cropArea.width - deltaX;
-          break;
-      }
-
-      newCropArea = constrainCropArea(newCropArea);
-      setCropArea(newCropArea);
-      setDragStart(position);
-    },
-    [isDragging, activeHandle, dragStart, cropArea, getRelativePosition, constrainCropArea]
-  );
-
   const handleMouseUpLogic = useCallback(() => {
     // 最小サイズをチェック
     if (cropArea.width < 10 || cropArea.height < 10) {
@@ -279,14 +221,6 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
 
     onCropAreaChange(actualCropArea);
   }, [cropArea, getScaleFactor, onCropAreaChange, imageNaturalSize]);
-
-  const handleMouseUp = useCallback(() => {
-    if (isDragging) {
-      setIsDragging(false);
-      setActiveHandle(null);
-      handleMouseUpLogic();
-    }
-  }, [isDragging, handleMouseUpLogic]);
 
   useEffect(() => {    const handleGlobalMouseUp = () => {
       if (isDragging) {
