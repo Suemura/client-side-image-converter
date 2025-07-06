@@ -1,11 +1,11 @@
 {
-  "name": "web-image-converter",
+  "name": "client-side-image-converter",
   "author": "Masato Suemura",
   "version": "0.1.0",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/suemura/web-image-converter"
+    "url": "https://github.com/suemura/client-side-image-converter"
   },
   "homepage": "https://image-converter.suemura.app/",
   "keywords": [

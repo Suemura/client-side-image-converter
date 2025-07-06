@@ -1,4 +1,4 @@
-# 🔒 Privacy-First Web Image Converter
+# 🔒 Client-Side Image Converter
 
 Next.js App Router を使用した完全にプライバシー重視の画像変換 Web アプリケーションです。
 すべての画像処理はブラウザ内で実行されるため、画像がサーバーに送信されることは一切ありません。
@@ -109,7 +109,7 @@ npx biome format src/ --write
 
 ## 📞 サポート
 
-質問やサポートが必要な場合は、[GitHub Issues](https://github.com/suemura/web-image-converter/issues) にお気軽にお問い合わせください。
+質問やサポートが必要な場合は、[GitHub Issues](https://github.com/suemura/client-side-image-converter/issues) にお気軽にお問い合わせください。
 
 ## 📋 利用可能なスクリプト
 
