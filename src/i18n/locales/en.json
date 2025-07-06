@@ -1,10 +1,10 @@
 {
   "app": {
-    "title": "Image Converter",
+    "title": "Client-Side Image Converter",
     "description": "Convert images to various formats"
   },
   "header": {
-    "title": "Image Converter",
+    "title": "Client-Side Image Converter",
     "github": "GitHub"
   },
   "navigation": {
@@ -13,23 +13,23 @@
     "convert": "Convert"
   },
   "home": {
-    "title": "Welcome to Image Converter",
-    "subtitle": "Transform your images with ease. Convert between formats, resize, and optimize your images with our powerful online tool.",
+    "title": "Client-Side Image Converter",
+    "subtitle": "Convert and crop images in batches on the client-side.\nA privacy-focused image conversion tool that never sends images to servers.",
     "startConverting": "Start Converting",
     "tryCropTool": "Try Crop Tool",
     "viewOnGithub": "View on GitHub",
     "features": {
       "formatConversion": {
         "title": "Format Conversion",
-        "description": "Convert between JPEG, PNG, WebP and other popular image formats with high quality preservation."
+        "description": "Convert between image formats\nsuch as JPEG, PNG, WebP\nwhile adjusting quality and size."
       },
       "imageCropping": {
         "title": "Image Cropping",
-        "description": "Crop and resize your images to perfect dimensions with our intuitive cropping tool."
+        "description": "Crop images to perfect sizes\nwith intuitive operations."
       },
       "batchProcessing": {
         "title": "Batch Processing",
-        "description": "Process multiple images at once and download them as a convenient ZIP file."
+        "description": "Process multiple images at once\nand download them together."
       }
     }
   },
@@ -54,7 +54,7 @@
   },
   "crop": {
     "title": "Image Cropping Tool",
-    "subtitle": "Crop and resize your images to perfect dimensions",
+    "subtitle": "Crop and resize images to perfect dimensions",
     "preview": "Preview",
     "processing": "Processing...",
     "processedFiles": "Processed Files",

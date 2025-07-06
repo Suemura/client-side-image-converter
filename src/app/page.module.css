@@ -1,0 +1,114 @@
+/* ホームページのメインコンテナ */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+/* メインタイトル */
+.title {
+  font-size: 3rem;
+  font-weight: bold;
+  color: var(--foreground);
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+}
+
+/* サブタイトル */
+.subtitle {
+  font-size: 1.25rem;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* ボタンコンテナ */
+.buttonContainer {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+/* GitHubリンクコンテナ */
+.githubContainer {
+  margin-top: 1rem;
+}
+
+/* GitHubリンク */
+.githubLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background-color: transparent;
+  transition: all 0.2s ease;
+}
+
+.githubLink:hover {
+  color: var(--foreground);
+  border-color: var(--foreground);
+}
+
+/* GitHubアイコン */
+.githubIcon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* 特徴セクショングリッド */
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 4rem;
+  width: 100%;
+  max-width: 1000px;
+}
+
+/* 特徴カード */
+.featureCard {
+  padding: 2rem;
+  background-color: white;
+  border-radius: 12px;
+  border: 1px solid var(--border-dashed);
+  text-align: center;
+}
+
+/* 特徴カードアイコン */
+.featureIcon {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 0.5rem auto;
+  display: block;
+  stroke: var(--foreground);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 特徴カードタイトル */
+.featureTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 1rem;
+}
+
+/* 特徴カード説明 */
+.featureDescription {
+  color: var(--muted-foreground);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}

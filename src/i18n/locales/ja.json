@@ -1,10 +1,10 @@
 {
   "app": {
-    "title": "Image Converter",
+    "title": "Client-Side Image Converter",
     "description": "画像を様々なフォーマットに変換"
   },
   "header": {
-    "title": "Image Converter",
+    "title": "Client-Side Image Converter",
     "github": "GitHub"
   },
   "navigation": {
@@ -13,23 +13,23 @@
     "convert": "変換"
   },
   "home": {
-    "title": "Welcome to Image Converter",
-    "subtitle": "画像を簡単に変換しましょう。フォーマット変換、リサイズ、最適化を強力なオンラインツールで行えます。",
+    "title": "Client-Side Image Converter",
+    "subtitle": "クライアントサイドで画像を一括で変換・クロップできます。\nサーバに画像を送信しないプライバシー重視の画像変換ツールです。",
     "startConverting": "変換を開始",
     "tryCropTool": "クロップツールを試す",
     "viewOnGithub": "GitHubで見る",
     "features": {
       "formatConversion": {
         "title": "フォーマット変換",
-        "description": "JPEG、PNG、WebPなどの人気画像フォーマット間で高品質を保ちながら変換できます。"
+        "description": "JPEG、PNG、WebPなどの\n画像フォーマット間で\n品質･サイズを調整しながら\n変換できます。"
       },
       "imageCropping": {
         "title": "画像クロップ",
-        "description": "直感的なクロップツールで画像を完璧なサイズにクロップ・リサイズできます。"
+        "description": "直感的な操作で画像を\n完璧なサイズにクロップできます。"
       },
       "batchProcessing": {
         "title": "バッチ処理",
-        "description": "複数の画像を一度に処理し、便利なZIPファイルとしてダウンロードできます。"
+        "description": "複数の画像を一度に処理し、\nダウンロードできます。"
       }
     }
   },
