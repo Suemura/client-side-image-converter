@@ -82,6 +82,35 @@ npx biome format src/ --write
    npm run preview
    ```
 
+## 📄 ライセンス
+
+このプロジェクトは [MIT License](LICENSE) の下で公開されています。
+
+### 依存関係のライセンス
+
+このプロジェクトは以下のライセンスを持つオープンソースライブラリを使用しています：
+
+- **MIT License**: Next.js, React, TypeScript等の主要ライブラリ
+- **Apache-2.0 License**: 一部のユーティリティライブラリ
+- **LGPL-3.0 License**: Sharp画像処理ライブラリ（ライブラリとして利用）
+- **MPL-2.0 License**: Axe Core（アクセシビリティ検証）
+
+すべての依存関係は商用利用可能なライセンスです。詳細は各ライブラリのライセンスファイルをご確認ください。
+
+## 🤝 Contributing
+
+プルリクエストやイシューの報告を歓迎します！
+
+1. このリポジトリをフォーク
+2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
+4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
+5. プルリクエストを作成
+
+## 📞 サポート
+
+質問やサポートが必要な場合は、[GitHub Issues](https://github.com/suemura/web-image-converter/issues) にお気軽にお問い合わせください。
+
 ## 📋 利用可能なスクリプト
 
 ```bash

@@ -2,7 +2,23 @@
   "name": "web-image-converter",
   "author": "Masato Suemura",
   "version": "0.1.0",
-  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/suemura/web-image-converter"
+  },
+  "homepage": "https://image-converter.suemura.app/",
+  "keywords": [
+    "image-converter",
+    "privacy-first",
+    "browser-based",
+    "nextjs",
+    "typescript",
+    "webp",
+    "jpeg",
+    "png"
+  ],
+  "private": false,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
