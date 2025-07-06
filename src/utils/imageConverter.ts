@@ -1,7 +1,5 @@
 // ファイルパス: /Users/suemura/Documents/GitHub/web-image-converter/src/utils/imageConverter.ts
 
-import JSZip from "jszip";
-
 export interface ConversionOptions {
   format: "jpeg" | "png" | "webp";
   quality: number; // 0-100
@@ -189,65 +187,6 @@ export class ImageConverter {
         ImageConverter.downloadFile(result);
       }, index * 100);
     });
-  }
-
-  static async downloadAsZip(results: ConversionResult[]): Promise<void> {
-    if (results.length === 0) return;
-
-    try {
-      const zip = new JSZip();
-
-      // ファイル名の重複を避けるためのカウンター
-      const fileNameCounts = new Map<string, number>();
-
-      for (const result of results) {
-        let filename = result.filename;
-
-        // 重複ファイル名の処理
-        if (fileNameCounts.has(filename)) {
-          const count = (fileNameCounts.get(filename) || 0) + 1;
-          fileNameCounts.set(filename, count);
-
-          const nameWithoutExt =
-            filename.substring(0, filename.lastIndexOf(".")) || filename;
-          const extension = filename.substring(filename.lastIndexOf(".")) || "";
-          filename = `${nameWithoutExt}_${count}${extension}`;
-        } else {
-          fileNameCounts.set(filename, 1);
-        }
-
-        // Blobをzipに追加
-        zip.file(filename, result.blob);
-      }
-
-      // Zipファイルを生成
-      const zipBlob = await zip.generateAsync({
-        type: "blob",
-        compression: "DEFLATE",
-        compressionOptions: { level: 6 },
-      });
-
-      // 現在の日時を使用してZipファイル名を生成
-      const now = new Date();
-      const timestamp = now.toISOString().slice(0, 19).replace(/:/g, "-");
-      const zipFilename = `converted_images_${timestamp}.zip`;
-
-      // Zipファイルをダウンロード
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(zipBlob);
-      link.download = zipFilename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // URLを解放
-      setTimeout(() => {
-        URL.revokeObjectURL(link.href);
-      }, 1000);
-    } catch (error) {
-      console.error("Zipファイルの作成に失敗しました:", error);
-      throw new Error("Zipファイルの作成に失敗しました");
-    }
   }
 
   static formatFileSize(bytes: number): string {

@@ -339,7 +339,7 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
           </button>
         </div>
       )}
-      
+
       <div className={styles.imageContainer}>
         <img
           ref={imageRef}

@@ -7,6 +7,7 @@ import { ImageComparisonModal } from "../../../components/ImageComparisonModal";
 import type { ConversionResult } from "../../../utils/imageConverter";
 import type { CropResult } from "../../../utils/imageCropper";
 import { ImageConverter } from "../../../utils/imageConverter";
+import { FileDownloader } from "../../../utils/fileDownloader";
 import { truncateFileName } from "../../../utils/fileName";
 import styles from "./ConversionResults.module.css";
 
@@ -87,20 +88,12 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   }, [cropResults, isCropMode]);
 
   const handleDownloadSingle = useCallback((result: ConversionResult) => {
-    ImageConverter.downloadFile(result);
+    FileDownloader.downloadSingle(result);
   }, []);
 
   const handleCropDownload = useCallback((result: CropResult) => {
-    if (!result.success || !result.croppedBlob) return;
-
-    const url = URL.createObjectURL(result.croppedBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = result.fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    if (!result.success) return;
+    FileDownloader.downloadSingle(result);
   }, []);
 
   const handleDownloadZip = useCallback(async () => {
@@ -109,15 +102,10 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     setIsDownloading(true);
     try {
       if (isCropMode && cropResults) {
-        // クロップ結果の一括ダウンロード（個別ダウンロードの連続実行）
-        for (const result of cropResults) {
-          if (result.success) {
-            handleCropDownload(result);
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-        }
+        // クロップ結果の一括ダウンロード（ZIPファイル作成）
+        await FileDownloader.downloadMultiple(cropResults);
       } else if (results) {
-        await ImageConverter.downloadAsZip(results);
+        await FileDownloader.downloadMultiple(results);
       }
     } catch (error) {
       console.error("ダウンロードエラー:", error);
@@ -125,7 +113,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     } finally {
       setIsDownloading(false);
     }
-  }, [results, cropResults, isCropMode, isDownloading, handleCropDownload]);
+  }, [results, cropResults, isCropMode, isDownloading]);
 
   const handleImageClick = useCallback((result: ConversionResult) => {
     setSelectedResult(result);

@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
 import { FileDetailModal } from "../../../components/FileDetailModal";
-import type { CropResult } from "../../../utils/imageCropper";
+import { ImageCropper, type CropResult } from "../../../utils/imageCropper";
+import { FileDownloader } from "../../../utils/fileDownloader";
 import { truncateFileName } from "../../../utils/fileName";
 import styles from "./CropResults.module.css";
 
@@ -41,15 +42,7 @@ export const CropResults: React.FC<CropResultsProps> = ({
 
   const downloadSingle = useCallback((result: CropResult) => {
     if (!result.success) return;
-
-    const url = URL.createObjectURL(result.croppedBlob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = result.fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    FileDownloader.downloadSingle(result);
   }, []);
 
   // BlobからFileオブジェクトを作成
@@ -76,19 +69,13 @@ export const CropResults: React.FC<CropResultsProps> = ({
 
     setIsDownloading(true);
     try {
-      // JSZipを使ってZIPファイルを作成（実装を簡略化）
-      // 現在は個別ダウンロードのみ実装
-      for (const result of results) {
-        if (result.success) {
-          downloadSingle(result);
-          // 少し間隔を空けて連続ダウンロード
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
+      await FileDownloader.downloadMultiple(results);
+    } catch (error) {
+      console.error("Download error:", error);
     } finally {
       setIsDownloading(false);
     }
-  }, [results, downloadSingle]);
+  }, [results]);
 
   const successResults = results.filter(r => r.success);
   const errorResults = results.filter(r => !r.success);
@@ -121,16 +108,12 @@ export const CropResults: React.FC<CropResultsProps> = ({
             <div
               className={styles.imagePreview}
               onClick={() => handleThumbnailClick(result)}
-              style={{
-                cursor: "pointer",
-                position: "relative"
-              }}
               onMouseEnter={(e) => {
-                const overlay = e.currentTarget.querySelector('.hover-overlay') as HTMLElement;
+                const overlay = e.currentTarget.querySelector(`.${styles.hoverOverlay}`) as HTMLElement;
                 if (overlay) overlay.style.opacity = '1';
               }}
               onMouseLeave={(e) => {
-                const overlay = e.currentTarget.querySelector('.hover-overlay') as HTMLElement;
+                const overlay = e.currentTarget.querySelector(`.${styles.hoverOverlay}`) as HTMLElement;
                 if (overlay) overlay.style.opacity = '0';
               }}
             >
@@ -139,26 +122,7 @@ export const CropResults: React.FC<CropResultsProps> = ({
                 alt={result.fileName}
                 className={styles.thumbnail}
               />
-              <div
-                className="hover-overlay"
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: "rgba(0, 0, 0, 0.5)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  fontSize: "0.75rem",
-                  opacity: 0,
-                  transition: "opacity 0.2s",
-                  borderRadius: "4px",
-                  pointerEvents: "none"
-                }}
-              >
+              <div className={styles.hoverOverlay}>
                 {t("results.preview")}
               </div>
             </div>

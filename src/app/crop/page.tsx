@@ -68,10 +68,10 @@ export default function CropPage() {
 
   const handlePreviousImage = useCallback(() => {
     if (files.length === 0) return;
-    
+
     const newIndex = currentPreviewIndex > 0 ? currentPreviewIndex - 1 : files.length - 1;
     setCurrentPreviewIndex(newIndex);
-    
+
     // プレビューURLを更新
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -82,10 +82,10 @@ export default function CropPage() {
 
   const handleNextImage = useCallback(() => {
     if (files.length === 0) return;
-    
+
     const newIndex = currentPreviewIndex < files.length - 1 ? currentPreviewIndex + 1 : 0;
     setCurrentPreviewIndex(newIndex);
-    
+
     // プレビューURLを更新
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
