@@ -1,5 +1,6 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { CropArea } from "../../../utils/imageCropper";
 import styles from "./CropSelector.module.css";
 
@@ -7,6 +8,10 @@ interface CropSelectorProps {
   imageUrl: string;
   onCropAreaChange: (cropArea: CropArea) => void;
   initialCropArea?: CropArea;
+  currentIndex?: number;
+  totalImages?: number;
+  onPreviousImage?: () => void;
+  onNextImage?: () => void;
 }
 
 type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'move';
@@ -15,7 +20,12 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
   imageUrl,
   onCropAreaChange,
   initialCropArea,
+  currentIndex = 0,
+  totalImages = 1,
+  onPreviousImage,
+  onNextImage,
 }) => {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -299,8 +309,37 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     };
   }, [isDragging, activeHandle, dragStart, cropArea, constrainCropArea, handleMouseUpLogic]);
 
+  const showNavigation = totalImages > 1;
+
   return (
     <div ref={containerRef} className={styles.container}>
+      {/* 画像切り替えナビゲーション */}
+      {showNavigation && (
+        <div className={styles.navigationHeader}>
+          <button
+            type="button"
+            className={styles.navButton}
+            onClick={onPreviousImage}
+            disabled={!onPreviousImage}
+            aria-label={t('crop.previousImage')}
+          >
+            ←
+          </button>
+          <span className={styles.imageCounter}>
+            {currentIndex + 1} / {totalImages}
+          </span>
+          <button
+            type="button"
+            className={styles.navButton}
+            onClick={onNextImage}
+            disabled={!onNextImage}
+            aria-label={t('crop.nextImage')}
+          >
+            →
+          </button>
+        </div>
+      )}
+      
       <div className={styles.imageContainer}>
         <img
           ref={imageRef}

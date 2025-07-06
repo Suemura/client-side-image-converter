@@ -77,7 +77,9 @@
     "backToUpload": "戻る",
     "downloadAll": "すべてダウンロード",
     "previewImage": "画像をプレビュー",
-    "batchCropDescription": "複数の画像を選択してまとめてクロップできます"
+    "batchCropDescription": "複数の画像を選択してまとめてクロップできます",
+    "previousImage": "前の画像",
+    "nextImage": "次の画像"
   },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",

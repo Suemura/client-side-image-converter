@@ -18,6 +18,7 @@ import styles from "./crop.module.css";
 export default function CropPage() {
   const { t } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [cropArea, setCropArea] = useState<CropArea | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -38,6 +39,7 @@ export default function CropPage() {
   const handleFilesSelected = useCallback((selectedFiles: File[]) => {
     const imageFiles = selectedFiles.filter(file => file.type.startsWith("image/"));
     setFiles(imageFiles);
+    setCurrentPreviewIndex(0); // 最初の画像に戻す
 
     if (imageFiles.length > 0) {
       // 古いプレビューURLをクリーンアップ
@@ -52,6 +54,7 @@ export default function CropPage() {
 
   const handleClearFiles = useCallback(() => {
     setFiles([]);
+    setCurrentPreviewIndex(0);
     setCropResults([]);
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -62,6 +65,34 @@ export default function CropPage() {
   const handleCropAreaChange = useCallback((newCropArea: CropArea) => {
     setCropArea(newCropArea);
   }, []);
+
+  const handlePreviousImage = useCallback(() => {
+    if (files.length === 0) return;
+    
+    const newIndex = currentPreviewIndex > 0 ? currentPreviewIndex - 1 : files.length - 1;
+    setCurrentPreviewIndex(newIndex);
+    
+    // プレビューURLを更新
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    const url = URL.createObjectURL(files[newIndex]);
+    setPreviewUrl(url);
+  }, [files, currentPreviewIndex, previewUrl]);
+
+  const handleNextImage = useCallback(() => {
+    if (files.length === 0) return;
+    
+    const newIndex = currentPreviewIndex < files.length - 1 ? currentPreviewIndex + 1 : 0;
+    setCurrentPreviewIndex(newIndex);
+    
+    // プレビューURLを更新
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    const url = URL.createObjectURL(files[newIndex]);
+    setPreviewUrl(url);
+  }, [files, currentPreviewIndex, previewUrl]);
 
   const handleStartCropping = useCallback(async () => {
     if (files.length === 0 || !cropArea) return;
@@ -187,6 +218,10 @@ export default function CropPage() {
                     imageUrl={previewUrl}
                     onCropAreaChange={handleCropAreaChange}
                     initialCropArea={cropArea || undefined}
+                    currentIndex={currentPreviewIndex}
+                    totalImages={files.length}
+                    onPreviousImage={handlePreviousImage}
+                    onNextImage={handleNextImage}
                   />
                 </>
               )}
