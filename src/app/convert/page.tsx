@@ -9,7 +9,7 @@ import {
   type ConversionResult,
   ImageConverter,
 } from "../../utils/imageConverter";
-import { ConversionResults } from "./components/ConversionResults";
+import { ConversionResults } from "../../components/Results";
 import {
   ConversionSettings,
   type ConversionSettings as ConversionSettingsType,

@@ -118,11 +118,11 @@ export class FileDownloader {
   private static generateZipFilename(results: DownloadableResult[]): string {
     const now = new Date();
     const timestamp = now.toISOString().slice(0, 19).replace(/:/g, "-");
-    
+
     // 最初の結果の種類を確認
     const isCropResult = results.some(result => 'croppedBlob' in result);
     const prefix = isCropResult ? "cropped_images" : "converted_images";
-    
+
     return `${prefix}_${timestamp}.zip`;
   }
 

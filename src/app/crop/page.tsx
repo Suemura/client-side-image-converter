@@ -11,7 +11,7 @@ import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { ImageCropper, type CropArea, type CropResult } from "../../utils/imageCropper";
 import { ProgressBar } from "../convert/components/ProgressBar";
-import { ConversionResults } from "../convert/components/ConversionResults";
+import { ConversionResults } from "../../components/Results";
 import { CropSelector } from "./components/CropSelector";
 import styles from "./crop.module.css";
 

@@ -1,15 +1,15 @@
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "../../../components/Button";
-import { FileDetailModal } from "../../../components/FileDetailModal";
-import { ImageComparisonModal } from "../../../components/ImageComparisonModal";
-import type { ConversionResult } from "../../../utils/imageConverter";
-import type { CropResult } from "../../../utils/imageCropper";
-import { ImageConverter } from "../../../utils/imageConverter";
-import { FileDownloader } from "../../../utils/fileDownloader";
-import { truncateFileName } from "../../../utils/fileName";
-import styles from "./ConversionResults.module.css";
+import { Button } from "./Button";
+import { FileDetailModal } from "./FileDetailModal";
+import { ImageComparisonModal } from "./ImageComparisonModal";
+import type { ConversionResult } from "../utils/imageConverter";
+import type { CropResult } from "../utils/imageCropper";
+import { ImageConverter } from "../utils/imageConverter";
+import { FileDownloader } from "../utils/fileDownloader";
+import { truncateFileName } from "../utils/fileName";
+import styles from "./Results.module.css";
 
 interface ConversionResultsProps {
   results?: ConversionResult[];
