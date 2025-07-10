@@ -1,55 +1,55 @@
 {
-  "name": "client-side-image-converter",
-  "author": "Masato Suemura",
-  "version": "0.1.0",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Suemura/client-side-image-converter"
-  },
-  "homepage": "https://image-converter.suemura.app/",
-  "keywords": [
-    "image-converter",
-    "privacy-first",
-    "browser-based",
-    "nextjs",
-    "typescript",
-    "webp",
-    "jpeg",
-    "png"
-  ],
-  "private": false,
-  "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "postbuild": "next-sitemap",
-    "start": "next start",
-    "lint": "next lint",
-    "deploy": "npm run build && wrangler pages deploy out",
-    "preview": "wrangler pages dev out"
-  },
-  "dependencies": {
-    "exif-js": "^2.3.0",
-    "i18next": "^25.2.1",
-    "jszip": "^3.10.1",
-    "next": "15.3.4",
-    "pako": "^2.1.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-i18next": "^15.5.3"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "@types/exif-js": "^2.3.1",
-    "@types/jszip": "^3.4.1",
-    "@types/node": "^20",
-    "@types/pako": "^2.0.3",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "9.30.0",
-    "eslint-config-next": "15.3.4",
-    "next-sitemap": "^4.2.3",
-    "typescript": "^5",
-    "wrangler": "^4.22.0"
-  }
+	"name": "client-side-image-converter",
+	"author": "Masato Suemura",
+	"version": "0.1.0",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Suemura/client-side-image-converter"
+	},
+	"homepage": "https://image-converter.suemura.app/",
+	"keywords": [
+		"image-converter",
+		"privacy-first",
+		"browser-based",
+		"nextjs",
+		"typescript",
+		"webp",
+		"jpeg",
+		"png"
+	],
+	"private": false,
+	"scripts": {
+		"dev": "next dev --turbopack",
+		"build": "next build",
+		"postbuild": "next-sitemap",
+		"start": "next start",
+		"lint": "next lint",
+		"deploy": "npm run build && wrangler pages deploy out",
+		"preview": "wrangler pages dev out"
+	},
+	"dependencies": {
+		"exif-js": "^2.3.0",
+		"i18next": "^25.2.1",
+		"jszip": "^3.10.1",
+		"next": "^15.3.5",
+		"pako": "^2.1.0",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
+		"react-i18next": "^15.5.3"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"@types/exif-js": "^2.3.1",
+		"@types/jszip": "^3.4.0",
+		"@types/node": "^20",
+		"@types/pako": "^2.0.3",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"eslint": "^9.30.1",
+		"eslint-config-next": "^15.3.5",
+		"next-sitemap": "^4.2.3",
+		"typescript": "^5",
+		"wrangler": "^4.24.3"
+	}
 }
