@@ -18,7 +18,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [imageUrl, setImageUrl] = useState<string>("");
   const [exifData, setExifData] = useState<ExifData>({});
   const [imageSize, setImageSize] = useState<{
@@ -35,15 +35,15 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
   }, []);
 
   const formatDateTime = useCallback((dateString?: string | number): string => {
-    if (!dateString) return "不明";
+    if (!dateString) return t("fileDetails.unknown");
     try {
       const date = new Date(dateString.toString());
-      if (Number.isNaN(date.getTime())) return "不明";
-      return date.toLocaleString("ja-JP");
+      if (Number.isNaN(date.getTime())) return t("fileDetails.unknown");
+      return date.toLocaleString(i18n.language === "ja" ? "ja-JP" : "en-US");
     } catch {
-      return "不明";
+      return t("fileDetails.unknown");
     }
-  }, []);
+  }, [t, i18n.language]);
 
   const extractExifData = useCallback((file: File): Promise<ExifData> => {
     return new Promise((resolve) => {
