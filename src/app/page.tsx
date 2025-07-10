@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import React from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { LayoutContainer } from "../components/LayoutContainer";
