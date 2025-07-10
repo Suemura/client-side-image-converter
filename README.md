@@ -76,7 +76,7 @@ This application can be deployed as a static site to Cloudflare Pages.
    Or directly:
 
    ```bash
-   npx wrangler pages deploy out --project-name web-image-converter
+   npx wrangler pages deploy out --project-name client-side-image-converter
    ```
 
 5. **Local preview (optional)**
@@ -111,7 +111,7 @@ Pull requests and issue reports are welcome!
 
 ## 📞 Support
 
-For questions or support needs, please feel free to contact us at [GitHub Issues](https://github.com/suemura/client-side-image-converter/issues).
+For questions or support needs, please feel free to contact us at [GitHub Issues](https://github.com/Suemura/client-side-image-converter/issues).
 
 ## 📋 Available Scripts
 

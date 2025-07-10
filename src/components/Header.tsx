@@ -18,7 +18,7 @@ export const Header: React.FC = () => {
         <Navigation />
         <div className={styles.socialSection}>
           <a
-            href="https://github.com/Suemura/web-image-converter"
+            href="https://github.com/Suemura/client-side-image-converter"
             target="_blank"
             rel="noopener noreferrer"
             className={styles.githubLink}

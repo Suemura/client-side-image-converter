@@ -35,7 +35,7 @@ export default function Home() {
           {/* GitHubリンク */}
           <div className={styles.githubContainer}>
             <a
-              href="https://github.com/suemura/client-side-image-converter"
+              href="https://github.com/Suemura/client-side-image-converter"
               target="_blank"
               rel="noopener noreferrer"
               className={styles.githubLink}

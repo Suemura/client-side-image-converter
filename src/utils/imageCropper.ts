@@ -1,5 +1,3 @@
-// ファイルパス: /Users/suemura/Documents/GitHub/web-image-converter/src/utils/imageCropper.ts
-
 export interface CropArea {
   x: number;
   y: number;

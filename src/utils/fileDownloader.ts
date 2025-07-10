@@ -1,5 +1,3 @@
-// ファイルパス: /Users/suemura/Documents/GitHub/web-image-converter/src/utils/fileDownloader.ts
-
 import JSZip from "jszip";
 import type { ConversionResult } from "./imageConverter";
 import type { CropResult } from "./imageCropper";
@@ -14,11 +12,11 @@ export class FileDownloader {
     let blob: Blob;
     let filename: string;
 
-    if ('blob' in result) {
+    if ("blob" in result) {
       // ConversionResult
       blob = result.blob;
       filename = result.filename;
-    } else if ('croppedBlob' in result && result.success) {
+    } else if ("croppedBlob" in result && result.success) {
       // CropResult
       blob = result.croppedBlob;
       filename = result.fileName;
@@ -42,7 +40,7 @@ export class FileDownloader {
    */
   static async downloadAsZip(
     results: DownloadableResult[],
-    zipFilename?: string
+    zipFilename?: string,
   ): Promise<void> {
     if (results.length === 0) return;
 
@@ -54,11 +52,11 @@ export class FileDownloader {
         let blob: Blob;
         let filename: string;
 
-        if ('blob' in result) {
+        if ("blob" in result) {
           // ConversionResult
           blob = result.blob;
           filename = result.filename;
-        } else if ('croppedBlob' in result && result.success) {
+        } else if ("croppedBlob" in result && result.success) {
           // CropResult
           blob = result.croppedBlob;
           filename = result.fileName;
@@ -92,7 +90,8 @@ export class FileDownloader {
       });
 
       // デフォルトのZipファイル名を生成
-      const defaultZipFilename = zipFilename || this.generateZipFilename(results);
+      const defaultZipFilename =
+        zipFilename || this.generateZipFilename(results);
 
       // Zipファイルをダウンロード
       const link = document.createElement("a");
@@ -120,7 +119,7 @@ export class FileDownloader {
     const timestamp = now.toISOString().slice(0, 19).replace(/:/g, "-");
 
     // 最初の結果の種類を確認
-    const isCropResult = results.some(result => 'croppedBlob' in result);
+    const isCropResult = results.some((result) => "croppedBlob" in result);
     const prefix = isCropResult ? "cropped_images" : "converted_images";
 
     return `${prefix}_${timestamp}.zip`;
@@ -133,8 +132,8 @@ export class FileDownloader {
     if (results.length === 0) return;
 
     // 成功した結果のみをフィルタリング
-    const successResults = results.filter(result => {
-      if ('blob' in result) {
+    const successResults = results.filter((result) => {
+      if ("blob" in result) {
         return true; // ConversionResultは常に成功とみなす
       } else {
         return result.success; // CropResultはsuccessプロパティをチェック

@@ -1,5 +1,3 @@
-// ファイルパス: /Users/suemura/Documents/GitHub/web-image-converter/src/utils/imageConverter.ts
-
 export interface ConversionOptions {
   format: "jpeg" | "png" | "webp";
   quality: number; // 0-100

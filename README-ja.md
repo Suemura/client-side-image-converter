@@ -74,7 +74,7 @@ npx biome format src/ --write
    または直接：
 
    ```bash
-   npx wrangler pages deploy out --project-name web-image-converter
+   npx wrangler pages deploy out --project-name client-side-image-converter
    ```
 
 5. **ローカルプレビュー（オプション）**
@@ -109,7 +109,7 @@ npx biome format src/ --write
 
 ## 📞 サポート
 
-質問やサポートが必要な場合は、[GitHub Issues](https://github.com/suemura/client-side-image-converter/issues) にお気軽にお問い合わせください。
+質問やサポートが必要な場合は、[GitHub Issues](https://github.com/Suemura/client-side-image-converter/issues) にお気軽にお問い合わせください。
 
 ## 📋 利用可能なスクリプト
 

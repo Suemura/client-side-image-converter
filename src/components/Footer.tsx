@@ -31,7 +31,7 @@ export const Footer: React.FC = () => {
             <div className={styles.linkGroup}>
               <h4 className={styles.linkTitle}>{t("footer.project")}</h4>
               <a
-                href="https://github.com/Suemura/web-image-converter"
+                href="https://github.com/Suemura/client-side-image-converter"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.link}
@@ -39,7 +39,7 @@ export const Footer: React.FC = () => {
                 {t("footer.github")}
               </a>
               <a
-                href="https://github.com/Suemura/web-image-converter/issues"
+                href="https://github.com/Suemura/client-side-image-converter/issues"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.link}
@@ -50,7 +50,7 @@ export const Footer: React.FC = () => {
             <div className={styles.linkGroup}>
               <h4 className={styles.linkTitle}>{t("footer.resources")}</h4>
               <a
-                href="https://github.com/Suemura/web-image-converter#readme"
+                href="https://github.com/Suemura/client-side-image-converter#readme"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.link}
@@ -58,7 +58,7 @@ export const Footer: React.FC = () => {
                 {t("footer.documentation")}
               </a>
               <a
-                href="https://github.com/Suemura/web-image-converter/blob/main/LICENSE"
+                href="https://github.com/Suemura/client-side-image-converter/blob/main/LICENSE"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.link}
