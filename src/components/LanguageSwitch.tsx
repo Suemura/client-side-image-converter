@@ -1,12 +1,14 @@
 import type React from "react";
 import { useTranslation } from "react-i18next";
+import { setStoredLanguage, type SupportedLanguage } from "../utils/languageStorage";
 import styles from "./LanguageSwitch.module.css";
 
 export const LanguageSwitch: React.FC = () => {
   const { i18n } = useTranslation();
 
   const toggleLanguage = () => {
-    const newLang = i18n.language === "ja" ? "en" : "ja";
+    const newLang: SupportedLanguage = i18n.language === "ja" ? "en" : "ja";
+    // i18nextの言語変更（これによりlanguageChangedイベントが発火し、自動的にローカルストレージに保存される）
     i18n.changeLanguage(newLang);
   };
 
