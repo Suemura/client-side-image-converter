@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "../i18n/config";
 import { getClientInitialLanguage } from "../utils/languageStorage";
@@ -12,7 +12,6 @@ interface I18nProviderProps {
 }
 
 export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
-  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     // Hydration完了後にクライアントサイドの言語設定を適用
@@ -20,16 +19,14 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
       try {
         // クライアントサイドで正しい言語を取得
         const clientLanguage = getClientInitialLanguage();
-        
+
         // 現在の言語と異なる場合のみ変更
         if (i18n.language !== clientLanguage) {
           await i18n.changeLanguage(clientLanguage);
         }
-        
-        setIsHydrated(true);
+
       } catch (error) {
-        console.error('Failed to initialize client language:', error);
-        setIsHydrated(true); // エラーでも表示は継続
+        console.error("Failed to initialize client language:", error);
       }
     };
 
