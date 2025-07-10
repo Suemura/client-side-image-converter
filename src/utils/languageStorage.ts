@@ -89,8 +89,34 @@ export const setStoredLanguage = (language: SupportedLanguage): void => {
 
 /**
  * 初期言語を決定（優先順位: ローカルストレージ > ブラウザ言語 > デフォルト）
+ * SSR時は常にデフォルト言語を返す
  */
 export const getInitialLanguage = (): SupportedLanguage => {
+  // SSR時は常にデフォルト言語を返してHydrationエラーを防ぐ
+  if (typeof window === 'undefined') {
+    return 'ja';
+  }
+  
+  // 1. ローカルストレージをチェック
+  const storedLanguage = getStoredLanguage();
+  if (storedLanguage) {
+    return storedLanguage;
+  }
+  
+  // 2. ブラウザ言語を検出
+  return detectBrowserLanguage();
+};
+
+/**
+ * クライアントサイド専用の初期言語取得
+ * Hydration後に呼び出し、正しい言語設定を取得する
+ */
+export const getClientInitialLanguage = (): SupportedLanguage => {
+  // クライアントサイドでのみ実行
+  if (typeof window === 'undefined') {
+    return 'ja';
+  }
+  
   // 1. ローカルストレージをチェック
   const storedLanguage = getStoredLanguage();
   if (storedLanguage) {

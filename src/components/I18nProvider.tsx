@@ -4,7 +4,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "../i18n/config";
-import { getInitialLanguage } from "../utils/languageStorage";
+import { getClientInitialLanguage } from "../utils/languageStorage";
 import { LanguageManager } from "./LanguageManager";
 
 interface I18nProviderProps {
@@ -12,34 +12,30 @@ interface I18nProviderProps {
 }
 
 export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    // クライアントサイドでの初期化
-    const initializeI18n = async () => {
+    // Hydration完了後にクライアントサイドの言語設定を適用
+    const initializeClientLanguage = async () => {
       try {
-        // クライアントサイドで正しい言語を再設定
-        const initialLanguage = getInitialLanguage();
+        // クライアントサイドで正しい言語を取得
+        const clientLanguage = getClientInitialLanguage();
         
         // 現在の言語と異なる場合のみ変更
-        if (i18n.language !== initialLanguage) {
-          await i18n.changeLanguage(initialLanguage);
+        if (i18n.language !== clientLanguage) {
+          await i18n.changeLanguage(clientLanguage);
         }
         
-        setIsInitialized(true);
+        setIsHydrated(true);
       } catch (error) {
-        console.error('Failed to initialize i18n:', error);
-        setIsInitialized(true); // エラーでも表示は継続
+        console.error('Failed to initialize client language:', error);
+        setIsHydrated(true); // エラーでも表示は継続
       }
     };
 
-    initializeI18n();
+    // Hydration完了を待つ
+    initializeClientLanguage();
   }, []);
-
-  // 初期化完了まで何も表示しない（フラッシュを防ぐ）
-  if (!isInitialized) {
-    return <div style={{ visibility: 'hidden' }}>{children}</div>;
-  }
 
   return (
     <I18nextProvider i18n={i18n}>
