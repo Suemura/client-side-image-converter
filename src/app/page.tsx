@@ -65,11 +65,11 @@ export default function Home() {
             </div>
 
             <div className={styles.featureCard}>
-              {/* 画像クロップアイコン */}
+              {/* 画像トリミングアイコン */}
               <img
                 className={styles.featureIcon}
                 src="icon_crop.svg"
-                alt="画像クロップアイコン"
+                alt="画像トリミングアイコン"
               />
               <h3 className={styles.featureTitle}>
                 {t("home.features.imageCropping.title")}

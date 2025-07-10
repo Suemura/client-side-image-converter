@@ -14,7 +14,7 @@ interface CropSelectorProps {
   onNextImage?: () => void;
 }
 
-type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'move';
+type ResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "move";
 
 export const CropSelector: React.FC<CropSelectorProps> = ({
   imageUrl,
@@ -32,10 +32,13 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [activeHandle, setActiveHandle] = useState<ResizeHandle | null>(null);
   const [cropArea, setCropArea] = useState<CropArea>(
-    initialCropArea || { x: 0, y: 0, width: 0, height: 0 }
+    initialCropArea || { x: 0, y: 0, width: 0, height: 0 },
   );
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageNaturalSize, setImageNaturalSize] = useState({ width: 0, height: 0 });
+  const [imageNaturalSize, setImageNaturalSize] = useState({
+    width: 0,
+    height: 0,
+  });
 
   const handleImageLoad = useCallback(() => {
     if (imageRef.current) {
@@ -45,11 +48,15 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
       });
       setImageLoaded(true);
 
-      // 画像読み込み後に画像全体を初期クロップ領域として設定
+      // 画像読み込み後に画像全体を初期トリミング領域として設定
       if (!initialCropArea) {
         // 画像の表示サイズが確定するまで少し待つ
         setTimeout(() => {
-          if (imageRef.current && imageRef.current.offsetWidth > 0 && imageRef.current.offsetHeight > 0) {
+          if (
+            imageRef.current &&
+            imageRef.current.offsetWidth > 0 &&
+            imageRef.current.offsetHeight > 0
+          ) {
             const displayWidth = imageRef.current.offsetWidth;
             const displayHeight = imageRef.current.offsetHeight;
 
@@ -57,7 +64,7 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
               x: 0,
               y: 0,
               width: displayWidth,
-              height: displayHeight
+              height: displayHeight,
             };
 
             setCropArea(defaultCropArea);
@@ -73,10 +80,14 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
             // デバッグ情報をログ出力
             onCropAreaChange(actualCropArea);
           } else {
-            console.warn('Image display size not ready, retrying...');
+            console.warn("Image display size not ready, retrying...");
             // もう一度試す
             setTimeout(() => {
-              if (imageRef.current && imageRef.current.offsetWidth > 0 && imageRef.current.offsetHeight > 0) {
+              if (
+                imageRef.current &&
+                imageRef.current.offsetWidth > 0 &&
+                imageRef.current.offsetHeight > 0
+              ) {
                 const displayWidth = imageRef.current.offsetWidth;
                 const displayHeight = imageRef.current.offsetHeight;
 
@@ -84,7 +95,7 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
                   x: 0,
                   y: 0,
                   width: displayWidth,
-                  height: displayHeight
+                  height: displayHeight,
                 };
 
                 setCropArea(defaultCropArea);
@@ -116,8 +127,12 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
   }, []);
 
   const getScaleFactor = useCallback(() => {
-    if (!imageRef.current || imageNaturalSize.width === 0 || imageNaturalSize.height === 0) {
-      console.warn('Cannot calculate scale factor: missing image data');
+    if (
+      !imageRef.current ||
+      imageNaturalSize.width === 0 ||
+      imageNaturalSize.height === 0
+    ) {
+      console.warn("Cannot calculate scale factor: missing image data");
       return { scaleX: 1, scaleY: 1 };
     }
 
@@ -125,7 +140,7 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     const displayHeight = imageRef.current.offsetHeight;
 
     if (displayWidth === 0 || displayHeight === 0) {
-      console.warn('Display size is 0');
+      console.warn("Display size is 0");
       return { scaleX: 1, scaleY: 1 };
     }
 
@@ -171,28 +186,34 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     return constrainedArea;
   }, []);
 
-  const handleResizeStart = useCallback((event: React.MouseEvent, handle: ResizeHandle) => {
-    event.preventDefault();
-    event.stopPropagation();
+  const handleResizeStart = useCallback(
+    (event: React.MouseEvent, handle: ResizeHandle) => {
+      event.preventDefault();
+      event.stopPropagation();
 
-    const position = getRelativePosition(event);
-    setIsDragging(true);
-    setActiveHandle(handle);
-    setDragStart(position);
-  }, [getRelativePosition]);
+      const position = getRelativePosition(event);
+      setIsDragging(true);
+      setActiveHandle(handle);
+      setDragStart(position);
+    },
+    [getRelativePosition],
+  );
 
-  const handleMouseDown = useCallback((event: React.MouseEvent) => {
-    event.preventDefault();
-    const position = getRelativePosition(event);
-    setIsDragging(true);
-    setActiveHandle('move');
-    setDragStart(position);
-  }, [getRelativePosition]);
+  const handleMouseDown = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      const position = getRelativePosition(event);
+      setIsDragging(true);
+      setActiveHandle("move");
+      setDragStart(position);
+    },
+    [getRelativePosition],
+  );
 
   const handleMouseUpLogic = useCallback(() => {
     // 最小サイズをチェック
     if (cropArea.width < 10 || cropArea.height < 10) {
-      console.warn('Crop area too small, skipping');
+      console.warn("Crop area too small, skipping");
       return;
     }
 
@@ -200,8 +221,13 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     const { scaleX, scaleY } = getScaleFactor();
 
     // スケールファクターが有効かチェック
-    if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY) || scaleX <= 0 || scaleY <= 0) {
-      console.error('Invalid scale factors:', { scaleX, scaleY });
+    if (
+      !Number.isFinite(scaleX) ||
+      !Number.isFinite(scaleY) ||
+      scaleX <= 0 ||
+      scaleY <= 0
+    ) {
+      console.error("Invalid scale factors:", { scaleX, scaleY });
       return;
     }
 
@@ -213,26 +239,41 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     };
 
     // 変換後の値が有効かチェック
-    if (actualCropArea.width <= 0 || actualCropArea.height <= 0 ||
-        actualCropArea.x < 0 || actualCropArea.y < 0 ||
-        !Number.isFinite(actualCropArea.x) || !Number.isFinite(actualCropArea.y) ||
-        !Number.isFinite(actualCropArea.width) || !Number.isFinite(actualCropArea.height)) {
-      console.error('Invalid actual crop area:', actualCropArea);
+    if (
+      actualCropArea.width <= 0 ||
+      actualCropArea.height <= 0 ||
+      actualCropArea.x < 0 ||
+      actualCropArea.y < 0 ||
+      !Number.isFinite(actualCropArea.x) ||
+      !Number.isFinite(actualCropArea.y) ||
+      !Number.isFinite(actualCropArea.width) ||
+      !Number.isFinite(actualCropArea.height)
+    ) {
+      console.error("Invalid actual crop area:", actualCropArea);
       return;
     }
 
     // 画像境界内に収まっているかチェック
-    if (actualCropArea.x + actualCropArea.width > imageNaturalSize.width ||
-        actualCropArea.y + actualCropArea.height > imageNaturalSize.height) {
-      console.warn('Actual crop area extends beyond image, adjusting...');
-      actualCropArea.width = Math.min(actualCropArea.width, imageNaturalSize.width - actualCropArea.x);
-      actualCropArea.height = Math.min(actualCropArea.height, imageNaturalSize.height - actualCropArea.y);
+    if (
+      actualCropArea.x + actualCropArea.width > imageNaturalSize.width ||
+      actualCropArea.y + actualCropArea.height > imageNaturalSize.height
+    ) {
+      console.warn("Actual crop area extends beyond image, adjusting...");
+      actualCropArea.width = Math.min(
+        actualCropArea.width,
+        imageNaturalSize.width - actualCropArea.x,
+      );
+      actualCropArea.height = Math.min(
+        actualCropArea.height,
+        imageNaturalSize.height - actualCropArea.y,
+      );
     }
 
     onCropAreaChange(actualCropArea);
   }, [cropArea, getScaleFactor, onCropAreaChange, imageNaturalSize]);
 
-  useEffect(() => {    const handleGlobalMouseUp = () => {
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
       if (isDragging) {
         setIsDragging(false);
         setActiveHandle(null);
@@ -255,41 +296,41 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
       let newCropArea = { ...cropArea };
 
       switch (activeHandle) {
-        case 'move':
+        case "move":
           newCropArea.x = cropArea.x + deltaX;
           newCropArea.y = cropArea.y + deltaY;
           break;
-        case 'nw':
+        case "nw":
           newCropArea.x = cropArea.x + deltaX;
           newCropArea.y = cropArea.y + deltaY;
           newCropArea.width = cropArea.width - deltaX;
           newCropArea.height = cropArea.height - deltaY;
           break;
-        case 'n':
+        case "n":
           newCropArea.y = cropArea.y + deltaY;
           newCropArea.height = cropArea.height - deltaY;
           break;
-        case 'ne':
+        case "ne":
           newCropArea.y = cropArea.y + deltaY;
           newCropArea.width = cropArea.width + deltaX;
           newCropArea.height = cropArea.height - deltaY;
           break;
-        case 'e':
+        case "e":
           newCropArea.width = cropArea.width + deltaX;
           break;
-        case 'se':
+        case "se":
           newCropArea.width = cropArea.width + deltaX;
           newCropArea.height = cropArea.height + deltaY;
           break;
-        case 's':
+        case "s":
           newCropArea.height = cropArea.height + deltaY;
           break;
-        case 'sw':
+        case "sw":
           newCropArea.x = cropArea.x + deltaX;
           newCropArea.width = cropArea.width - deltaX;
           newCropArea.height = cropArea.height + deltaY;
           break;
-        case 'w':
+        case "w":
           newCropArea.x = cropArea.x + deltaX;
           newCropArea.width = cropArea.width - deltaX;
           break;
@@ -307,7 +348,14 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
       document.removeEventListener("mouseup", handleGlobalMouseUp);
       document.removeEventListener("mousemove", handleGlobalMouseMove);
     };
-  }, [isDragging, activeHandle, dragStart, cropArea, constrainCropArea, handleMouseUpLogic]);
+  }, [
+    isDragging,
+    activeHandle,
+    dragStart,
+    cropArea,
+    constrainCropArea,
+    handleMouseUpLogic,
+  ]);
 
   const showNavigation = totalImages > 1;
 
@@ -321,7 +369,7 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
             className={styles.navButton}
             onClick={onPreviousImage}
             disabled={!onPreviousImage}
-            aria-label={t('crop.previousImage')}
+            aria-label={t("crop.previousImage")}
           >
             ←
           </button>
@@ -333,7 +381,7 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
             className={styles.navButton}
             onClick={onNextImage}
             disabled={!onNextImage}
-            aria-label={t('crop.nextImage')}
+            aria-label={t("crop.nextImage")}
           >
             →
           </button>
@@ -364,44 +412,46 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
             {/* 四隅のハンドル */}
             <div
               className={`${styles.resizeHandle} ${styles.nw}`}
-              onMouseDown={(e) => handleResizeStart(e, 'nw')}
+              onMouseDown={(e) => handleResizeStart(e, "nw")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.ne}`}
-              onMouseDown={(e) => handleResizeStart(e, 'ne')}
+              onMouseDown={(e) => handleResizeStart(e, "ne")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.se}`}
-              onMouseDown={(e) => handleResizeStart(e, 'se')}
+              onMouseDown={(e) => handleResizeStart(e, "se")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.sw}`}
-              onMouseDown={(e) => handleResizeStart(e, 'sw')}
+              onMouseDown={(e) => handleResizeStart(e, "sw")}
             />
 
             {/* 辺のハンドル */}
             <div
               className={`${styles.resizeHandle} ${styles.n}`}
-              onMouseDown={(e) => handleResizeStart(e, 'n')}
+              onMouseDown={(e) => handleResizeStart(e, "n")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.e}`}
-              onMouseDown={(e) => handleResizeStart(e, 'e')}
+              onMouseDown={(e) => handleResizeStart(e, "e")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.s}`}
-              onMouseDown={(e) => handleResizeStart(e, 's')}
+              onMouseDown={(e) => handleResizeStart(e, "s")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.w}`}
-              onMouseDown={(e) => handleResizeStart(e, 'w')}
+              onMouseDown={(e) => handleResizeStart(e, "w")}
             />
           </div>
         )}
 
         {isDragging && activeHandle && (
           <div className={styles.instructions}>
-            {activeHandle === 'move' ? 'ドラッグして移動' : 'ドラッグしてリサイズ'}
+            {activeHandle === "move"
+              ? "ドラッグして移動"
+              : "ドラッグしてリサイズ"}
           </div>
         )}
       </div>

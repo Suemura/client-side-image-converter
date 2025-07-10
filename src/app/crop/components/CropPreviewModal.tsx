@@ -1,8 +1,8 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { CropResult } from "../../../utils/imageCropper";
 import { Button } from "../../../components/Button";
+import type { CropResult } from "../../../utils/imageCropper";
 import styles from "./CropPreviewModal.module.css";
 
 interface CropPreviewModalProps {
@@ -26,7 +26,7 @@ export const CropPreviewModal: React.FC<CropPreviewModalProps> = ({
   const [croppedImageUrl, setCroppedImageUrl] = useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // クロップされた画像のURLを生成
+  // トリミングされた画像のURLを生成
   useEffect(() => {
     if (cropResult.success) {
       const url = URL.createObjectURL(cropResult.croppedBlob);
@@ -95,13 +95,22 @@ export const CropPreviewModal: React.FC<CropPreviewModalProps> = ({
         document.removeEventListener("touchend", handleTouchEnd);
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
+  }, [
+    isDragging,
+    handleMouseMove,
+    handleMouseUp,
+    handleTouchMove,
+    handleTouchEnd,
+  ]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape") {
-      onClose();
-    }
-  }, [onClose]);
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    },
+    [onClose],
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -141,7 +150,7 @@ export const CropPreviewModal: React.FC<CropPreviewModalProps> = ({
                 className={styles.image}
               />
 
-              {/* クロップ後画像 */}
+              {/* トリミング後画像 */}
               <div
                 className={styles.overlayImage}
                 style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
@@ -171,13 +180,23 @@ export const CropPreviewModal: React.FC<CropPreviewModalProps> = ({
           <div className={styles.imageInfo}>
             <div className={styles.infoSection}>
               <h4>{t("results.originalImage")}</h4>
-              <p>{t("crop.fileName")}: {cropResult.originalFile.name}</p>
-              <p>{t("crop.fileSize")}: {(cropResult.originalFile.size / 1024).toFixed(1)} KB</p>
+              <p>
+                {t("crop.fileName")}: {cropResult.originalFile.name}
+              </p>
+              <p>
+                {t("crop.fileSize")}:{" "}
+                {(cropResult.originalFile.size / 1024).toFixed(1)} KB
+              </p>
             </div>
             <div className={styles.infoSection}>
               <h4>{t("results.croppedImage")}</h4>
-              <p>{t("crop.fileName")}: {cropResult.fileName}</p>
-              <p>{t("crop.fileSize")}: {(cropResult.croppedBlob.size / 1024).toFixed(1)} KB</p>
+              <p>
+                {t("crop.fileName")}: {cropResult.fileName}
+              </p>
+              <p>
+                {t("crop.fileSize")}:{" "}
+                {(cropResult.croppedBlob.size / 1024).toFixed(1)} KB
+              </p>
             </div>
           </div>
         </div>

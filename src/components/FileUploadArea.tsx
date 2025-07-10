@@ -60,7 +60,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
             canvas.height = size;
 
             if (ctx) {
-              // 画像を正方形にクロップして描画
+              // 画像を正方形にトリミングして描画
               const minDimension = Math.min(img.width, img.height);
               const sx = (img.width - minDimension) / 2;
               const sy = (img.height - minDimension) / 2;
@@ -212,8 +212,10 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
           aria-label="ファイルをドラッグ&ドロップまたはクリックして選択"
         >
           <div className={styles.dropZoneContent}>
-            <p className={styles.dropZoneTitle}>Drop files here</p>
-            <p className={styles.dropZoneSubtitle}>Or click to select files</p>
+            <p className={styles.dropZoneTitle}>{t("fileUpload.dropFiles")}</p>
+            <p className={styles.dropZoneSubtitle}>
+              {t("fileUpload.clickToSelect")}
+            </p>
           </div>
           <input
             ref={fileInputRef}

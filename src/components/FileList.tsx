@@ -1,9 +1,9 @@
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { formatFileSize, truncateFileName } from "../utils/fileName";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
-import { formatFileSize, truncateFileName } from "../utils/fileName";
 
 interface FileListProps {
   files: File[];
@@ -43,7 +43,7 @@ export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
             canvas.height = size;
 
             if (ctx) {
-              // 画像を正方形にクロップして描画
+              // 画像を正方形にトリミングして描画
               const minDimension = Math.min(img.width, img.height);
               const sx = (img.width - minDimension) / 2;
               const sy = (img.height - minDimension) / 2;

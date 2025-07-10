@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { FileList } from "../../components/FileList";
@@ -9,9 +9,13 @@ import { FileUploadArea } from "../../components/FileUploadArea";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
-import { ImageCropper, type CropArea, type CropResult } from "../../utils/imageCropper";
-import { ProgressBar } from "../convert/components/ProgressBar";
 import { ConversionResults } from "../../components/Results";
+import {
+  type CropArea,
+  type CropResult,
+  ImageCropper,
+} from "../../utils/imageCropper";
+import { ProgressBar } from "../convert/components/ProgressBar";
 import { CropSelector } from "./components/CropSelector";
 import styles from "./crop.module.css";
 
@@ -36,21 +40,26 @@ export default function CropPage() {
     };
   }, [previewUrl]);
 
-  const handleFilesSelected = useCallback((selectedFiles: File[]) => {
-    const imageFiles = selectedFiles.filter(file => file.type.startsWith("image/"));
-    setFiles(imageFiles);
-    setCurrentPreviewIndex(0); // 最初の画像に戻す
+  const handleFilesSelected = useCallback(
+    (selectedFiles: File[]) => {
+      const imageFiles = selectedFiles.filter((file) =>
+        file.type.startsWith("image/"),
+      );
+      setFiles(imageFiles);
+      setCurrentPreviewIndex(0); // 最初の画像に戻す
 
-    if (imageFiles.length > 0) {
-      // 古いプレビューURLをクリーンアップ
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+      if (imageFiles.length > 0) {
+        // 古いプレビューURLをクリーンアップ
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+        }
+        // 新しいプレビューURLを作成
+        const url = URL.createObjectURL(imageFiles[0]);
+        setPreviewUrl(url);
       }
-      // 新しいプレビューURLを作成
-      const url = URL.createObjectURL(imageFiles[0]);
-      setPreviewUrl(url);
-    }
-  }, [previewUrl]);
+    },
+    [previewUrl],
+  );
 
   const handleClearFiles = useCallback(() => {
     setFiles([]);
@@ -69,7 +78,8 @@ export default function CropPage() {
   const handlePreviousImage = useCallback(() => {
     if (files.length === 0) return;
 
-    const newIndex = currentPreviewIndex > 0 ? currentPreviewIndex - 1 : files.length - 1;
+    const newIndex =
+      currentPreviewIndex > 0 ? currentPreviewIndex - 1 : files.length - 1;
     setCurrentPreviewIndex(newIndex);
 
     // プレビューURLを更新
@@ -83,7 +93,8 @@ export default function CropPage() {
   const handleNextImage = useCallback(() => {
     if (files.length === 0) return;
 
-    const newIndex = currentPreviewIndex < files.length - 1 ? currentPreviewIndex + 1 : 0;
+    const newIndex =
+      currentPreviewIndex < files.length - 1 ? currentPreviewIndex + 1 : 0;
     setCurrentPreviewIndex(newIndex);
 
     // プレビューURLを更新
@@ -108,7 +119,7 @@ export default function CropPage() {
         (completed, total) => {
           setProgressCurrent(completed);
           setProgressTotal(total);
-        }
+        },
       );
 
       setCropResults(results);
@@ -123,7 +134,7 @@ export default function CropPage() {
     setCropResults([]);
   }, []);
 
-  // クロップボタンの状態を計算
+  // トリミングボタンの状態を計算
   const isCropButtonDisabled = files.length === 0 || !cropArea || isProcessing;
   const hasResults = cropResults.length > 0;
 
@@ -174,10 +185,7 @@ export default function CropPage() {
                 />
               ) : (
                 <>
-                  <FileList
-                    files={files}
-                    onClearFiles={handleClearFiles}
-                  />
+                  <FileList files={files} onClearFiles={handleClearFiles} />
                   <div style={{ marginTop: "1rem" }}>
                     <Button variant="secondary" onClick={handleClearFiles}>
                       {t("crop.selectNewImage")}
@@ -187,18 +195,20 @@ export default function CropPage() {
               )}
 
               {files.length === 0 && (
-                <p style={{
-                  color: "var(--muted-foreground)",
-                  fontSize: "0.875rem",
-                  textAlign: "center",
-                  marginTop: "1rem"
-                }}>
+                <p
+                  style={{
+                    color: "var(--muted-foreground)",
+                    fontSize: "0.875rem",
+                    textAlign: "center",
+                    marginTop: "1rem",
+                  }}
+                >
                   {t("crop.batchCropDescription")}
                 </p>
               )}
             </div>
 
-            {/* 中央カラム: クロップ操作 */}
+            {/* 中央カラム: トリミング操作 */}
             <div className={styles.cropColumnCenter}>
               <h3 className={styles.cropCenterTitle}>
                 {t("crop.selectCropArea")}
@@ -232,7 +242,13 @@ export default function CropPage() {
                     {t("crop.croppingInProgress")}
                   </div>
                 ) : hasResults ? (
-                  <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "1rem",
+                      justifyContent: "center",
+                    }}
+                  >
                     <Button
                       variant="primary"
                       onClick={handleStartCropping}
