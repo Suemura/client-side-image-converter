@@ -141,28 +141,11 @@ export default function CropPage() {
     <LayoutContainer>
       <Header />
       <MainContent>
-        <div style={{ padding: "2rem" }}>
-          <h1
-            style={{
-              fontSize: "2.5rem",
-              fontWeight: "bold",
-              color: "var(--foreground)",
-              marginBottom: "1rem",
-              textAlign: "center",
-            }}
-          >
+        <div className={styles.pageContainer}>
+          <h1 className={styles.pageTitle}>
             {t("crop.title")}
           </h1>
-          <p
-            style={{
-              fontSize: "1.125rem",
-              color: "var(--muted-foreground)",
-              textAlign: "center",
-              marginBottom: "3rem",
-              maxWidth: "600px",
-              margin: "0 auto 3rem",
-            }}
-          >
+          <p className={styles.pageSubtitle}>
             {t("crop.subtitle")}
           </p>
 
@@ -210,13 +193,7 @@ export default function CropPage() {
                     {t("crop.croppingInProgress")}
                   </div>
                 ) : hasResults ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "1rem",
-                      justifyContent: "center",
-                    }}
-                  >
+                  <div className={styles.buttonGroup}>
                     <Button
                       variant="primary"
                       onClick={handleStartCropping}

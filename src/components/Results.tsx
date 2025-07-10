@@ -239,7 +239,6 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                       type="button"
                       className={styles.previewImage}
                       onClick={() => handleCropImageClick(result)}
-                      style={{ cursor: "pointer" }}
                       aria-label={`${result.fileName}の詳細を表示`}
                     >
                       {result.success &&
@@ -308,7 +307,6 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                         type="button"
                         className={styles.previewImage}
                         onClick={() => handleImageClick(result)}
-                        style={{ cursor: "pointer" }}
                         aria-label={`${result.filename}の変換前後比較を表示`}
                       >
                         <img

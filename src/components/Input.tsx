@@ -1,4 +1,5 @@
 import type React from "react";
+import styles from "./Input.module.css";
 
 interface InputProps {
   label: string;
@@ -21,34 +22,12 @@ export const Input: React.FC<InputProps> = ({
   disabled = false,
   className = "",
 }) => {
-  const inputStyles = {
-    display: "flex",
-    width: "100%",
-    minWidth: "0",
-    flex: "1 1 0%",
-    resize: "none" as const,
-    overflow: "hidden",
-    borderRadius: "0.75rem",
-    color: disabled ? "var(--muted-foreground)" : "var(--foreground)",
-    border: "1px solid var(--border-dashed)",
-    backgroundColor: disabled ? "var(--muted-foreground)" : "var(--background)",
-    height: "3.5rem",
-    padding: "15px",
-    fontSize: "1rem",
-    fontWeight: "400",
-    fontFamily: "inherit",
-    cursor: disabled ? "not-allowed" : "text",
-    opacity: disabled ? 0.6 : 1,
-  };
 
   return (
-    <label className={`flex flex-col min-w-40 flex-1 ${className}`}>
-      <p
-        className="text-base font-medium pb-2"
-        style={{ color: "var(--foreground)" }}
-      >
+    <label className={`${styles.container} ${className}`}>
+      <p className={styles.label}>
         {label}
-        {required && <span style={{ color: "red" }}>*</span>}
+        {required && <span className={styles.required}>*</span>}
       </p>
       <input
         type={type}
@@ -57,18 +36,8 @@ export const Input: React.FC<InputProps> = ({
         placeholder={placeholder}
         required={required}
         disabled={disabled}
-        style={inputStyles}
-        className="focus-outline-0"
+        className={styles.input}
       />
-      <style jsx>{`
-        input::placeholder {
-          color: var(--muted-foreground);
-        }
-        input:focus {
-          outline: 0;
-          border-color: var(--border-dashed);
-        }
-      `}</style>
     </label>
   );
 };
