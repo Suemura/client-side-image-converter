@@ -81,14 +81,11 @@ export default function Home() {
 
             <div className={styles.featureCard}>
               {/* バッチ処理アイコン */}
-              <svg className={styles.featureIcon} viewBox="0 0 24 24">
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
-                <path d="M8 12h8" />
-                <path d="M12 8v8" />
-              </svg>
+              <img
+                className={styles.featureIcon}
+                src="icon_batch.svg"
+                alt="バッチ処理アイコン"
+              />
               <h3 className={styles.featureTitle}>
                 {t("home.features.batchProcessing.title")}
               </h3>

@@ -78,7 +78,7 @@
 
 /* 特徴カード */
 .featureCard {
-  padding: 2rem;
+  padding: 1.5rem;
   background-color: white;
   border-radius: 12px;
   border: 1px solid var(--border-dashed);
