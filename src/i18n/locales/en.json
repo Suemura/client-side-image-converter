@@ -10,13 +10,15 @@
   "navigation": {
     "top": "Top",
     "crop": "Crop",
-    "convert": "Convert"
+    "convert": "Convert",
+    "metadata": "Metadata"
   },
   "home": {
     "title": "Client-Side Image Converter",
     "subtitle": "Convert and crop images in batches on the client-side.\nA privacy-focused image conversion tool that never sends images to servers.",
     "startConverting": "Start Converting",
     "tryCropTool": "Try Crop Tool",
+    "tryMetadataTool": "Metadata Manager",
     "viewOnGithub": "View on GitHub",
     "features": {
       "formatConversion": {
@@ -160,6 +162,26 @@
     "mb": "MB",
     "gb": "GB",
     "px": "px"
+  },
+  "metadata": {
+    "title": "Image Metadata & Privacy Manager",
+    "subtitle": "View image metadata (EXIF information) and selectively remove privacy-sensitive data.",
+    "uploadedImages": "Uploaded Images",
+    "metadataAnalysis": "Metadata Analysis",
+    "privacyRiskTags": "Privacy Risk Tags",
+    "allExifTags": "All EXIF Tags",
+    "selectTagsToRemove": "Select tags to remove",
+    "removeSelectedMetadata": "Remove Selected Metadata",
+    "downloadCleanedImages": "Download Cleaned Images",
+    "processing": "Processing...",
+    "noMetadataFound": "No metadata found",
+    "metadataRemoved": "Metadata removed successfully",
+    "analyzingMetadata": "Analyzing metadata...",
+    "risk": {
+      "high": "HIGH",
+      "medium": "MED",
+      "low": "LOW"
+    }
   },
   "footer": {
     "privacyMessage": "All image processing is done locally on your device. No images are ever uploaded to any server.",

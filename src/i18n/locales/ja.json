@@ -10,13 +10,15 @@
   "navigation": {
     "top": "トップ",
     "crop": "トリミング",
-    "convert": "変換"
+    "convert": "変換",
+    "metadata": "メタデータ"
   },
   "home": {
     "title": "Client-Side Image Converter",
     "subtitle": "クライアントサイドで画像を一括で変換・トリミングできます。\nサーバに画像を送信しないプライバシー重視の画像変換ツールです。",
     "startConverting": "変換",
     "tryCropTool": "トリミング",
+    "tryMetadataTool": "メタデータ管理",
     "viewOnGithub": "GitHubで見る",
     "features": {
       "formatConversion": {
@@ -160,6 +162,26 @@
     "mb": "MB",
     "gb": "GB",
     "px": "px"
+  },
+  "metadata": {
+    "title": "画像メタデータ・プライバシー管理",
+    "subtitle": "画像のメタデータ（EXIF情報）を確認し、プライバシーに関わる情報を選択的に削除できます。",
+    "uploadedImages": "アップロード済み画像",
+    "metadataAnalysis": "メタデータ分析",
+    "privacyRiskTags": "プライバシーリスクのあるタグ",
+    "allExifTags": "すべてのEXIFタグ",
+    "selectTagsToRemove": "削除するタグを選択してください",
+    "removeSelectedMetadata": "選択したメタデータを削除",
+    "downloadCleanedImages": "クリーニング済み画像をダウンロード",
+    "processing": "処理中...",
+    "noMetadataFound": "メタデータが見つかりませんでした",
+    "metadataRemoved": "メタデータが削除されました",
+    "analyzingMetadata": "メタデータを分析中...",
+    "risk": {
+      "high": "高",
+      "medium": "中",
+      "low": "低"
+    }
   },
   "footer": {
     "privacyMessage": "すべての画像処理はお使いのデバイス内で完結し、サーバーへのアップロードは一切行いません。",
