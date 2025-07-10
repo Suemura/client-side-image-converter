@@ -139,6 +139,7 @@ export default function MetadataPage() {
             files={selectedFiles}
             onFilesSelected={handleFilesSelected}
             onClearFiles={handleClearFiles}
+            showFileList={false}
           />
 
           {selectedFiles.length > 0 && (
