@@ -1,134 +1,136 @@
 # 🔒 Client-Side Image Converter
 
-Next.js App Router を使用した完全にプライバシー重視の画像変換 Web アプリケーションです。
-すべての画像処理はブラウザ内で実行されるため、画像がサーバーに送信されることは一切ありません。
+[日本語版 README はこちら](./README-ja.md)
 
-## 🔗 デモサイト
+A completely privacy-focused image conversion web application built with Next.js App Router.
+All image processing is performed within the browser, ensuring your images are never sent to any server.
+
+## 🔗 Live Demo
 
 https://image-converter.suemura.app/
 
-## 🛡️ プライバシーの特徴
+## 🛡️ Privacy Features
 
-### **完全なローカル処理**
+### **Complete Local Processing**
 
-- **サーバー送信なし**: 画像は一切サーバーに送信されません
-- **オフライン動作**: 一度読み込めば、インターネット接続なしで動作します
+- **No Server Transmission**: Images are never sent to any server
+- **Offline Operation**: Works without internet connection once loaded
 
-## 開発環境のセットアップ
+## Development Setup
 
 ```bash
-# 依存関係のインストール
+# Install dependencies
 npm install
 
-# 開発サーバーの起動
+# Start development server
 npm run dev
 
-# コード品質チェック
+# Run code quality checks
 npm run lint
 
-# コードフォーマット
+# Format code
 npx biome format src/ --write
 ```
 
-## 🌐 多言語対応
+## 🌐 Multi-language Support
 
-このアプリケーションは以下の言語をサポートしています：
+This application supports the following languages:
 
-- 🇯🇵 日本語（デフォルト）
-- 🇺🇸 英語
+- 🇺🇸 English
+- 🇯🇵 Japanese (Default)
 
-ヘッダーの言語切り替えボタンから、リアルタイムで言語を変更できます。
+You can switch languages in real-time using the language toggle button in the header.
 
-## 🚀 デプロイ
+## 🚀 Deployment
 
-### Cloudflare Pages へのデプロイ
+### Deploy to Cloudflare Pages
 
-このアプリケーションは Cloudflare Pages に静的サイトとしてデプロイできます。
+This application can be deployed as a static site to Cloudflare Pages.
 
-#### デプロイ手順
+#### Deployment Steps
 
-1. **依存関係のインストール**
+1. **Install dependencies**
 
    ```bash
    npm install
    ```
 
-2. **静的サイトとしてビルド**
+2. **Build as static site**
 
    ```bash
    npm run build
    ```
 
-3. **Cloudflare にログイン**
+3. **Login to Cloudflare**
 
    ```bash
    npx wrangler login
    ```
 
-4. **デプロイ実行**
+4. **Deploy**
 
    ```bash
    npm run deploy
    ```
 
-   または直接：
+   Or directly:
 
    ```bash
    npx wrangler pages deploy out --project-name web-image-converter
    ```
 
-5. **ローカルプレビュー（オプション）**
+5. **Local preview (optional)**
    ```bash
    npm run preview
    ```
 
-## 📄 ライセンス
+## 📄 License
 
-このプロジェクトは [MIT License](LICENSE) の下で公開されています。
+This project is published under the [MIT License](LICENSE).
 
-### 依存関係のライセンス
+### Dependency Licenses
 
-このプロジェクトは以下のライセンスを持つオープンソースライブラリを使用しています：
+This project uses open-source libraries with the following licenses:
 
-- **MIT License**: Next.js, React, TypeScript等の主要ライブラリ
-- **Apache-2.0 License**: 一部のユーティリティライブラリ
-- **LGPL-3.0 License**: Sharp画像処理ライブラリ（ライブラリとして利用）
-- **MPL-2.0 License**: Axe Core（アクセシビリティ検証）
+- **MIT License**: Major libraries including Next.js, React, TypeScript
+- **Apache-2.0 License**: Some utility libraries
+- **LGPL-3.0 License**: Sharp image processing library (used as a library)
+- **MPL-2.0 License**: Axe Core (accessibility validation)
 
-すべての依存関係は商用利用可能なライセンスです。詳細は各ライブラリのライセンスファイルをご確認ください。
+All dependencies are commercially usable. Please refer to each library's license file for details.
 
 ## 🤝 Contributing
 
-プルリクエストやイシューの報告を歓迎します！
+Pull requests and issue reports are welcome!
 
-1. このリポジトリをフォーク
-2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
-3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
-4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
-5. プルリクエストを作成
+1. Fork this repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Create a Pull Request
 
-## 📞 サポート
+## 📞 Support
 
-質問やサポートが必要な場合は、[GitHub Issues](https://github.com/suemura/client-side-image-converter/issues) にお気軽にお問い合わせください。
+For questions or support needs, please feel free to contact us at [GitHub Issues](https://github.com/suemura/client-side-image-converter/issues).
 
-## 📋 利用可能なスクリプト
+## 📋 Available Scripts
 
 ```bash
-# 開発サーバー起動
+# Start development server
 npm run dev
 
-# 本番用ビルド
+# Production build
 npm run build
 
-# 本番サーバー起動（ビルド後）
+# Start production server (after build)
 npm start
 
-# リンティング
+# Linting
 npm run lint
 
-# Cloudflare Pagesデプロイ
+# Deploy to Cloudflare Pages
 npm run deploy
 
-# ローカルでデプロイ版プレビュー
+# Preview deployed version locally
 npm run preview
 ```
