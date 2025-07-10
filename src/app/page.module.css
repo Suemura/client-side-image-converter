@@ -79,7 +79,7 @@
 /* 特徴カード */
 .featureCard {
   padding: 1.5rem;
-  background-color: white;
+  background-color: var(--background);
   border-radius: 12px;
   border: 1px solid var(--border-dashed);
   text-align: center;

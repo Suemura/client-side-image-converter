@@ -10,7 +10,7 @@
 }
 
 .cropColumn {
-  background-color: white;
+  background-color: var(--background);
   border-radius: 12px;
   border: 1px solid var(--border-dashed);
   padding: 1.25rem;
@@ -18,7 +18,7 @@
 }
 
 .cropColumnCenter {
-  background-color: white;
+  background-color: var(--background);
   border-radius: 12px;
   border: 1px solid var(--border-dashed);
   padding: 1.5rem;

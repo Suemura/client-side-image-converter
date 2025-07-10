@@ -32,7 +32,8 @@
   gap: 16px;
   margin-bottom: 24px;
   padding: 16px;
-  background-color: #f9fafb;
+  background-color: var(--background);
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 
@@ -71,7 +72,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  background-color: #f9fafb;
+  background-color: var(--background);
   border-radius: 8px;
   border: 1px solid var(--border-dashed);
 }
@@ -92,7 +93,7 @@
   border-radius: 6px;
   overflow: hidden;
   border: 1px solid var(--border-dashed);
-  background-color: white;
+  background-color: var(--background);
   padding: 0;
   margin: 0;
   cursor: pointer;

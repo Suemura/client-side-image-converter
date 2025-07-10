@@ -25,14 +25,14 @@
 .warningBox {
   padding: 8px 16px;
   margin: 0 16px 8px 16px;
-  background-color: #fff7ed;
-  border: 1px solid #f97316;
+  background-color: var(--primary);
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 
 .warningText {
   font-size: 14px;
-  color: #ea580c;
+  color: var(--foreground);
   margin: 0;
 }
 

@@ -178,7 +178,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
     >
       <div
         style={{
-          backgroundColor: "white",
+          backgroundColor: "var(--background)",
           borderRadius: "12px",
           maxWidth: "90vw",
           maxHeight: "90vh",
@@ -195,7 +195,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#f9fafb",
+            backgroundColor: "var(--background)",
             position: "relative",
           }}
         >
@@ -285,7 +285,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
           style={{
             width: "400px",
             padding: "24px",
-            backgroundColor: "white",
+            backgroundColor: "var(--background)",
             borderLeft: "1px solid var(--border-dashed)",
             overflow: "auto",
           }}

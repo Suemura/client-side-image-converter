@@ -1,6 +1,6 @@
 .footer {
-  border-top: 1px solid #e5e7eb;
-  background-color: #f9fafb;
+  border-top: 1px solid var(--border);
+  background-color: var(--background);
   padding: 48px 0 32px;
   margin-top: auto;
 }
@@ -31,9 +31,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #e0f2fe;
+  background-color: var(--primary);
   border-radius: 12px;
-  color: #0369a1;
+  color: var(--foreground);
 }
 
 .privacyIcon svg {
@@ -44,7 +44,7 @@
 .privacyText {
   font-size: 14px;
   line-height: 1.6;
-  color: #4b5563;
+  color: var(--muted-foreground);
   max-width: 400px;
 }
 
@@ -62,24 +62,24 @@
 .linkTitle {
   font-size: 14px;
   font-weight: 600;
-  color: #111827;
+  color: var(--foreground);
   margin-bottom: 4px;
 }
 
 .link {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--muted-foreground);
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .link:hover {
-  color: #374151;
+  color: var(--foreground);
 }
 
 .bottomSection {
   padding-top: 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -87,12 +87,12 @@
 
 .copyright {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--muted-foreground);
 }
 
 .madeWith {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--muted-foreground);
 }
 
 .heart {

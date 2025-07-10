@@ -31,7 +31,7 @@ export const Input: React.FC<InputProps> = ({
     borderRadius: "0.75rem",
     color: disabled ? "var(--muted-foreground)" : "var(--foreground)",
     border: "1px solid var(--border-dashed)",
-    backgroundColor: disabled ? "#f3f4f6" : "#f9fafb",
+    backgroundColor: disabled ? "var(--muted-foreground)" : "var(--background)",
     height: "3.5rem",
     padding: "15px",
     fontSize: "1rem",

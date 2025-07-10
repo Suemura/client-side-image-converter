@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { formatFileSize, truncateFileName } from "../utils/fileName";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
+import styles from "./FileList.module.css";
 
 interface FileListProps {
   files: File[];
@@ -106,12 +107,9 @@ export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
   }
 
   return (
-    <div
-      className="p-4"
-      style={{ borderTop: "1px solid var(--border-dashed)" }}
-    >
-      <div className="flex items-center justify-between pb-3">
-        <h4 className="font-medium" style={{ color: "var(--foreground)" }}>
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h4 className={styles.title}>
           {t("fileUpload.selectedFiles")} ({files.length}
           {t("common.files")})
         </h4>
@@ -120,91 +118,42 @@ export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
         </Button>
       </div>
 
-      <div
-        className="flex flex-col gap-2"
-        style={{ maxHeight: "200px", overflow: "auto" }}
-      >
+      <div className={styles.fileList}>
         {thumbnails.map((thumbnail, index) => (
           <button
             type="button"
             key={`${thumbnail.file.name}-${thumbnail.file.size}-${index}`}
-            className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors w-full text-left"
-            style={{
-              backgroundColor: "#f9fafb",
-              border: "1px solid var(--border-dashed)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#f3f4f6";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#f9fafb";
-            }}
+            className={styles.fileItem}
             onClick={() => handleFileClick(thumbnail.file)}
             aria-label={`${t("fileUpload.viewDetails")} ${thumbnail.file.name}`}
           >
-            <div className="flex items-center gap-3 flex-1">
+            <div className={styles.fileContent}>
               <div
-                className="flex items-center justify-center rounded"
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  backgroundColor: thumbnail.thumbnailUrl
-                    ? "transparent"
-                    : "var(--primary)",
-                  color: "var(--foreground)",
-                  fontSize: "12px",
-                  fontWeight: "500",
-                  overflow: "hidden",
-                  border: thumbnail.thumbnailUrl
-                    ? "1px solid var(--border-dashed)"
-                    : "none",
-                }}
+                className={`${styles.thumbnail} ${
+                  thumbnail.thumbnailUrl
+                    ? styles.thumbnailWithImage
+                    : styles.thumbnailWithoutImage
+                }`}
               >
                 {thumbnail.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={thumbnail.thumbnailUrl}
                     alt={`${thumbnail.file.name} thumbnail`}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      borderRadius: "3px",
-                    }}
+                    className={styles.thumbnailImage}
                   />
                 ) : isGeneratingThumbnails &&
                   thumbnail.file.type.startsWith("image/") ? (
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: "#f0f0f0",
-                      borderRadius: "3px",
-                      fontSize: "10px",
-                      color: "var(--muted-foreground)",
-                    }}
-                  >
-                    ...
-                  </div>
+                  <div className={styles.thumbnailLoading}>...</div>
                 ) : (
                   thumbnail.file.type.split("/")[1]?.toUpperCase() || "FILE"
                 )}
               </div>
-              <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
-                <p
-                  className="text-sm font-medium"
-                  style={{ color: "var(--foreground)" }}
-                  title={thumbnail.file.name}
-                >
+              <div className={styles.fileInfo}>
+                <p className={styles.fileName} title={thumbnail.file.name}>
                   {truncateFileName(thumbnail.file.name, 20)}
                 </p>
-                <p
-                  className="text-sm"
-                  style={{ color: "var(--muted-foreground)" }}
-                >
+                <p className={styles.fileSize}>
                   {formatFileSize(thumbnail.file.size)}
                 </p>
               </div>

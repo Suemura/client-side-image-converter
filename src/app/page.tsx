@@ -7,10 +7,14 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { LayoutContainer } from "../components/LayoutContainer";
 import { MainContent } from "../components/MainContent";
+import { useThemeAwareImage } from "../hooks/useThemeAwareImage";
 import styles from "./page.module.css";
 
 export default function Home() {
   const { t } = useTranslation();
+  const convertIcon = useThemeAwareImage("icon_convert.svg", "icon_convert_dark.svg");
+  const cropIcon = useThemeAwareImage("icon_crop.svg", "icon_crop_dark.svg");
+  const batchIcon = useThemeAwareImage("icon_batch.svg", "icon_batch_dark.svg");
 
   return (
     <LayoutContainer>
@@ -53,7 +57,7 @@ export default function Home() {
               {/* フォーマット変換アイコン */}
               <img
                 className={styles.featureIcon}
-                src="icon_convert.svg"
+                src={convertIcon}
                 alt="フォーマット変換アイコン"
               />
               <h3 className={styles.featureTitle}>
@@ -68,7 +72,7 @@ export default function Home() {
               {/* 画像トリミングアイコン */}
               <img
                 className={styles.featureIcon}
-                src="icon_crop.svg"
+                src={cropIcon}
                 alt="画像トリミングアイコン"
               />
               <h3 className={styles.featureTitle}>
@@ -83,7 +87,7 @@ export default function Home() {
               {/* バッチ処理アイコン */}
               <img
                 className={styles.featureIcon}
-                src="icon_batch.svg"
+                src={batchIcon}
                 alt="バッチ処理アイコン"
               />
               <h3 className={styles.featureTitle}>

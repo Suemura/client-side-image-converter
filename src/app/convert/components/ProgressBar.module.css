@@ -1,5 +1,5 @@
 .container {
-  background-color: white;
+  background-color: var(--background);
   border-radius: 16px;
   border: 1px solid var(--border-dashed);
   padding: 24px;
@@ -31,7 +31,7 @@
 .progressBarContainer {
   width: 100%;
   height: 8px;
-  background-color: #f3f4f6;
+  background-color: var(--border);
   border-radius: 4px;
   overflow: hidden;
 }

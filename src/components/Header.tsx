@@ -4,6 +4,7 @@ import styles from "./Header.module.css";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { Logo } from "./Logo";
 import { Navigation } from "./Navigation";
+import { ThemeSwitch } from "./ThemeSwitch";
 
 export const Header: React.FC = () => {
   const { t } = useTranslation();
@@ -33,6 +34,7 @@ export const Header: React.FC = () => {
             </svg>
             <span className={styles.githubText}>{t("header.github")}</span>
           </a>
+          <ThemeSwitch />
           <LanguageSwitch />
         </div>
       </div>

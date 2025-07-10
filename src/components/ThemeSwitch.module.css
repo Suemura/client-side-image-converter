@@ -29,11 +29,11 @@
   border-color: #404040;
 }
 
-.sliderJapanese {
+.sliderLight {
   left: 2px;
 }
 
-.sliderEnglish {
+.sliderDark {
   left: 42px;
 }
 
@@ -50,7 +50,7 @@
   z-index: 1;
 }
 
-.languageLabel {
+.themeLabel {
   transition: color 0.3s ease;
   display: flex;
   align-items: center;

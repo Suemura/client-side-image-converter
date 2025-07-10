@@ -18,8 +18,8 @@
 }
 
 .dropZoneActive {
-  background-color: #f0f9ff;
-  border-color: var(--primary);
+  background-color: var(--primary);
+  border-color: var(--border);
 }
 
 .dropZoneContent {
@@ -114,12 +114,12 @@
   transition: background-color 0.2s;
   width: 100%;
   text-align: left;
-  background-color: #f9fafb;
+  background-color: var(--background);
   border: 1px solid var(--border-dashed);
 }
 
 .fileItem:hover {
-  background-color: #f3f4f6;
+  background-color: var(--primary);
 }
 
 .fileItemContent {
@@ -165,7 +165,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f0f0f0;
+  background-color: var(--border);
   border-radius: 3px;
   font-size: 10px;
   color: var(--muted-foreground);

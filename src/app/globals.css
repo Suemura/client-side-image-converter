@@ -1,11 +1,37 @@
 :root {
+  /* メインの背景色 - body、featureCard、Input、Footer等 */
   --background: #f9fafb;
+  /* メインテキスト色 - タイトル、本文等 */
   --foreground: #101518;
+  /* 境界線色 - カード、Footer等の境界 */
   --border: #eaedf1;
+  /* 軽い境界線色 - ThemeSwitchスライダー境界等 */
+  --border-light: #e5e5e5;
+  /* 破線境界色 - 入力フィールド、ドラッグエリア等 */
   --border-dashed: #d4dce2;
+  /* 補助テキスト色 - 説明文、ラベル等 */
   --muted-foreground: #5c748a;
+  /* プライマリアクセント色 - プライバシーアイコン背景、警告ボックス等 */
   --primary: #dce8f3;
+  /* フォントファミリー */
   --font-family: var(--font-manrope), var(--font-noto-sans), sans-serif;
+}
+
+[data-theme="dark"] {
+  /* ダークモード：メインの背景色 */
+  --background: #0e1117;
+  /* ダークモード：メインテキスト色 */
+  --foreground: #f1f3f4;
+  /* ダークモード：境界線色 */
+  --border: #2a2a2a;
+  /* ダークモード：軽い境界線色 */
+  --border-light: #404040;
+  /* ダークモード：破線境界色 */
+  --border-dashed: #3a3a3a;
+  /* ダークモード：補助テキスト色 */
+  --muted-foreground: #8b9098;
+  /* ダークモード：プライマリアクセント色 */
+  --primary: #1a2531;
 }
 
 html,
@@ -216,7 +242,7 @@ input {
 }
 
 .bg-gray-50 {
-  background-color: #f9fafb;
+  background-color: var(--background);
 }
 .border-gray {
   border-color: var(--border);

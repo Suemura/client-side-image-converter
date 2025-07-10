@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Noto_Sans } from "next/font/google";
 import { I18nProvider } from "../components/I18nProvider";
+import { ThemeProvider } from "../contexts/ThemeContext";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -29,8 +30,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className={`${manrope.variable} ${notoSans.variable}`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const savedTheme = localStorage.getItem('theme');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+              })()
+            `,
+          }}
+        />
+      </head>
       <body>
-        <I18nProvider>{children}</I18nProvider>
+        <ThemeProvider>
+          <I18nProvider>{children}</I18nProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
