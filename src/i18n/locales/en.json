@@ -160,5 +160,17 @@
     "mb": "MB",
     "gb": "GB",
     "px": "px"
+  },
+  "footer": {
+    "privacyMessage": "All image processing is done locally on your device. No images are ever uploaded to any server.",
+    "project": "Project",
+    "github": "GitHub",
+    "reportIssue": "Report Issue",
+    "resources": "Resources",
+    "documentation": "Documentation",
+    "license": "License",
+    "allRightsReserved": "All rights reserved.",
+    "madeWith": "Made with",
+    "forPrivacy": "for privacy"
   }
 }

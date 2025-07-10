@@ -160,5 +160,17 @@
     "mb": "MB",
     "gb": "GB",
     "px": "px"
+  },
+  "footer": {
+    "privacyMessage": "すべての画像処理はお使いのデバイス内で完結し、サーバーへのアップロードは一切行いません。",
+    "project": "プロジェクト",
+    "github": "GitHub",
+    "reportIssue": "問題を報告",
+    "resources": "リソース",
+    "documentation": "ドキュメント",
+    "license": "ライセンス",
+    "allRightsReserved": "All rights reserved.",
+    "madeWith": "プライバシーを重視して",
+    "forPrivacy": "で作られました"
   }
 }

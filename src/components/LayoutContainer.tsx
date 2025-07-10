@@ -1,4 +1,5 @@
 import type React from "react";
+import { Footer } from "./Footer";
 
 interface LayoutContainerProps {
   children: React.ReactNode;
@@ -19,6 +20,7 @@ export const LayoutContainer: React.FC<LayoutContainerProps> = ({
       <div className="flex h-full flex-col" style={{ flexGrow: 1 }}>
         {children}
       </div>
+      <Footer />
     </div>
   );
 };
