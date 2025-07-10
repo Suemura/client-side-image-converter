@@ -106,7 +106,27 @@
     "unknown": "不明",
     "loading": "読み込み中...",
     "cannotPreview": "プレビューできません",
-    "close": "閉じる"
+    "close": "閉じる",
+    "exifTags": {
+      "Make": "カメラメーカー",
+      "Model": "カメラモデル",
+      "DateTime": "撮影日時",
+      "DateTimeOriginal": "元撮影日時",
+      "ExposureTime": "シャッター速度",
+      "FNumber": "F値",
+      "ISO": "ISO感度",
+      "ISOSpeedRatings": "ISO感度",
+      "FocalLength": "焦点距離",
+      "Flash": "フラッシュ",
+      "WhiteBalance": "ホワイトバランス",
+      "ExposureMode": "露出モード",
+      "Orientation": "向き",
+      "XResolution": "水平解像度",
+      "YResolution": "垂直解像度",
+      "Software": "ソフトウェア",
+      "Artist": "作成者",
+      "Copyright": "著作権"
+    }
   },
   "progress": {
     "converting": "変換中...",

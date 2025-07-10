@@ -59,33 +59,33 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
         const relevantData: ExifData = {};
 
         // 主要なEXIF情報を抽出
-        const tagMapping = {
-          Make: "カメラメーカー",
-          Model: "カメラモデル",
-          DateTime: "撮影日時",
-          DateTimeOriginal: "元撮影日時",
-          ExposureTime: "シャッター速度",
-          FNumber: "F値",
-          ISO: "ISO感度",
-          ISOSpeedRatings: "ISO感度",
-          FocalLength: "焦点距離",
-          Flash: "フラッシュ",
-          WhiteBalance: "ホワイトバランス",
-          ExposureMode: "露出モード",
-          Orientation: "向き",
-          XResolution: "水平解像度",
-          YResolution: "垂直解像度",
-          Software: "ソフトウェア",
-          Artist: "作成者",
-          Copyright: "著作権",
-        };
+        const tagKeys = [
+          "Make",
+          "Model",
+          "DateTime",
+          "DateTimeOriginal",
+          "ExposureTime",
+          "FNumber",
+          "ISO",
+          "ISOSpeedRatings",
+          "FocalLength",
+          "Flash",
+          "WhiteBalance",
+          "ExposureMode",
+          "Orientation",
+          "XResolution",
+          "YResolution",
+          "Software",
+          "Artist",
+          "Copyright",
+        ];
 
-        for (const [exifKey, displayName] of Object.entries(tagMapping)) {
+        for (const exifKey of tagKeys) {
           if (
             allMetaData[exifKey] !== undefined &&
             allMetaData[exifKey] !== null
           ) {
-            relevantData[displayName] = allMetaData[exifKey];
+            relevantData[exifKey] = allMetaData[exifKey];
           }
         }
 
@@ -371,7 +371,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
               <div style={{ fontSize: "14px", lineHeight: "1.6" }}>
                 {Object.entries(exifData).map(([key, value]) => (
                   <div key={key} style={{ marginBottom: "4px" }}>
-                    <strong>{key}:</strong>{" "}
+                    <strong>{t(`fileDetails.exifTags.${key}`, key)}:</strong>{" "}
                     <span style={{ color: "var(--muted-foreground)" }}>
                       {value?.toString() || t("fileDetails.unknown")}
                     </span>

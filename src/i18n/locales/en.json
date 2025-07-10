@@ -106,7 +106,27 @@
     "unknown": "Unknown",
     "loading": "Loading...",
     "cannotPreview": "Cannot preview",
-    "close": "Close"
+    "close": "Close",
+    "exifTags": {
+      "Make": "Camera Make",
+      "Model": "Camera Model",
+      "DateTime": "Date/Time",
+      "DateTimeOriginal": "Original Date/Time",
+      "ExposureTime": "Exposure Time",
+      "FNumber": "F-Number",
+      "ISO": "ISO Speed",
+      "ISOSpeedRatings": "ISO Speed",
+      "FocalLength": "Focal Length",
+      "Flash": "Flash",
+      "WhiteBalance": "White Balance",
+      "ExposureMode": "Exposure Mode",
+      "Orientation": "Orientation",
+      "XResolution": "Horizontal Resolution",
+      "YResolution": "Vertical Resolution",
+      "Software": "Software",
+      "Artist": "Artist",
+      "Copyright": "Copyright"
+    }
   },
   "progress": {
     "converting": "Converting...",
