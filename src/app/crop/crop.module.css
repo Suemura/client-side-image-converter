@@ -1,12 +1,13 @@
 .cropPageContainer {
   display: grid;
-  grid-template-columns: 1fr 2fr 4fr 2fr 1fr;
+  grid-template-columns: 2fr 4fr 2fr;
   gap: 1.5rem;
   align-items: start;
   width: 100%;
-  max-width: 1600px;
+  max-width: 1400px;
   min-height: 600px;
   margin: 0 auto;
+  padding: 0 2rem;
 }
 
 .cropColumn {
@@ -136,9 +137,10 @@
 /* レスポンシブデザイン */
 @media (max-width: 1200px) {
   .cropPageContainer {
-    grid-template-columns: 0.5fr 2fr 4fr 2fr 0.5fr;
+    grid-template-columns: 2fr 4fr 2fr;
     gap: 1rem;
     max-width: 1200px;
+    padding: 0 1rem;
   }
 }
 
@@ -147,6 +149,7 @@
     grid-template-columns: 1fr;
     gap: 1.5rem;
     max-width: 600px;
+    padding: 0 1rem;
   }
 
   .cropColumn,
@@ -163,5 +166,6 @@
 
   .cropPageContainer {
     gap: 1rem;
+    padding: 0 0.5rem;
   }
 }

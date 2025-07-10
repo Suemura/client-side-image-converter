@@ -168,9 +168,6 @@ export default function CropPage() {
           </p>
 
           <div className={styles.cropPageContainer}>
-            {/* 左余白 */}
-            <div></div>
-
             {/* 左カラム: ファイル選択・ファイルリスト */}
             <div className={styles.cropColumn}>
               <h4 className={styles.cropColumnTitle}>
@@ -300,9 +297,6 @@ export default function CropPage() {
                 </div>
               )}
             </div>
-
-            {/* 右余白 */}
-            <div></div>
           </div>
         </div>
       </MainContent>
