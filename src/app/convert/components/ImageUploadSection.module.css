@@ -1,7 +1,8 @@
 .container {
   display: flex;
   flex-direction: column;
-  width: 320px;
+  width: 100%;
+  max-width: 320px;
 }
 
 .title {
@@ -18,4 +19,18 @@
   font-weight: normal;
   padding: 4px 16px 12px 16px;
   color: var(--muted-foreground);
+}
+
+.description {
+  font-size: 14px;
+  font-weight: normal;
+  padding: 4px 16px 12px 16px;
+  color: var(--muted-foreground);
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.buttonContainer {
+  margin-top: 1rem;
+  padding: 0 16px;
 }

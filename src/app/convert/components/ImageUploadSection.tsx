@@ -1,5 +1,7 @@
 import type React from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../../../components/Button";
+import { FileList } from "../../../components/FileList";
 import { FileUploadArea } from "../../../components/FileUploadArea";
 import styles from "./ImageUploadSection.module.css";
 
@@ -15,20 +17,31 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
   onClearFiles,
 }) => {
   const { t } = useTranslation();
-
+  
   return (
     <div className={styles.container}>
       <h2 className={styles.title}>{t("fileUpload.dragDropLabel")}</h2>
 
-      <FileUploadArea
-        files={files}
-        onFilesSelected={onFilesSelected}
-        onClearFiles={onClearFiles}
-      />
+      {files.length === 0 ? (
+        <>
+          <FileUploadArea
+            files={files}
+            onFilesSelected={onFilesSelected}
+            onClearFiles={onClearFiles}
+          />
 
-      <p className={styles.supportedFormats}>
-        Supported formats: JPG, PNG, BMP, TIFF
-      </p>
+          <p className={styles.supportedFormats}>Supported formats: JPG, PNG, BMP, TIFF</p>
+        </>
+      ) : (
+        <>
+          <FileList files={files} onClearFiles={onClearFiles} />
+          <div className={styles.buttonContainer}>
+            <Button variant="secondary" onClick={onClearFiles}>
+              {t("crop.selectNewImage")}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

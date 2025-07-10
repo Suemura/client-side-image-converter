@@ -362,7 +362,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
       {showComparison && selectedResult && isModalOpen && (
         <ImageComparisonModal
           result={selectedResult}
-          originalImageUrl={originalImageUrls[selectedResult.filename] || ""}
+          originalImageUrl={originalImageUrls[selectedResult.originalFilename] || ""}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
         />

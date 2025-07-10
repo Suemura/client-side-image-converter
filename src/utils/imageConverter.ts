@@ -12,6 +12,7 @@ export interface ConversionResult {
   originalSize: number;
   convertedSize: number;
   filename: string;
+  originalFilename: string;
 }
 
 export class ImageConverter {
@@ -99,6 +100,7 @@ export class ImageConverter {
                   originalSize: file.size,
                   convertedSize: blob.size,
                   filename,
+                  originalFilename: file.name,
                 });
               },
             );
@@ -129,6 +131,7 @@ export class ImageConverter {
                   originalSize: file.size,
                   convertedSize: blob.size,
                   filename,
+                  originalFilename: file.name,
                 });
               },
               mimeType,
