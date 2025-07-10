@@ -34,6 +34,11 @@ export default function Home() {
                 {t("home.tryCropTool")}
               </Button>
             </Link>
+            <Link href="/metadata">
+              <Button variant="secondary" size="large">
+                {t("home.tryMetadataTool")}
+              </Button>
+            </Link>
           </div>
 
           {/* GitHubリンク */}
