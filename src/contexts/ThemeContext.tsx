@@ -23,25 +23,39 @@ export const useTheme = () => {
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [theme, setTheme] = useState<Theme>(() => {
-    // サーバーサイドレンダリング時はlightを返す
-    if (typeof window === "undefined") return "light";
-    
-    // ローカルストレージから読み取り
-    const savedTheme = localStorage.getItem("theme") as Theme;
-    if (savedTheme) {
-      return savedTheme;
-    }
-    
-    // システムの設定を読み取り
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    return prefersDark ? "dark" : "light";
-  });
+  const [theme, setTheme] = useState<Theme>("light");
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem("theme", theme);
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
+    // クライアントサイドでのみ初期化
+    // 現在のdata-theme属性を確認
+    const currentTheme = document.documentElement.getAttribute("data-theme") as Theme;
+    if (currentTheme === "dark" || currentTheme === "light") {
+      setTheme(currentTheme);
+    } else {
+      // フォールバック: ローカルストレージまたはシステム設定
+      const savedTheme = localStorage.getItem("theme") as Theme;
+      if (savedTheme) {
+        setTheme(savedTheme);
+      } else {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        setTheme(prefersDark ? "dark" : "light");
+      }
+    }
+    setIsInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (isInitialized) {
+      localStorage.setItem("theme", theme);
+      // data-theme属性はスクリプトで既に設定されているので、
+      // 実際にテーマが変更された時のみ更新
+      const currentTheme = document.documentElement.getAttribute("data-theme");
+      if (currentTheme !== theme) {
+        document.documentElement.setAttribute("data-theme", theme);
+      }
+    }
+  }, [theme, isInitialized]);
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light");
@@ -49,7 +63,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
+      <div suppressHydrationWarning>{children}</div>
     </ThemeContext.Provider>
   );
 };

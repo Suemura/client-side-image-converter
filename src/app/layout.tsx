@@ -29,22 +29,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={`${manrope.variable} ${notoSans.variable}`}>
-      <head>
+    <html lang="ja" className={`${manrope.variable} ${notoSans.variable}`} suppressHydrationWarning>
+      <head />
+      <body>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                const savedTheme = localStorage.getItem('theme');
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                const theme = savedTheme || (prefersDark ? 'dark' : 'light');
-                document.documentElement.setAttribute('data-theme', theme);
+                try {
+                  const savedTheme = localStorage.getItem('theme');
+                  if (savedTheme) {
+                    document.documentElement.setAttribute('data-theme', savedTheme);
+                  } else {
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    const theme = prefersDark ? 'dark' : 'light';
+                    document.documentElement.setAttribute('data-theme', theme);
+                  }
+                } catch (e) {
+                  document.documentElement.setAttribute('data-theme', 'light');
+                }
               })()
             `,
           }}
         />
-      </head>
-      <body>
         <ThemeProvider>
           <I18nProvider>{children}</I18nProvider>
         </ThemeProvider>
