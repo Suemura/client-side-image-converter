@@ -1,6 +1,6 @@
 import type React from "react";
 import { useTranslation } from "react-i18next";
-import { setStoredLanguage, type SupportedLanguage } from "../utils/languageStorage";
+import type { SupportedLanguage } from "../utils/languageStorage";
 import styles from "./LanguageSwitch.module.css";
 
 export const LanguageSwitch: React.FC = () => {
