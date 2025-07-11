@@ -177,6 +177,7 @@
     "noMetadataFound": "No metadata found",
     "metadataRemoved": "Metadata removed successfully",
     "analyzingMetadata": "Analyzing metadata...",
+    "processingNote": "* Only selected tags will be removed, other metadata will be preserved. JPEG format only.",
     "risk": {
       "high": "HIGH",
       "medium": "MED",

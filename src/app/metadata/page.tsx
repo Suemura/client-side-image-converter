@@ -240,6 +240,13 @@ export default function MetadataPage() {
                       </div>
                     </div>
 
+                    {/* 動作説明 */}
+                    <div style={{ marginBottom: "16px", padding: "12px", backgroundColor: "var(--muted)", borderRadius: "8px" }}>
+                      <p style={{ fontSize: "14px", color: "var(--muted-foreground)", margin: 0 }}>
+                        {t("metadata.processingNote")}
+                      </p>
+                    </div>
+
                     {/* アクションボタン */}
                     <div className={styles.actionButtons}>
                       <Button

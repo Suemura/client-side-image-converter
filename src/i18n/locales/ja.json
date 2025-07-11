@@ -177,6 +177,7 @@
     "noMetadataFound": "メタデータが見つかりませんでした",
     "metadataRemoved": "メタデータが削除されました",
     "analyzingMetadata": "メタデータを分析中...",
+    "processingNote": "※ 選択されたタグのみが削除され、その他のメタデータは保持されます。JPEG形式のみ対応しています。",
     "risk": {
       "high": "高",
       "medium": "中",
