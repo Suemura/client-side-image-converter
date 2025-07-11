@@ -52,7 +52,10 @@
     "pngQualityNotice": "PNG format uses lossless compression, so quality settings are not applied. Output is always at maximum quality.",
     "pngQualityExperimental": "Experimental PNG quality control is supported. Lower values result in smaller file sizes but may reduce image quality.",
     "pngQualityHelp": "PNG Quality: 95+=Standard PNG, 70-94=Medium compression, <70=High compression (quality loss)",
-    "qualityDescription": "Quality: Lower values result in smaller file sizes but reduced image quality"
+    "qualityDescription": "Quality: Lower values result in smaller file sizes but reduced image quality",
+    "metadataSettings": "Metadata Settings",
+    "preserveExif": "Preserve EXIF Information",
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the converted image. Only available for JPEG and WebP formats."
   },
   "crop": {
     "title": "Image Cropping Tool",
@@ -73,6 +76,8 @@
     "startCropping": "Start Cropping",
     "reCrop": "Re-Crop",
     "croppingInProgress": "Cropping in progress...",
+    "preserveExif": "Preserve EXIF Information",
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the cropped image. Only available for JPEG format.",
     "filesSelected": "Selected Files",
     "cropSettings": "Crop Settings",
     "previewAndCrop": "Preview and Crop",

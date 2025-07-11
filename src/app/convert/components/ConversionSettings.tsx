@@ -12,6 +12,7 @@ export interface ConversionSettings {
   width?: number;
   height?: number;
   maintainAspectRatio: boolean;
+  preserveExif: boolean;
 }
 
 interface ConversionSettingsProps {
@@ -188,6 +189,28 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
             {t("convert.maintainAspectRatio")}
           </span>
         </label>
+      </div>
+
+      <h3 className={styles.sectionTitle}>{t("convert.metadataSettings")}</h3>
+
+      <div className={styles.checkboxContainer}>
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            checked={settings.preserveExif}
+            onChange={() => onSettingsChange({
+              ...settings,
+              preserveExif: !settings.preserveExif,
+            })}
+            className={styles.checkbox}
+          />
+          <span className={styles.checkboxText}>
+            {t("convert.preserveExif")}
+          </span>
+        </label>
+      </div>
+      <div className={styles.helpText}>
+        {t("convert.preserveExifHelp")}
       </div>
 
       <div className={styles.buttonContainer}>

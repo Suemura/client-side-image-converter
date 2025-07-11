@@ -1,4 +1,5 @@
 import EXIF from "exif-js";
+import piexif from "piexifjs";
 
 export interface ExifData {
   [key: string]: string | number | undefined;
@@ -83,7 +84,7 @@ export class MetadataManager {
 
   /**
    * 指定されたタグを画像から削除する
-   * EXIFデータの選択的削除を実装
+   * piexifjsを使用したEXIFデータの選択的削除
    */
   static async removeMetadataFromImage(
     file: File, 
@@ -95,21 +96,41 @@ export class MetadataManager {
         return;
       }
 
-      // FileReaderでファイルをArrayBufferとして読み込み
+      // JPEGファイルのみ対応
+      if (!file.type.includes('jpeg') && !file.type.includes('jpg')) {
+        // JPEG以外はCanvas経由で全削除
+        this.removeAllMetadataWithCanvas(file).then(resolve).catch(reject);
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
-          const arrayBuffer = e.target?.result as ArrayBuffer;
-          if (!arrayBuffer) {
+          const imageData = e.target?.result as string;
+          if (!imageData) {
             reject(new Error('Failed to read file'));
             return;
           }
 
-          // EXIFデータを抽出・編集
-          const modifiedBuffer = await this.removeExifTags(arrayBuffer, tagsToRemove);
+          // piexifjsでEXIFデータを読み込み
+          const exifObj = piexif.load(imageData);
           
-          // 新しいFileオブジェクトを作成
-          const modifiedBlob = new Blob([modifiedBuffer], { type: file.type });
+          // 指定されたタグを削除
+          this.removeTagsFromExifObj(exifObj as Record<string, Record<number, string | number | number[]>>, tagsToRemove);
+          
+          // 修正したEXIFデータを画像に挿入
+          const exifBytes = piexif.dump(exifObj);
+          const newImageData = piexif.insert(exifBytes, imageData);
+          
+          // Base64からBlobに変換
+          const base64Data = newImageData.split(',')[1];
+          const binaryData = atob(base64Data);
+          const uint8Array = new Uint8Array(binaryData.length);
+          for (let i = 0; i < binaryData.length; i++) {
+            uint8Array[i] = binaryData.charCodeAt(i);
+          }
+          
+          const modifiedBlob = new Blob([uint8Array], { type: file.type });
           const modifiedFile = new File([modifiedBlob], file.name, {
             type: file.type,
             lastModified: Date.now()
@@ -127,212 +148,81 @@ export class MetadataManager {
         reject(new Error('Failed to read file'));
       };
 
-      reader.readAsArrayBuffer(file);
+      reader.readAsDataURL(file);
     });
   }
 
   /**
-   * EXIFタグを選択的に削除する
+   * piexifjsのExifObjから指定されたタグを削除
    */
-  private static async removeExifTags(
-    arrayBuffer: ArrayBuffer, 
+  private static removeTagsFromExifObj(
+    exifObj: Record<string, Record<number, string | number | number[]>>,
     tagsToRemove: string[]
-  ): Promise<ArrayBuffer> {
-    const dataView = new DataView(arrayBuffer);
-    
-    // JPEGの場合の処理
-    if (dataView.getUint16(0) === 0xFFD8) {
-      return this.removeJpegExifTags(arrayBuffer, tagsToRemove);
-    }
-    
-    // JPEG以外の場合は、Canvas経由での削除にフォールバック
-    throw new Error('EXIF editing only supported for JPEG files');
-  }
-
-  /**
-   * JPEGファイルからEXIFタグを選択的に削除
-   */
-  private static removeJpegExifTags(
-    arrayBuffer: ArrayBuffer, 
-    tagsToRemove: string[]
-  ): ArrayBuffer {
-    const dataView = new DataView(arrayBuffer);
-    const uint8Array = new Uint8Array(arrayBuffer);
-    
-    // APP1セグメント（EXIF）を探す
-    let offset = 2; // SOI (0xFFD8) の後から開始
-    
-    while (offset < dataView.byteLength - 1) {
-      const marker = dataView.getUint16(offset);
+  ): void {
+    // タグ名とpiexifjsの定数のマッピング
+    const tagMapping: Record<string, { ifd: string; tag: number }> = {
+      // 0th IFD
+      'Make': { ifd: '0th', tag: piexif.ImageIFD.Make },
+      'Model': { ifd: '0th', tag: piexif.ImageIFD.Model },
+      'Software': { ifd: '0th', tag: piexif.ImageIFD.Software },
+      'DateTime': { ifd: '0th', tag: piexif.ImageIFD.DateTime },
+      'Artist': { ifd: '0th', tag: piexif.ImageIFD.Artist },
+      'Copyright': { ifd: '0th', tag: piexif.ImageIFD.Copyright },
+      'Orientation': { ifd: '0th', tag: piexif.ImageIFD.Orientation },
       
-      if (marker === 0xFFE1) { // APP1セグメント
-        const segmentLength = dataView.getUint16(offset + 2);
-        
-        // "Exif\0\0" を確認
-        if (offset + 10 < dataView.byteLength &&
-            dataView.getUint32(offset + 4) === 0x45786966 && // "Exif"
-            dataView.getUint16(offset + 8) === 0x0000) { // "\0\0"
-          
-          // EXIFデータを処理
-          const exifData = this.processExifData(
-            uint8Array, 
-            offset + 10, 
-            segmentLength - 6, 
-            tagsToRemove
-          );
-          
-          // 修正されたバッファを作成
-          const result = new Uint8Array(arrayBuffer.byteLength - (segmentLength - 6) + exifData.length);
-          
-          // 前の部分をコピー
-          result.set(uint8Array.slice(0, offset + 10));
-          
-          // 修正されたEXIFデータを設定
-          result.set(exifData, offset + 10);
-          
-          // 後の部分をコピー
-          result.set(
-            uint8Array.slice(offset + 4 + segmentLength), 
-            offset + 10 + exifData.length
-          );
-          
-          // 新しいセグメント長を設定
-          const newDataView = new DataView(result.buffer);
-          newDataView.setUint16(offset + 2, exifData.length + 6);
-          
-          return result.buffer;
-        }
-      }
-      
-      if (marker >= 0xFFD0 && marker <= 0xFFD7) {
-        // RSTマーカー（長さフィールドなし）
-        offset += 2;
-      } else if (marker === 0xFFDA) {
-        // SOS（画像データ開始）- これ以上EXIFはない
-        break;
-      } else {
-        // その他のマーカー
-        const segmentLength = dataView.getUint16(offset + 2);
-        offset += 2 + segmentLength;
-      }
-    }
-    
-    // EXIFセグメントが見つからなかった場合は元のデータを返す
-    return arrayBuffer;
-  }
-
-  /**
-   * EXIFデータ内の指定タグを削除
-   */
-  private static processExifData(
-    data: Uint8Array, 
-    startOffset: number, 
-    length: number, 
-    tagsToRemove: string[]
-  ): Uint8Array {
-    // 簡易的な実装: タグマッピング
-    const tagMap: Record<string, number> = {
-      'Make': 0x010F,
-      'Model': 0x0110,
-      'DateTime': 0x0132,
-      'DateTimeOriginal': 0x9003,
-      'DateTimeDigitized': 0x9004,
-      'Software': 0x0131,
-      'Artist': 0x013B,
-      'Copyright': 0x8298,
-      'GPS': 0x8825,
-      'GPSLatitude': 0x0002,
-      'GPSLongitude': 0x0004,
-      'GPSAltitude': 0x0006,
-      'ExposureTime': 0x829A,
-      'FNumber': 0x829D,
-      'ISO': 0x8827,
-      'ISOSpeedRatings': 0x8827,
-      'FocalLength': 0x920A,
-      'Flash': 0x9209,
-      'WhiteBalance': 0xA403,
-      'ExposureMode': 0xA402,
-      'Orientation': 0x0112
+      // Exif IFD
+      'DateTimeOriginal': { ifd: 'Exif', tag: piexif.ExifIFD.DateTimeOriginal },
+      'DateTimeDigitized': { ifd: 'Exif', tag: piexif.ExifIFD.DateTimeDigitized },
+      'ExposureTime': { ifd: 'Exif', tag: piexif.ExifIFD.ExposureTime },
+      'FNumber': { ifd: 'Exif', tag: piexif.ExifIFD.FNumber },
+      'ISO': { ifd: 'Exif', tag: piexif.ExifIFD.ISOSpeedRatings },
+      'ISOSpeedRatings': { ifd: 'Exif', tag: piexif.ExifIFD.ISOSpeedRatings },
+      'FocalLength': { ifd: 'Exif', tag: piexif.ExifIFD.FocalLength },
+      'Flash': { ifd: 'Exif', tag: piexif.ExifIFD.Flash },
+      'WhiteBalance': { ifd: 'Exif', tag: piexif.ExifIFD.WhiteBalance },
+      'ExposureMode': { ifd: 'Exif', tag: piexif.ExifIFD.ExposureMode },
+      'CameraOwnerName': { ifd: 'Exif', tag: piexif.ExifIFD.CameraOwnerName },
+      'BodySerialNumber': { ifd: 'Exif', tag: piexif.ExifIFD.BodySerialNumber },
+      'LensModel': { ifd: 'Exif', tag: piexif.ExifIFD.LensModel },
+      'LensSerialNumber': { ifd: 'Exif', tag: piexif.ExifIFD.LensSerialNumber },
     };
 
-    // 削除対象のタグ番号を取得
-    const tagsToRemoveNumbers = tagsToRemove
-      .map(tag => tagMap[tag])
-      .filter(num => num !== undefined);
+    // GPS関連のタグを処理
+    const gpsTagMapping: Record<string, number> = {
+      'GPSLatitude': piexif.GPSIFD.GPSLatitude,
+      'GPSLongitude': piexif.GPSIFD.GPSLongitude,
+      'GPSAltitude': piexif.GPSIFD.GPSAltitude,
+      'GPSImgDirection': piexif.GPSIFD.GPSImgDirection,
+      'GPSDateStamp': piexif.GPSIFD.GPSDateStamp,
+      'GPSTimeStamp': piexif.GPSIFD.GPSTimeStamp,
+    };
 
-    if (tagsToRemoveNumbers.length === 0) {
-      return data.slice(startOffset, startOffset + length);
-    }
-
-    // TIFF形式のEXIFデータを解析・編集
-    const exifData = data.slice(startOffset, startOffset + length);
-    return this.removeTiffTags(exifData, tagsToRemoveNumbers);
-  }
-
-  /**
-   * TIFFフォーマットのEXIFデータから指定タグを削除
-   */
-  private static removeTiffTags(data: Uint8Array, tagsToRemove: number[]): Uint8Array {
-    // エンディアンを確認
-    const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
-    const endian = dataView.getUint16(0);
-    const littleEndian = endian === 0x4949;
-    
-    // IFDオフセットを取得
-    const ifdOffset = littleEndian ? 
-      dataView.getUint32(4, true) : 
-      dataView.getUint32(4, false);
-    
-    // 簡易実装: タグが見つかった場合は該当エントリを除去
-    // 完全な実装には更に詳細な解析が必要
-    return this.filterIfdEntries(data, ifdOffset, tagsToRemove, littleEndian);
-  }
-
-  /**
-   * IFDエントリから指定タグを除去
-   */
-  private static filterIfdEntries(
-    data: Uint8Array, 
-    ifdOffset: number, 
-    tagsToRemove: number[], 
-    littleEndian: boolean
-  ): Uint8Array {
-    // 簡易実装: 指定されたタグのエントリを除去した新しいバッファを作成
-    // 実際の実装ではより複雑なIFD構造の解析が必要
-    
-    const result = new Uint8Array(data);
-    const dataView = new DataView(result.buffer, result.byteOffset, result.byteLength);
-    
-    try {
-      if (ifdOffset < data.length - 2) {
-        const entryCount = littleEndian ? 
-          dataView.getUint16(ifdOffset, true) : 
-          dataView.getUint16(ifdOffset, false);
-        
-        // エントリを確認して削除対象をマーク
-        for (let i = 0; i < entryCount; i++) {
-          const entryOffset = ifdOffset + 2 + (i * 12);
-          if (entryOffset + 2 < data.length) {
-            const tag = littleEndian ? 
-              dataView.getUint16(entryOffset, true) : 
-              dataView.getUint16(entryOffset, false);
-            
-            if (tagsToRemove.includes(tag)) {
-              // タグを無効化（タイプを0に設定）
-              if (littleEndian) {
-                dataView.setUint16(entryOffset + 2, 0, true);
-              } else {
-                dataView.setUint16(entryOffset + 2, 0, false);
-              }
-            }
-          }
-        }
+    for (const tagName of tagsToRemove) {
+      // GPS全体を削除する場合
+      if (tagName === 'GPS' || tagName === 'GPS Info IFD Pointer') {
+        delete exifObj['GPS'];
+        continue;
       }
-    } catch (error) {
-      console.warn('EXIF tag removal warning:', error);
+
+      // 通常のタグマッピングから削除
+      const mapping = tagMapping[tagName];
+      if (mapping && exifObj[mapping.ifd]) {
+        delete exifObj[mapping.ifd][mapping.tag];
+      }
+
+      // GPSタグの個別削除
+      if (tagName.startsWith('GPS') && gpsTagMapping[tagName] && exifObj['GPS']) {
+        delete exifObj['GPS'][gpsTagMapping[tagName]];
+      }
     }
-    
-    return result;
+
+    // 空になったIFDを削除
+    const ifds = ['0th', 'Exif', 'GPS', '1st'];
+    for (const ifd of ifds) {
+      if (exifObj[ifd] && Object.keys(exifObj[ifd]).length === 0) {
+        delete exifObj[ifd];
+      }
+    }
   }
 
   /**
