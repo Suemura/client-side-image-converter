@@ -171,7 +171,7 @@
   },
   "metadata": {
     "title": "画像メタデータ・プライバシー管理",
-    "subtitle": "画像のメタデータ（EXIF情報）を確認し、プライバシーに関わる情報を選択的に削除できます。",
+    "subtitle": "画像のメタデータ（EXIF情報）を確認し、プライバシーに関わる情報を削除できます。JPEG形式では選択的削除、その他の形式では全削除となります。",
     "uploadedImages": "アップロード済み画像",
     "metadataAnalysis": "メタデータ分析",
     "privacyRiskTags": "プライバシーリスクのあるタグ",
@@ -183,7 +183,11 @@
     "noMetadataFound": "メタデータが見つかりませんでした",
     "metadataRemoved": "メタデータが削除されました",
     "analyzingMetadata": "メタデータを分析中...",
-    "processingNote": "※ 選択されたタグのみが削除され、その他のメタデータは保持されます。JPEG形式のみ対応しています。",
+    "processingNote": "※ JPEG形式: 選択されたタグのみ削除、その他の形式: すべてのメタデータを削除",
+    "processingMethod": {
+      "selective": "選択的削除",
+      "allRemoval": "全削除"
+    },
     "risk": {
       "high": "高",
       "medium": "中",

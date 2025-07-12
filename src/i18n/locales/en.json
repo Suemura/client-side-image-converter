@@ -171,7 +171,7 @@
   },
   "metadata": {
     "title": "Image Metadata & Privacy Manager",
-    "subtitle": "View image metadata (EXIF information) and selectively remove privacy-sensitive data.",
+    "subtitle": "View image metadata (EXIF information) and remove privacy-sensitive data. JPEG formats support selective removal, other formats use complete removal.",
     "uploadedImages": "Uploaded Images",
     "metadataAnalysis": "Metadata Analysis",
     "privacyRiskTags": "Privacy Risk Tags",
@@ -183,7 +183,11 @@
     "noMetadataFound": "No metadata found",
     "metadataRemoved": "Metadata removed successfully",
     "analyzingMetadata": "Analyzing metadata...",
-    "processingNote": "* Only selected tags will be removed, other metadata will be preserved. JPEG format only.",
+    "processingNote": "* JPEG format: Only selected tags removed, Other formats: All metadata removed",
+    "processingMethod": {
+      "selective": "Selective",
+      "allRemoval": "All Removal"
+    },
     "risk": {
       "high": "HIGH",
       "medium": "MED",

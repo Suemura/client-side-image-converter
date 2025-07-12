@@ -115,6 +115,19 @@ export default function MetadataPage() {
     );
   };
 
+  // ファイル形式によるメタデータ処理方法を表示
+  const getProcessingMethodBadge = (file: File) => {
+    const isJpeg = file.type.includes('jpeg') || file.type.includes('jpg');
+    const badgeClass = isJpeg ? styles.processingMethodSelective : styles.processingMethodAll;
+    const textKey = isJpeg ? 'metadata.processingMethod.selective' : 'metadata.processingMethod.allRemoval';
+    
+    return (
+      <span className={`${styles.processingMethodBadge} ${badgeClass}`}>
+        {t(textKey)}
+      </span>
+    );
+  };
+
   // タグの使用カウントを取得
   const getTagCount = (tag: string): number => {
     if (!analysis) return 0;
@@ -165,8 +178,11 @@ export default function MetadataPage() {
                       </div>
                       <p className={styles.imageFileName}>
                         {file.name}
-                        {getPrivacyRiskBadge(file)}
                       </p>
+                      <div className={styles.imageBadges}>
+                        {getPrivacyRiskBadge(file)}
+                        {getProcessingMethodBadge(file)}
+                      </div>
                       <p className={styles.imageFileSize}>
                         {(file.size / 1024 / 1024).toFixed(2)} MB
                       </p>
