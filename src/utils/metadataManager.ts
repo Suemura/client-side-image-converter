@@ -140,8 +140,7 @@ export class MetadataManager {
           
           const modifiedBlob = new Blob([uint8Array], { type: file.type });
           const modifiedFile = new File([modifiedBlob], file.name, {
-            type: file.type,
-            lastModified: Date.now()
+            type: file.type
           });
 
           resolve(modifiedFile);
@@ -258,8 +257,7 @@ export class MetadataManager {
           }
           
           const cleanedFile = new File([blob], file.name, { 
-            type: file.type,
-            lastModified: Date.now()
+            type: file.type
           });
           
           resolve(cleanedFile);

@@ -16,6 +16,7 @@ export interface ConversionResult {
   convertedSize: number;
   filename: string;
   originalFilename: string;
+  file: File;
 }
 
 export class ImageConverter {
@@ -111,6 +112,11 @@ export class ImageConverter {
                 ) || originalFilename;
               const filename = `${nameWithoutExt}.${options.format}`;
 
+              // ファイルオブジェクトを作成
+              const resultFile = new File([finalBlob], filename, {
+                type: finalBlob.type,
+              });
+
               resolve({
                 blob: finalBlob,
                 url,
@@ -118,6 +124,7 @@ export class ImageConverter {
                 convertedSize: finalBlob.size,
                 filename,
                 originalFilename: file.name,
+                file: resultFile,
               });
             };
 

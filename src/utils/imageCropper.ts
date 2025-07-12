@@ -13,6 +13,7 @@ export interface CropResult {
   fileName: string;
   success: boolean;
   error?: string;
+  croppedFile?: File;
 }
 
 export class ImageCropper {
@@ -179,11 +180,17 @@ export class ImageCropper {
 
       const fileName = this.generateCroppedFileName(file.name);
 
+      // ファイルオブジェクトを作成
+      const croppedFile = new File([croppedBlob], fileName, {
+        type: file.type,
+      });
+
       return {
         originalFile: file,
         croppedBlob,
         fileName,
         success: true,
+        croppedFile,
       };
     } catch (error) {
       return {

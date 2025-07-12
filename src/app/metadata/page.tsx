@@ -263,6 +263,7 @@ export default function MetadataPage() {
                       </p>
                     </div>
 
+
                     {/* アクションボタン */}
                     <div className={styles.actionButtons}>
                       <Button

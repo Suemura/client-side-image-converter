@@ -204,6 +204,7 @@ export default function CropPage() {
                 <div className={styles.helpText}>
                   {t("crop.preserveExifHelp")}
                 </div>
+
               </div>
 
               <div className={styles.centerButton}>
