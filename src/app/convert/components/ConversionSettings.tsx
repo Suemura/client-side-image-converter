@@ -194,7 +194,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
       <h3 className={styles.sectionTitle}>{t("convert.metadataSettings")}</h3>
 
       <div className={styles.checkboxContainer}>
-        <label className={styles.checkboxLabel}>
+        <label className={`${styles.checkboxLabel} ${settings.targetFormat !== 'jpeg' ? styles.checkboxDisabled : ''}`}>
           <input
             type="checkbox"
             checked={settings.preserveExif}
@@ -202,6 +202,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
               ...settings,
               preserveExif: !settings.preserveExif,
             })}
+            disabled={settings.targetFormat !== 'jpeg'}
             className={styles.checkbox}
           />
           <span className={styles.checkboxText}>
@@ -210,7 +211,10 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
         </label>
       </div>
       <div className={styles.helpText}>
-        {t("convert.preserveExifHelp")}
+        {settings.targetFormat === 'jpeg' 
+          ? t("convert.preserveExifHelp")
+          : t("convert.preserveExifJpegOnly")
+        }
       </div>
 
       <div className={styles.buttonContainer}>

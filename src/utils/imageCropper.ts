@@ -154,7 +154,7 @@ export class ImageCropper {
         );
       });
 
-      // Exifデータを挿入
+      // Exifデータを挿入（JPEGのみ）
       if (exifData && (file.type.includes('jpeg') || file.type.includes('jpg'))) {
         try {
           const reader = new FileReader();

@@ -73,6 +73,15 @@
   color: var(--foreground);
 }
 
+.checkboxDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.checkboxDisabled .checkboxText {
+  color: var(--muted-foreground);
+}
+
 .buttonContainer {
   display: flex;
   padding: 12px 16px;

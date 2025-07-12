@@ -32,7 +32,7 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
             showFileList={showFileList}
           />
 
-          <p className={styles.supportedFormats}>Supported formats: JPG, PNG, BMP, TIFF</p>
+          <p className={styles.supportedFormats}>Supported formats: JPG, PNG, WebP, BMP, TIFF</p>
         </>
       ) : (
         <>

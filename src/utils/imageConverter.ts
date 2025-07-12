@@ -33,7 +33,7 @@ export class ImageConverter {
       let exifData: string | null = null;
       const shouldPreserveExif = options.preserveExif && 
         (file.type.includes('jpeg') || file.type.includes('jpg')) &&
-        (options.format === 'jpeg' || options.format === 'webp');
+        (options.format === 'jpeg');
 
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -121,8 +121,8 @@ export class ImageConverter {
               });
             };
 
-            // ExifデータをBlobに挿入
-            if (exifData && (options.format === 'jpeg' || options.format === 'webp')) {
+            // ExifデータをBlobに挿入（JPEGのみ）
+            if (exifData && options.format === 'jpeg') {
               const reader2 = new FileReader();
               reader2.onload = (e2) => {
                 try {

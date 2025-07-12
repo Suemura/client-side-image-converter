@@ -55,7 +55,8 @@
     "qualityDescription": "品質: 低い値ほどファイルサイズが小さくなりますが、画質が劣化します",
     "metadataSettings": "メタデータ設定",
     "preserveExif": "EXIF情報を保持",
-    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が変換後の画像に保持されます。JPEGとWebP形式でのみ有効です。"
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が変換後の画像に保持されます。JPEG形式でのみ有効です。",
+    "preserveExifJpegOnly": "EXIF情報の保持はJPEG形式でのみ対応しています。"
   },
   "crop": {
     "title": "トリミングツール",

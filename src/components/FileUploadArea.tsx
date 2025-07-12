@@ -22,7 +22,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   files,
   onFilesSelected,
   onClearFiles,
-  acceptedTypes = ["image/jpeg", "image/png", "image/bmp", "image/tiff"],
+  acceptedTypes = ["image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"],
   showFileList = true,
 }) => {
   const { t } = useTranslation();

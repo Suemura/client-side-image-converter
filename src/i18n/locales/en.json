@@ -55,7 +55,8 @@
     "qualityDescription": "Quality: Lower values result in smaller file sizes but reduced image quality",
     "metadataSettings": "Metadata Settings",
     "preserveExif": "Preserve EXIF Information",
-    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the converted image. Only available for JPEG and WebP formats."
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the converted image. Only available for JPEG format.",
+    "preserveExifJpegOnly": "EXIF preservation is only supported for JPEG format."
   },
   "crop": {
     "title": "Image Cropping Tool",

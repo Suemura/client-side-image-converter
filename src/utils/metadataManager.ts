@@ -36,6 +36,13 @@ export class MetadataManager {
         return;
       }
 
+      // WebPは現在EXIF読み取りサポート対象外
+      if (file.type.includes('webp')) {
+        resolve({});
+        return;
+      }
+
+      // JPEG/その他の形式にはexif-jsを使用
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (EXIF as any).getData(file, function (this: any) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,6 +60,7 @@ export class MetadataManager {
       });
     });
   }
+
 
   /**
    * 複数ファイルのメタデータを分析する
@@ -255,7 +263,7 @@ export class MetadataManager {
           });
           
           resolve(cleanedFile);
-        }, file.type, 0.98);
+        }, file.type, file.type.includes('webp') ? 0.95 : 0.98);
       };
 
       img.onerror = () => {
