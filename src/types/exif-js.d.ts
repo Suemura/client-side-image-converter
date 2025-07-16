@@ -16,7 +16,10 @@ declare module "exif-js" {
      * @param file - ファイルまたはDOM要素
      * @param callback - コールバック関数（thisコンテキストでEXIFデータを取得）
      */
-    getData(file: File | HTMLElement, callback: (this: ExifContext) => void): void;
+    getData(
+      file: File | HTMLElement,
+      callback: (this: ExifContext) => void,
+    ): void;
 
     /**
      * すべてのEXIFタグを取得する

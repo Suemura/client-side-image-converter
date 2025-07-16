@@ -41,22 +41,22 @@ export const FileListWithThumbnails: React.FC<FileListWithThumbnailsProps> = ({
 
     // クリーンアップ関数
     return () => {
-      filesWithThumbnails.forEach(({ thumbnail }) => {
+      for (const { thumbnail } of filesWithThumbnails) {
         if (thumbnail) {
           URL.revokeObjectURL(thumbnail);
         }
-      });
+      }
     };
   }, [files]);
 
   // currentFileが変更された時のクリーンアップは別途処理
   useEffect(() => {
     return () => {
-      filesWithThumbnails.forEach(({ thumbnail }) => {
+      for (const { thumbnail } of filesWithThumbnails) {
         if (thumbnail) {
           URL.revokeObjectURL(thumbnail);
         }
-      });
+      }
     };
   }, []);
 
@@ -67,7 +67,7 @@ export const FileListWithThumbnails: React.FC<FileListWithThumbnailsProps> = ({
       <div className={styles.fileList}>
         {filesWithThumbnails.map(({ file, thumbnail }, index) => (
           <div
-            key={index}
+            key={file.name}
             className={`${styles.fileItem} ${
               currentFile && file === currentFile ? styles.fileItemActive : ""
             }`}

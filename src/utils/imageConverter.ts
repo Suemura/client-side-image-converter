@@ -139,7 +139,7 @@ export class ImageConverter {
                 reader2.onload = (e2) => {
                   try {
                     const dataUrl = e2.target?.result as string;
-                    const newDataUrl = piexif.insert(exifData!, dataUrl);
+                    const newDataUrl = piexif.insert(exifData, dataUrl);
                     const base64Data = newDataUrl.split(",")[1];
                     const binaryData = atob(base64Data);
                     const uint8Array = new Uint8Array(binaryData.length);

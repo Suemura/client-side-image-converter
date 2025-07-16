@@ -44,14 +44,16 @@ export default function MetadataPage() {
       setSelectedFiles(imageFiles);
 
       // 既存のURLをクリーンアップ
-      imageUrls.forEach((url) => URL.revokeObjectURL(url));
+      for (const url of imageUrls.values()) {
+        URL.revokeObjectURL(url);
+      }
 
       // 新しい画像URLを作成
       const newImageUrls = new Map<string, string>();
-      imageFiles.forEach((file) => {
+      for (const file of imageFiles) {
         const url = URL.createObjectURL(file);
         newImageUrls.set(file.name, url);
-      });
+      }
       setImageUrls(newImageUrls);
 
       // メタデータ分析を実行
@@ -65,7 +67,9 @@ export default function MetadataPage() {
   const handleClearFiles = useCallback(() => {
     setSelectedFiles([]);
     // URLをクリーンアップ
-    imageUrls.forEach((url) => URL.revokeObjectURL(url));
+    for (const url of imageUrls.values()) {
+      URL.revokeObjectURL(url);
+    }
     setImageUrls(new Map());
   }, [imageUrls]);
 
@@ -103,7 +107,9 @@ export default function MetadataPage() {
   // クリーンアップ
   useEffect(() => {
     return () => {
-      imageUrls.forEach((url) => URL.revokeObjectURL(url));
+      for (const url of imageUrls.values()) {
+        URL.revokeObjectURL(url);
+      }
     };
   }, [imageUrls]);
 

@@ -24,7 +24,8 @@
     "build": "next build",
     "postbuild": "next-sitemap",
     "start": "next start",
-    "lint": "npx @biomejs/biome check",
+    "lint": "npx @biomejs/biome check src/",
+    "lint:fix": "npx @biomejs/biome check src/ --write --unsafe",
     "deploy": "npm run build && wrangler pages deploy out",
     "preview": "wrangler pages dev out"
   },

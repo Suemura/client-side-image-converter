@@ -50,6 +50,9 @@ export class ImageCropper {
       // 画像を読み込み
       const img = await ImageCropper.loadImage(file);
 
+      // ローカル変数を使用してパラメータの再代入を避ける
+      let adjustedCropArea = cropArea;
+
       // トリミング領域の妥当性をチェック
       if (cropArea.width <= 0 || cropArea.height <= 0) {
         throw new Error("Invalid crop area dimensions");
@@ -80,32 +83,31 @@ export class ImageCropper {
           adjustedCropArea.width = img.width;
           adjustedCropArea.height = img.height;
         }
-        cropArea = adjustedCropArea;
       }
 
       // 最終的な検証
       // NaNや無限大の値をチェック
       if (
-        !Number.isFinite(cropArea.x) ||
-        !Number.isFinite(cropArea.y) ||
-        !Number.isFinite(cropArea.width) ||
-        !Number.isFinite(cropArea.height)
+        !Number.isFinite(adjustedCropArea.x) ||
+        !Number.isFinite(adjustedCropArea.y) ||
+        !Number.isFinite(adjustedCropArea.width) ||
+        !Number.isFinite(adjustedCropArea.height)
       ) {
         throw new Error(
-          `Non-finite values in crop area: x=${cropArea.x}, y=${cropArea.y}, width=${cropArea.width}, height=${cropArea.height}`,
+          `Non-finite values in crop area: x=${adjustedCropArea.x}, y=${adjustedCropArea.y}, width=${adjustedCropArea.width}, height=${adjustedCropArea.height}`,
         );
       }
 
       if (
-        cropArea.width <= 0 ||
-        cropArea.height <= 0 ||
-        cropArea.x < 0 ||
-        cropArea.y < 0 ||
-        cropArea.x >= img.width ||
-        cropArea.y >= img.height
+        adjustedCropArea.width <= 0 ||
+        adjustedCropArea.height <= 0 ||
+        adjustedCropArea.x < 0 ||
+        adjustedCropArea.y < 0 ||
+        adjustedCropArea.x >= img.width ||
+        adjustedCropArea.y >= img.height
       ) {
         throw new Error(
-          `Invalid final crop area: x=${cropArea.x}, y=${cropArea.y}, width=${cropArea.width}, height=${cropArea.height}, imageSize=${img.width}x${img.height}`,
+          `Invalid final crop area: x=${adjustedCropArea.x}, y=${adjustedCropArea.y}, width=${adjustedCropArea.width}, height=${adjustedCropArea.height}, imageSize=${img.width}x${img.height}`,
         );
       }
 
@@ -115,16 +117,22 @@ export class ImageCropper {
         cropArea.y + cropArea.height > img.height
       ) {
         console.warn("Crop area extends beyond image, adjusting...");
-        cropArea = {
-          x: cropArea.x,
-          y: cropArea.y,
-          width: Math.min(cropArea.width, img.width - cropArea.x),
-          height: Math.min(cropArea.height, img.height - cropArea.y),
+        adjustedCropArea = {
+          x: adjustedCropArea.x,
+          y: adjustedCropArea.y,
+          width: Math.min(
+            adjustedCropArea.width,
+            img.width - adjustedCropArea.x,
+          ),
+          height: Math.min(
+            adjustedCropArea.height,
+            img.height - adjustedCropArea.y,
+          ),
         };
-        console.log("Adjusted crop area:", cropArea);
+        console.log("Adjusted crop area:", adjustedCropArea);
       } // トリミング領域のサイズでcanvasを設定
-      canvas.width = cropArea.width;
-      canvas.height = cropArea.height;
+      canvas.width = adjustedCropArea.width;
+      canvas.height = adjustedCropArea.height;
 
       // 画像をトリミングしてcanvasに描画
       // 描画前にcanvasをクリア
@@ -133,14 +141,14 @@ export class ImageCropper {
       try {
         ctx.drawImage(
           img,
-          cropArea.x,
-          cropArea.y,
-          cropArea.width,
-          cropArea.height,
+          adjustedCropArea.x,
+          adjustedCropArea.y,
+          adjustedCropArea.width,
+          adjustedCropArea.height,
           0,
           0,
-          cropArea.width,
-          cropArea.height,
+          adjustedCropArea.width,
+          adjustedCropArea.height,
         );
       } catch (drawError) {
         console.error("Error drawing image:", drawError);

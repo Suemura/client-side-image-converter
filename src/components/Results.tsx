@@ -92,7 +92,9 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
 
     // クリーンアップ
     return () => {
-      Object.values(urls).forEach((url) => URL.revokeObjectURL(url));
+      for (const url of Object.values(urls)) {
+        URL.revokeObjectURL(url);
+      }
     };
   }, [cropResults, isCropMode]);
 
