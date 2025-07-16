@@ -5,11 +5,11 @@ import { useTranslation } from "react-i18next";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
+import { ConversionResults } from "../../components/Results";
 import {
   type ConversionResult,
   ImageConverter,
 } from "../../utils/imageConverter";
-import { ConversionResults } from "../../components/Results";
 import {
   ConversionSettings,
   type ConversionSettings as ConversionSettingsType,

@@ -91,7 +91,7 @@ export class FileDownloader {
 
       // デフォルトのZipファイル名を生成
       const defaultZipFilename =
-        zipFilename || this.generateZipFilename(results);
+        zipFilename || FileDownloader.generateZipFilename(results);
 
       // Zipファイルをダウンロード
       const link = document.createElement("a");
@@ -135,19 +135,18 @@ export class FileDownloader {
     const successResults = results.filter((result) => {
       if ("blob" in result) {
         return true; // ConversionResultは常に成功とみなす
-      } else {
-        return result.success; // CropResultはsuccessプロパティをチェック
       }
+      return result.success; // CropResultはsuccessプロパティをチェック
     });
 
     if (successResults.length === 0) return;
 
     if (successResults.length === 1) {
       // 1ファイルの場合は直接ダウンロード
-      this.downloadSingle(successResults[0]);
+      FileDownloader.downloadSingle(successResults[0]);
     } else {
       // 複数ファイルの場合はZIPファイルを作成
-      await this.downloadAsZip(successResults);
+      await FileDownloader.downloadAsZip(successResults);
     }
   }
 
@@ -168,12 +167,15 @@ export class FileDownloader {
   /**
    * 複数のFileオブジェクトをダウンロード
    */
-  static async downloadMultipleFiles(files: File[], zipFilename?: string): Promise<void> {
+  static async downloadMultipleFiles(
+    files: File[],
+    zipFilename?: string,
+  ): Promise<void> {
     if (files.length === 0) return;
 
     if (files.length === 1) {
       // 1ファイルの場合は直接ダウンロード
-      this.downloadFile(files[0]);
+      FileDownloader.downloadFile(files[0]);
     } else {
       // 複数ファイルの場合はZIPファイルを作成
       const zip = new JSZip();
@@ -207,7 +209,9 @@ export class FileDownloader {
       });
 
       // デフォルトのZipファイル名を生成
-      const defaultZipFilename = zipFilename || `files_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.zip`;
+      const defaultZipFilename =
+        zipFilename ||
+        `files_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.zip`;
 
       // Zipファイルをダウンロード
       const link = document.createElement("a");

@@ -34,17 +34,23 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
     return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
   }, []);
 
-  const formatDateTime = useCallback((dateValue?: string | number): string => {
-    if (!dateValue) return t("fileDetails.unknown");
-    try {
-      // 数値の場合はそのまま、文字列の場合はparseIntまたはそのまま使用
-      const date = typeof dateValue === 'number' ? new Date(dateValue) : new Date(dateValue);
-      if (Number.isNaN(date.getTime())) return t("fileDetails.unknown");
-      return date.toLocaleString(i18n.language === "ja" ? "ja-JP" : "en-US");
-    } catch {
-      return t("fileDetails.unknown");
-    }
-  }, [t, i18n.language]);
+  const formatDateTime = useCallback(
+    (dateValue?: string | number): string => {
+      if (!dateValue) return t("fileDetails.unknown");
+      try {
+        // 数値の場合はそのまま、文字列の場合はparseIntまたはそのまま使用
+        const date =
+          typeof dateValue === "number"
+            ? new Date(dateValue)
+            : new Date(dateValue);
+        if (Number.isNaN(date.getTime())) return t("fileDetails.unknown");
+        return date.toLocaleString(i18n.language === "ja" ? "ja-JP" : "en-US");
+      } catch {
+        return t("fileDetails.unknown");
+      }
+    },
+    [t, i18n.language],
+  );
 
   const extractExifData = useCallback((file: File): Promise<ExifData> => {
     return new Promise((resolve) => {

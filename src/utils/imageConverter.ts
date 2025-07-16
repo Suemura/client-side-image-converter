@@ -32,9 +32,10 @@ export class ImageConverter {
 
       // Exifデータを読み込む（JPEGの場合のみ）
       let exifData: string | null = null;
-      const shouldPreserveExif = options.preserveExif && 
-        (file.type.includes('jpeg') || file.type.includes('jpg')) &&
-        (options.format === 'jpeg');
+      const shouldPreserveExif =
+        options.preserveExif &&
+        (file.type.includes("jpeg") || file.type.includes("jpg")) &&
+        options.format === "jpeg";
 
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -43,140 +44,140 @@ export class ImageConverter {
             const imageData = e.target?.result as string;
             exifData = piexif.dump(piexif.load(imageData));
           } catch (error) {
-            console.warn('Failed to read EXIF data:', error);
+            console.warn("Failed to read EXIF data:", error);
           }
         }
 
         const img = new Image();
         img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
+          try {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
 
-          if (!ctx) {
-            reject(new Error("Canvas context を取得できませんでした"));
-            return;
-          }
-
-          // サイズ計算
-          let { width, height } = img;
-
-          if (options.width || options.height) {
-            if (options.maintainAspectRatio) {
-              const aspectRatio = width / height;
-
-              if (options.width && options.height) {
-                // 両方指定されている場合、アスペクト比を維持して小さい方に合わせる
-                const targetRatio = options.width / options.height;
-                if (aspectRatio > targetRatio) {
-                  width = options.width;
-                  height = options.width / aspectRatio;
-                } else {
-                  height = options.height;
-                  width = options.height * aspectRatio;
-                }
-              } else if (options.width) {
-                width = options.width;
-                height = options.width / aspectRatio;
-              } else if (options.height) {
-                height = options.height;
-                width = options.height * aspectRatio;
-              }
-            } else {
-              width = options.width || width;
-              height = options.height || height;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          // 画像を描画
-          ctx.drawImage(img, 0, 0, width, height);
-
-          // 変換後の処理を共通化
-          const handleBlob = (blob: Blob | null) => {
-            if (!blob) {
-              reject(new Error(`${options.format.toUpperCase()}画像の変換に失敗しました`));
+            if (!ctx) {
+              reject(new Error("Canvas context を取得できませんでした"));
               return;
             }
 
-            // Exifデータを挿入する処理
-            const processBlob = async (finalBlob: Blob) => {
-              const url = URL.createObjectURL(finalBlob);
-              const originalFilename = file.name;
-              const nameWithoutExt =
-                originalFilename.substring(
-                  0,
-                  originalFilename.lastIndexOf("."),
-                ) || originalFilename;
-              const filename = `${nameWithoutExt}.${options.format}`;
+            // サイズ計算
+            let { width, height } = img;
 
-              // ファイルオブジェクトを作成
-              const resultFile = new File([finalBlob], filename, {
-                type: finalBlob.type,
-              });
+            if (options.width || options.height) {
+              if (options.maintainAspectRatio) {
+                const aspectRatio = width / height;
 
-              resolve({
-                blob: finalBlob,
-                url,
-                originalSize: file.size,
-                convertedSize: finalBlob.size,
-                filename,
-                originalFilename: file.name,
-                file: resultFile,
-              });
+                if (options.width && options.height) {
+                  // 両方指定されている場合、アスペクト比を維持して小さい方に合わせる
+                  const targetRatio = options.width / options.height;
+                  if (aspectRatio > targetRatio) {
+                    width = options.width;
+                    height = options.width / aspectRatio;
+                  } else {
+                    height = options.height;
+                    width = options.height * aspectRatio;
+                  }
+                } else if (options.width) {
+                  width = options.width;
+                  height = options.width / aspectRatio;
+                } else if (options.height) {
+                  height = options.height;
+                  width = options.height * aspectRatio;
+                }
+              } else {
+                width = options.width || width;
+                height = options.height || height;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // 画像を描画
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // 変換後の処理を共通化
+            const handleBlob = (blob: Blob | null) => {
+              if (!blob) {
+                reject(
+                  new Error(
+                    `${options.format.toUpperCase()}画像の変換に失敗しました`,
+                  ),
+                );
+                return;
+              }
+
+              // Exifデータを挿入する処理
+              const processBlob = async (finalBlob: Blob) => {
+                const url = URL.createObjectURL(finalBlob);
+                const originalFilename = file.name;
+                const nameWithoutExt =
+                  originalFilename.substring(
+                    0,
+                    originalFilename.lastIndexOf("."),
+                  ) || originalFilename;
+                const filename = `${nameWithoutExt}.${options.format}`;
+
+                // ファイルオブジェクトを作成
+                const resultFile = new File([finalBlob], filename, {
+                  type: finalBlob.type,
+                });
+
+                resolve({
+                  blob: finalBlob,
+                  url,
+                  originalSize: file.size,
+                  convertedSize: finalBlob.size,
+                  filename,
+                  originalFilename: file.name,
+                  file: resultFile,
+                });
+              };
+
+              // ExifデータをBlobに挿入（JPEGのみ）
+              if (exifData && options.format === "jpeg") {
+                const reader2 = new FileReader();
+                reader2.onload = (e2) => {
+                  try {
+                    const dataUrl = e2.target?.result as string;
+                    const newDataUrl = piexif.insert(exifData!, dataUrl);
+                    const base64Data = newDataUrl.split(",")[1];
+                    const binaryData = atob(base64Data);
+                    const uint8Array = new Uint8Array(binaryData.length);
+                    for (let i = 0; i < binaryData.length; i++) {
+                      uint8Array[i] = binaryData.charCodeAt(i);
+                    }
+                    const newBlob = new Blob([uint8Array], { type: blob.type });
+                    processBlob(newBlob);
+                  } catch (error) {
+                    console.warn("Failed to insert EXIF data:", error);
+                    processBlob(blob);
+                  }
+                };
+                reader2.readAsDataURL(blob);
+              } else {
+                processBlob(blob);
+              }
             };
 
-            // ExifデータをBlobに挿入（JPEGのみ）
-            if (exifData && options.format === 'jpeg') {
-              const reader2 = new FileReader();
-              reader2.onload = (e2) => {
-                try {
-                  const dataUrl = e2.target?.result as string;
-                  const newDataUrl = piexif.insert(exifData!, dataUrl);
-                  const base64Data = newDataUrl.split(',')[1];
-                  const binaryData = atob(base64Data);
-                  const uint8Array = new Uint8Array(binaryData.length);
-                  for (let i = 0; i < binaryData.length; i++) {
-                    uint8Array[i] = binaryData.charCodeAt(i);
-                  }
-                  const newBlob = new Blob([uint8Array], { type: blob.type });
-                  processBlob(newBlob);
-                } catch (error) {
-                  console.warn('Failed to insert EXIF data:', error);
-                  processBlob(blob);
-                }
-              };
-              reader2.readAsDataURL(blob);
+            // 変換
+            if (options.format === "png") {
+              // PNG専用の品質制御
+              ImageConverter.convertToPngWithQuality(
+                canvas,
+                options.quality,
+                handleBlob,
+              );
             } else {
-              processBlob(blob);
+              // JPEG/WebP用の標準品質制御
+              const quality = options.quality / 100;
+              const mimeType = `image/${options.format}`;
+
+              canvas.toBlob(handleBlob, mimeType, quality);
             }
-          };
-
-          // 変換
-          if (options.format === "png") {
-            // PNG専用の品質制御
-            ImageConverter.convertToPngWithQuality(
-              canvas,
-              options.quality,
-              handleBlob,
-            );
-          } else {
-            // JPEG/WebP用の標準品質制御
-            const quality = options.quality / 100;
-            const mimeType = `image/${options.format}`;
-
-            canvas.toBlob(
-              handleBlob,
-              mimeType,
-              quality,
-            );
+          } catch (error) {
+            reject(error);
           }
-        } catch (error) {
-          reject(error);
-        }
-      };
+        };
 
         img.onerror = () => {
           reject(new Error("画像の読み込みに失敗しました"));

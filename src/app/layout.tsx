@@ -29,7 +29,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={`${manrope.variable} ${notoSans.variable}`} suppressHydrationWarning>
+    <html
+      lang="ja"
+      className={`${manrope.variable} ${notoSans.variable}`}
+      suppressHydrationWarning
+    >
       <head />
       <body>
         <script

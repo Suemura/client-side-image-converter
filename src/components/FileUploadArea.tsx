@@ -22,7 +22,13 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   files,
   onFilesSelected,
   onClearFiles,
-  acceptedTypes = ["image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"],
+  acceptedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/bmp",
+    "image/tiff",
+  ],
   showFileList = true,
 }) => {
   const { t } = useTranslation();
@@ -244,7 +250,8 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
         >
           <div className={styles.compactHeader}>
             <h4 className={styles.compactTitle}>
-              {t("fileUpload.selectedFiles")} ({files.length}{t("common.files")})
+              {t("fileUpload.selectedFiles")} ({files.length}
+              {t("common.files")})
             </h4>
             <div className={styles.buttonGroup}>
               <Button variant="secondary" size="small" onClick={handleClick}>

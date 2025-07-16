@@ -20,7 +20,11 @@ export class ImageCropper {
   /**
    * 画像をトリミングする
    */
-  static async cropImage(file: File, cropArea: CropArea, preserveExif = false): Promise<CropResult> {
+  static async cropImage(
+    file: File,
+    cropArea: CropArea,
+    preserveExif = false,
+  ): Promise<CropResult> {
     try {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
@@ -31,17 +35,20 @@ export class ImageCropper {
 
       // Exifデータを読み込む（JPEGの場合のみ）
       let exifData: string | null = null;
-      if (preserveExif && (file.type.includes('jpeg') || file.type.includes('jpg'))) {
+      if (
+        preserveExif &&
+        (file.type.includes("jpeg") || file.type.includes("jpg"))
+      ) {
         try {
-          const dataUrl = await this.fileToDataUrl(file);
+          const dataUrl = await ImageCropper.fileToDataUrl(file);
           exifData = piexif.dump(piexif.load(dataUrl));
         } catch (error) {
-          console.warn('Failed to read EXIF data:', error);
+          console.warn("Failed to read EXIF data:", error);
         }
       }
 
       // 画像を読み込み
-      const img = await this.loadImage(file);
+      const img = await ImageCropper.loadImage(file);
 
       // トリミング領域の妥当性をチェック
       if (cropArea.width <= 0 || cropArea.height <= 0) {
@@ -156,7 +163,10 @@ export class ImageCropper {
       });
 
       // Exifデータを挿入（JPEGのみ）
-      if (exifData && (file.type.includes('jpeg') || file.type.includes('jpg'))) {
+      if (
+        exifData &&
+        (file.type.includes("jpeg") || file.type.includes("jpg"))
+      ) {
         try {
           const reader = new FileReader();
           const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -164,9 +174,9 @@ export class ImageCropper {
             reader.onerror = reject;
             reader.readAsDataURL(croppedBlob);
           });
-          
+
           const newDataUrl = piexif.insert(exifData, dataUrl);
-          const base64Data = newDataUrl.split(',')[1];
+          const base64Data = newDataUrl.split(",")[1];
           const binaryData = atob(base64Data);
           const uint8Array = new Uint8Array(binaryData.length);
           for (let i = 0; i < binaryData.length; i++) {
@@ -174,11 +184,11 @@ export class ImageCropper {
           }
           croppedBlob = new Blob([uint8Array], { type: file.type });
         } catch (error) {
-          console.warn('Failed to insert EXIF data:', error);
+          console.warn("Failed to insert EXIF data:", error);
         }
       }
 
-      const fileName = this.generateCroppedFileName(file.name);
+      const fileName = ImageCropper.generateCroppedFileName(file.name);
 
       // ファイルオブジェクトを作成
       const croppedFile = new File([croppedBlob], fileName, {
@@ -215,7 +225,11 @@ export class ImageCropper {
     const results: CropResult[] = [];
 
     for (let i = 0; i < files.length; i++) {
-      const result = await this.cropImage(files[i], cropArea, preserveExif);
+      const result = await ImageCropper.cropImage(
+        files[i],
+        cropArea,
+        preserveExif,
+      );
       results.push(result);
 
       if (onProgress) {

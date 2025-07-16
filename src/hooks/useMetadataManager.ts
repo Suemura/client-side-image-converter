@@ -1,5 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
-import { MetadataManager, type MetadataAnalysis } from '../utils/metadataManager';
+import { useCallback, useEffect, useState } from "react";
+import {
+  type MetadataAnalysis,
+  MetadataManager,
+} from "../utils/metadataManager";
 
 export interface UseMetadataManagerResult {
   analysis: MetadataAnalysis | null;
@@ -34,7 +37,7 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
       // デフォルトでプライバシーリスクタグを選択
       setSelectedTags(new Set(result.privacyRiskTags));
     } catch (error) {
-      console.error('Failed to analyze metadata:', error);
+      console.error("Failed to analyze metadata:", error);
     } finally {
       setIsAnalyzing(false);
     }
@@ -42,7 +45,7 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
 
   // タグの選択状態をトグル
   const toggleTag = useCallback((tag: string) => {
-    setSelectedTags(prev => {
+    setSelectedTags((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(tag)) {
         newSet.delete(tag);
@@ -76,21 +79,21 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
     setProgressTotal(analysis.fileMetadata.length);
 
     try {
-      const files = analysis.fileMetadata.map(fm => fm.file);
+      const files = analysis.fileMetadata.map((fm) => fm.file);
       const tagsToRemove = Array.from(selectedTags);
-      
+
       const cleanedFiles = await MetadataManager.removeMetadataFromFiles(
         files,
         tagsToRemove,
         (current, total) => {
           setProgressCurrent(current);
           setProgressTotal(total);
-        }
+        },
       );
 
       return cleanedFiles;
     } catch (error) {
-      console.error('Failed to remove metadata:', error);
+      console.error("Failed to remove metadata:", error);
       return [];
     } finally {
       setIsProcessing(false);
@@ -118,6 +121,6 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
     toggleTag,
     selectAllPrivacyTags,
     clearSelection,
-    removeSelectedMetadata
+    removeSelectedMetadata,
   };
 };

@@ -1,19 +1,19 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: 'https://image-converter.suemura.app',
+  siteUrl: "https://image-converter.suemura.app",
   generateRobotsTxt: true,
   generateIndexSitemap: false,
-  outDir: './out',
+  outDir: "./out",
   transform: async (config, path) => {
     // デフォルトの優先度とページごとの設定
     const priorities = {
-      '/': 1.0,
-      '/convert': 0.8,
-      '/crop': 0.8,
+      "/": 1.0,
+      "/convert": 0.8,
+      "/crop": 0.8,
     };
 
     // 変更頻度の設定
-    const changefreq = path === '/' ? 'weekly' : 'monthly';
+    const changefreq = path === "/" ? "weekly" : "monthly";
 
     return {
       loc: path,
@@ -25,8 +25,8 @@ module.exports = {
   robotsTxtOptions: {
     policies: [
       {
-        userAgent: '*',
-        allow: '/',
+        userAgent: "*",
+        allow: "/",
       },
     ],
     additionalSitemaps: [],

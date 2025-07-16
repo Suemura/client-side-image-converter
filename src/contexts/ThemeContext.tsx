@@ -29,7 +29,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     // クライアントサイドでのみ初期化
     // 現在のdata-theme属性を確認
-    const currentTheme = document.documentElement.getAttribute("data-theme") as Theme;
+    const currentTheme = document.documentElement.getAttribute(
+      "data-theme",
+    ) as Theme;
     if (currentTheme === "dark" || currentTheme === "light") {
       setTheme(currentTheme);
     } else {
@@ -38,7 +40,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       if (savedTheme) {
         setTheme(savedTheme);
       } else {
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
         setTheme(prefersDark ? "dark" : "light");
       }
     }

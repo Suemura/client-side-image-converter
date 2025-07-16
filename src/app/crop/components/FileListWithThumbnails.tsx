@@ -18,7 +18,9 @@ export const FileListWithThumbnails: React.FC<FileListWithThumbnailsProps> = ({
   title,
   currentFile,
 }) => {
-  const [filesWithThumbnails, setFilesWithThumbnails] = useState<FileWithThumbnail[]>([]);
+  const [filesWithThumbnails, setFilesWithThumbnails] = useState<
+    FileWithThumbnail[]
+  >([]);
 
   useEffect(() => {
     // サムネイル生成処理
@@ -61,9 +63,7 @@ export const FileListWithThumbnails: React.FC<FileListWithThumbnailsProps> = ({
   return (
     <div className={styles.container}>
       <h4 className={styles.title}>{title}</h4>
-      <div className={styles.fileCount}>
-        {files.length}個のファイル選択済み
-      </div>
+      <div className={styles.fileCount}>{files.length}個のファイル選択済み</div>
       <div className={styles.fileList}>
         {filesWithThumbnails.map(({ file, thumbnail }, index) => (
           <div
