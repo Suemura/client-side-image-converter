@@ -58,10 +58,8 @@ export class MetadataManager {
       }
 
       // JPEG/その他の形式にはexif-jsを使用
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (EXIF as any).getData(file, function (this: any) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const allMetaData = (EXIF as any).getAllTags(this);
+      EXIF.getData(file, function (this) {
+        const allMetaData = EXIF.getAllTags(this);
         const relevantData: ExifData = {};
 
         // すべてのEXIF情報を抽出（元のFileDetailModalより包括的）
@@ -231,7 +229,7 @@ export class MetadataManager {
     for (const tagName of tagsToRemove) {
       // GPS全体を削除する場合
       if (tagName === "GPS" || tagName === "GPS Info IFD Pointer") {
-        (exifObj as any).GPS = undefined;
+        (exifObj as { GPS?: unknown }).GPS = undefined;
         continue;
       }
 
