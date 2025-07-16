@@ -8,7 +8,7 @@ import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
 import {
   type ConversionResult,
-  ImageConverter,
+  convertMultipleImages,
 } from "../../utils/imageConverter";
 import {
   ConversionSettings,
@@ -61,7 +61,7 @@ export default function Home() {
     setConversionResults([]);
 
     try {
-      const results = await ImageConverter.convertMultipleImages(
+      const results = await convertMultipleImages(
         selectedFiles,
         {
           format: conversionSettings.targetFormat,

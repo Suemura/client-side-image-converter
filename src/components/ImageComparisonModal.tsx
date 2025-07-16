@@ -2,7 +2,11 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ConversionResult } from "../utils/imageConverter";
-import { ImageConverter } from "../utils/imageConverter";
+import {
+  calculateCompressionRatio,
+  downloadFile,
+  formatFileSize,
+} from "../utils/imageConverter";
 import { Button } from "./Button";
 import styles from "./ImageComparisonModal.module.css";
 
@@ -120,7 +124,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
   }, [isOpen]);
 
   const handleDownload = useCallback(() => {
-    ImageConverter.downloadFile(result);
+    downloadFile(result);
   }, [result]);
 
   const handleBackdropClick = useCallback(
@@ -134,7 +138,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
 
   if (!isOpen || !originalImageUrl) return null;
 
-  const compressionRatio = ImageConverter.calculateCompressionRatio(
+  const compressionRatio = calculateCompressionRatio(
     result.originalSize,
     result.convertedSize,
   );
@@ -148,8 +152,8 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
             <h3 className={styles.modalTitle}>{result.filename}</h3>
             <div className={styles.modalSubtitle}>
               <span className={styles.fileSizeText}>
-                {ImageConverter.formatFileSize(result.originalSize)} →{" "}
-                {ImageConverter.formatFileSize(result.convertedSize)}
+                {formatFileSize(result.originalSize)} →{" "}
+                {formatFileSize(result.convertedSize)}
               </span>
               <span
                 className={`${styles.compressionRatio} ${

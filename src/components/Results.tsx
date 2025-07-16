@@ -4,7 +4,10 @@ import { useTranslation } from "react-i18next";
 import { FileDownloader } from "../utils/fileDownloader";
 import { truncateFileName } from "../utils/fileName";
 import type { ConversionResult } from "../utils/imageConverter";
-import { ImageConverter } from "../utils/imageConverter";
+import {
+  calculateCompressionRatio,
+  formatFileSize,
+} from "../utils/imageConverter";
 import type { CropResult } from "../utils/imageCropper";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
@@ -166,7 +169,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
       (sum, result) => sum + result.convertedSize,
       0,
     );
-    overallCompressionRatio = ImageConverter.calculateCompressionRatio(
+    overallCompressionRatio = calculateCompressionRatio(
       totalOriginalSize,
       totalConvertedSize,
     );
@@ -200,13 +203,13 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
           <div>
             <p className={styles.statLabel}>{t("results.originalSize")}</p>
             <p className={styles.statValue}>
-              {ImageConverter.formatFileSize(totalOriginalSize)}
+              {formatFileSize(totalOriginalSize)}
             </p>
           </div>
           <div>
             <p className={styles.statLabel}>{t("results.convertedSize")}</p>
             <p className={styles.statValue}>
-              {ImageConverter.formatFileSize(totalConvertedSize)}
+              {formatFileSize(totalConvertedSize)}
             </p>
           </div>
           <div>
@@ -292,7 +295,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
             ))
           : // コンバージョン結果の表示
             resultsToShow.map((result, index) => {
-              const compressionRatio = ImageConverter.calculateCompressionRatio(
+              const compressionRatio = calculateCompressionRatio(
                 result.originalSize,
                 result.convertedSize,
               );
@@ -323,11 +326,8 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                         <p className={styles.fileName}>{result.filename}</p>
                         <div className={styles.fileSizeInfo}>
                           <span className={styles.fileSizeText}>
-                            {ImageConverter.formatFileSize(result.originalSize)}{" "}
-                            →{" "}
-                            {ImageConverter.formatFileSize(
-                              result.convertedSize,
-                            )}
+                            {formatFileSize(result.originalSize)} →{" "}
+                            {formatFileSize(result.convertedSize)}
                           </span>
                           <span
                             className={
