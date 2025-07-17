@@ -29,10 +29,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={`${manrope.variable} ${notoSans.variable}`} suppressHydrationWarning>
+    <html
+      lang="ja"
+      className={`${manrope.variable} ${notoSans.variable}`}
+      suppressHydrationWarning
+    >
       <head />
       <body>
         <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: Theme initialization script to prevent FOUC, hardcoded content is safe
           dangerouslySetInnerHTML={{
             __html: `
               (function() {

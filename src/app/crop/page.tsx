@@ -11,7 +11,7 @@ import { ConversionResults } from "../../components/Results";
 import {
   type CropArea,
   type CropResult,
-  ImageCropper,
+  cropImages,
 } from "../../utils/imageCropper";
 import { ImageUploadSection } from "../convert/components/ImageUploadSection";
 import { ProgressBar } from "../convert/components/ProgressBar";
@@ -113,7 +113,7 @@ export default function CropPage() {
     setProgressTotal(files.length);
 
     try {
-      const results = await ImageCropper.cropImages(
+      const results = await cropImages(
         files,
         cropArea,
         (completed, total) => {
@@ -144,12 +144,8 @@ export default function CropPage() {
       <Header />
       <MainContent>
         <div className={styles.pageContainer}>
-          <h1 className={styles.pageTitle}>
-            {t("crop.title")}
-          </h1>
-          <p className={styles.pageSubtitle}>
-            {t("crop.subtitle")}
-          </p>
+          <h1 className={styles.pageTitle}>{t("crop.title")}</h1>
+          <p className={styles.pageSubtitle}>{t("crop.subtitle")}</p>
 
           <div className={styles.cropPageContainer}>
             {/* 左カラム: ファイル選択・ファイルリスト */}
@@ -204,7 +200,6 @@ export default function CropPage() {
                 <div className={styles.helpText}>
                   {t("crop.preserveExifHelp")}
                 </div>
-
               </div>
 
               <div className={styles.centerButton}>

@@ -5,22 +5,25 @@
  * @param maxLength - 最大長（デフォルト: 12）
  * @returns 省略されたファイル名
  */
-export const truncateFileName = (fileName: string, maxLength: number = 12): string => {
+export const truncateFileName = (fileName: string, maxLength = 12): string => {
   if (fileName.length <= maxLength) {
     return fileName;
   }
 
   // ファイル名と拡張子を分離
-  const lastDotIndex = fileName.lastIndexOf('.');
-  const name = lastDotIndex !== -1 ? fileName.substring(0, lastDotIndex) : fileName;
-  const extension = lastDotIndex !== -1 ? fileName.substring(lastDotIndex) : '';
+  const lastDotIndex = fileName.lastIndexOf(".");
+  const name =
+    lastDotIndex !== -1 ? fileName.substring(0, lastDotIndex) : fileName;
+  const extension = lastDotIndex !== -1 ? fileName.substring(lastDotIndex) : "";
 
   // 拡張子の長さを考慮して、名前部分の長さを調整
   const availableLength = maxLength - extension.length - 3; // 3は"..."の長さ
 
   if (availableLength <= 0) {
     // 拡張子が長すぎる場合は、末尾省略に切り替え
-    return fileName.length > maxLength ? `${fileName.substring(0, maxLength - 3)}...` : fileName;
+    return fileName.length > maxLength
+      ? `${fileName.substring(0, maxLength - 3)}...`
+      : fileName;
   }
 
   // 前半と後半の長さを計算

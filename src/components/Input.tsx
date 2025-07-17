@@ -22,7 +22,6 @@ export const Input: React.FC<InputProps> = ({
   disabled = false,
   className = "",
 }) => {
-
   return (
     <label className={`${styles.container} ${className}`}>
       <p className={styles.label}>

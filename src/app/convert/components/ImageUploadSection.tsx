@@ -18,7 +18,7 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
   showFileList = true,
 }) => {
   const { t } = useTranslation();
-  
+
   return (
     <div className={styles.container}>
       <h2 className={styles.title}>{t("fileUpload.dragDropLabel")}</h2>
@@ -32,7 +32,9 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
             showFileList={showFileList}
           />
 
-          <p className={styles.supportedFormats}>Supported formats: JPG, PNG, WebP, BMP, TIFF</p>
+          <p className={styles.supportedFormats}>
+            Supported formats: JPG, PNG, WebP, BMP, TIFF
+          </p>
         </>
       ) : (
         <>

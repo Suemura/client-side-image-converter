@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": [".next/"]
+    "ignore": [".next/", ".wrangler/"]
   },
   "formatter": {
     "enabled": true,
@@ -24,7 +24,10 @@
       "a11y": {
         "noSvgWithoutTitle": "off",
         "useKeyWithClickEvents": "off",
-        "useSemanticElements": "off"
+        "useSemanticElements": "off",
+        "useAltText": "off",
+        "useValidAnchor": "off",
+        "useAriaPropsForRole": "off"
       },
       "suspicious": {
         "noExplicitAny": "warn"

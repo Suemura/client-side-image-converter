@@ -12,7 +12,10 @@ import styles from "./page.module.css";
 
 export default function Home() {
   const { t } = useTranslation();
-  const convertIcon = useThemeAwareImage("icon_convert.svg", "icon_convert_dark.svg");
+  const convertIcon = useThemeAwareImage(
+    "icon_convert.svg",
+    "icon_convert_dark.svg",
+  );
   const cropIcon = useThemeAwareImage("icon_crop.svg", "icon_crop_dark.svg");
   const batchIcon = useThemeAwareImage("icon_batch.svg", "icon_batch_dark.svg");
 

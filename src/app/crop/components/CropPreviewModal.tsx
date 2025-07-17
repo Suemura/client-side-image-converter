@@ -132,6 +132,7 @@ export const CropPreviewModal: React.FC<CropPreviewModalProps> = ({
         <div className={styles.header}>
           <h3 className={styles.title}>{t("crop.preview")}</h3>
           <button
+            type="button"
             className={styles.closeButton}
             onClick={onClose}
             aria-label={t("fileDetails.close")}

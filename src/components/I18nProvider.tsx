@@ -12,7 +12,6 @@ interface I18nProviderProps {
 }
 
 export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
-
   useEffect(() => {
     // Hydration完了後にクライアントサイドの言語設定を適用
     const initializeClientLanguage = async () => {
@@ -24,7 +23,6 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
         if (i18n.language !== clientLanguage) {
           await i18n.changeLanguage(clientLanguage);
         }
-
       } catch (error) {
         console.error("Failed to initialize client language:", error);
       }
