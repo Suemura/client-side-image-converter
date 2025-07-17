@@ -345,18 +345,3 @@ export const assessPrivacyRisk = (
 
   return "low";
 };
-
-// 後方互換性のためのクラス形式のエクスポート（非推奨）
-/** @deprecated Use individual functions instead */
-export class MetadataManager {
-  /** @deprecated Use extractExifData function instead */
-  static extractExifData = extractExifData;
-  /** @deprecated Use analyzeMetadata function instead */
-  static analyzeMetadata = analyzeMetadata;
-  /** @deprecated Use removeMetadataFromImage function instead */
-  static removeMetadataFromImage = removeMetadataFromImage;
-  /** @deprecated Use removeMetadataFromFiles function instead */
-  static removeMetadataFromFiles = removeMetadataFromFiles;
-  /** @deprecated Use assessPrivacyRisk function instead */
-  static assessPrivacyRisk = assessPrivacyRisk;
-}

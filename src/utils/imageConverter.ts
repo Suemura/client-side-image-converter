@@ -141,6 +141,11 @@ export const convertImage = async (
               reader2.onload = (e2) => {
                 try {
                   const dataUrl = e2.target?.result as string;
+                  if (!dataUrl || !exifData) {
+                    console.warn("Failed to read data URL for EXIF insertion");
+                    processBlob(blob);
+                    return;
+                  }
                   const newDataUrl = piexif.insert(exifData, dataUrl);
                   const base64Data = newDataUrl.split(",")[1];
                   const binaryData = atob(base64Data);
@@ -310,22 +315,3 @@ export const convertToPngWithQuality = (
     );
   }
 };
-
-// 後方互換性のためのクラス形式のエクスポート（非推奨）
-/** @deprecated Use individual functions instead */
-export class ImageConverter {
-  /** @deprecated Use convertImage function instead */
-  static convertImage = convertImage;
-  /** @deprecated Use convertMultipleImages function instead */
-  static convertMultipleImages = convertMultipleImages;
-  /** @deprecated Use downloadFile function instead */
-  static downloadFile = downloadFile;
-  /** @deprecated Use downloadMultipleFiles function instead */
-  static downloadMultipleFiles = downloadMultipleFiles;
-  /** @deprecated Use formatFileSize function instead */
-  static formatFileSize = formatFileSize;
-  /** @deprecated Use calculateCompressionRatio function instead */
-  static calculateCompressionRatio = calculateCompressionRatio;
-  /** @deprecated Use convertToPngWithQuality function instead */
-  static convertToPngWithQuality = convertToPngWithQuality;
-}

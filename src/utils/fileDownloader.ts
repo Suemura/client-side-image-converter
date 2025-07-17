@@ -227,18 +227,3 @@ export const downloadMultipleFiles = async (
     }, 1000);
   }
 };
-
-// 後方互換性のためのクラス形式のエクスポート（非推奨）
-/** @deprecated Use individual functions instead */
-export class FileDownloader {
-  /** @deprecated Use downloadSingle function instead */
-  static downloadSingle = downloadSingle;
-  /** @deprecated Use downloadAsZip function instead */
-  static downloadAsZip = downloadAsZip;
-  /** @deprecated Use downloadMultiple function instead */
-  static downloadMultiple = downloadMultiple;
-  /** @deprecated Use downloadFile function instead */
-  static downloadFile = downloadFile;
-  /** @deprecated Use downloadMultipleFiles function instead */
-  static downloadMultipleFiles = downloadMultipleFiles;
-}

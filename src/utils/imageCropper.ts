@@ -290,16 +290,3 @@ export const createDownloadUrl = (blob: Blob): string => {
 export const revokeDownloadUrl = (url: string): void => {
   URL.revokeObjectURL(url);
 };
-
-// 後方互換性のためのクラス形式のエクスポート（非推奨）
-/** @deprecated Use individual functions instead */
-export class ImageCropper {
-  /** @deprecated Use cropImage function instead */
-  static cropImage = cropImage;
-  /** @deprecated Use cropImages function instead */
-  static cropImages = cropImages;
-  /** @deprecated Use createDownloadUrl function instead */
-  static createDownloadUrl = createDownloadUrl;
-  /** @deprecated Use revokeDownloadUrl function instead */
-  static revokeDownloadUrl = revokeDownloadUrl;
-}

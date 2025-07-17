@@ -11,7 +11,7 @@ import { ConversionResults } from "../../components/Results";
 import {
   type CropArea,
   type CropResult,
-  ImageCropper,
+  cropImages,
 } from "../../utils/imageCropper";
 import { ImageUploadSection } from "../convert/components/ImageUploadSection";
 import { ProgressBar } from "../convert/components/ProgressBar";
@@ -113,7 +113,7 @@ export default function CropPage() {
     setProgressTotal(files.length);
 
     try {
-      const results = await ImageCropper.cropImages(
+      const results = await cropImages(
         files,
         cropArea,
         (completed, total) => {

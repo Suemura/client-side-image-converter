@@ -8,8 +8,11 @@ import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { useMetadataManager } from "../../hooks/useMetadataManager";
-import { FileDownloader } from "../../utils/fileDownloader";
-import { MetadataManager } from "../../utils/metadataManager";
+import {
+  downloadFile,
+  downloadMultipleFiles,
+} from "../../utils/fileDownloader";
+import { assessPrivacyRisk } from "../../utils/metadataManager";
 import { ImageUploadSection } from "../convert/components/ImageUploadSection";
 import styles from "./page.module.css";
 
@@ -91,15 +94,9 @@ export default function MetadataPage() {
     if (cleanedFiles.length > 0) {
       // クリーニング済みファイルをダウンロード
       if (cleanedFiles.length === 1) {
-        FileDownloader.downloadFile(
-          cleanedFiles[0],
-          `cleaned_${cleanedFiles[0].name}`,
-        );
+        downloadFile(cleanedFiles[0], `cleaned_${cleanedFiles[0].name}`);
       } else {
-        await FileDownloader.downloadMultipleFiles(
-          cleanedFiles,
-          "cleaned_images",
-        );
+        await downloadMultipleFiles(cleanedFiles, "cleaned_images");
       }
     }
   }, [analysis, selectedTags, removeSelectedMetadata]);
@@ -122,7 +119,7 @@ export default function MetadataPage() {
     );
     if (!fileMetadata) return null;
 
-    const risk = MetadataManager.assessPrivacyRisk(fileMetadata.exifData);
+    const risk = assessPrivacyRisk(fileMetadata.exifData);
     const riskClass =
       risk === "high"
         ? styles.privacyRiskHigh

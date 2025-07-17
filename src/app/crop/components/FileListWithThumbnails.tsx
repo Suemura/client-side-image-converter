@@ -35,21 +35,24 @@ export const FileListWithThumbnails: React.FC<FileListWithThumbnailsProps> = ({
 
       const results = await Promise.all(thumbnailPromises);
       setFilesWithThumbnails(results);
+      return results;
     };
 
-    generateThumbnails();
+    const thumbnailsPromise = generateThumbnails();
 
     // クリーンアップ関数
     return () => {
-      for (const { thumbnail } of filesWithThumbnails) {
-        if (thumbnail) {
-          URL.revokeObjectURL(thumbnail);
+      thumbnailsPromise.then((results) => {
+        for (const { thumbnail } of results) {
+          if (thumbnail) {
+            URL.revokeObjectURL(thumbnail);
+          }
         }
-      }
+      });
     };
   }, [files]);
 
-  // currentFileが変更された時のクリーンアップは別途処理
+  // コンポーネントアンマウント時のクリーンアップ
   useEffect(() => {
     return () => {
       for (const { thumbnail } of filesWithThumbnails) {
@@ -58,14 +61,14 @@ export const FileListWithThumbnails: React.FC<FileListWithThumbnailsProps> = ({
         }
       }
     };
-  }, []);
+  }, [filesWithThumbnails]);
 
   return (
     <div className={styles.container}>
       <h4 className={styles.title}>{title}</h4>
       <div className={styles.fileCount}>{files.length}個のファイル選択済み</div>
       <div className={styles.fileList}>
-        {filesWithThumbnails.map(({ file, thumbnail }, index) => (
+        {filesWithThumbnails.map(({ file, thumbnail }) => (
           <div
             key={file.name}
             className={`${styles.fileItem} ${

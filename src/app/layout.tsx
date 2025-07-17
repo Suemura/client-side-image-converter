@@ -37,6 +37,7 @@ export default function RootLayout({
       <head />
       <body>
         <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: Theme initialization script to prevent FOUC, hardcoded content is safe
           dangerouslySetInnerHTML={{
             __html: `
               (function() {

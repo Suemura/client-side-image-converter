@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   type MetadataAnalysis,
-  MetadataManager,
+  analyzeMetadata,
+  removeMetadataFromFiles,
 } from "../utils/metadataManager";
 
 export interface UseMetadataManagerResult {
@@ -32,7 +33,7 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
 
     setIsAnalyzing(true);
     try {
-      const result = await MetadataManager.analyzeMetadata(files);
+      const result = await analyzeMetadata(files);
       setAnalysis(result);
       // デフォルトでプライバシーリスクタグを選択
       setSelectedTags(new Set(result.privacyRiskTags));
@@ -82,7 +83,7 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
       const files = analysis.fileMetadata.map((fm) => fm.file);
       const tagsToRemove = Array.from(selectedTags);
 
-      const cleanedFiles = await MetadataManager.removeMetadataFromFiles(
+      const cleanedFiles = await removeMetadataFromFiles(
         files,
         tagsToRemove,
         (current, total) => {

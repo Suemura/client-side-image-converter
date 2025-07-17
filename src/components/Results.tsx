@@ -1,7 +1,7 @@
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileDownloader } from "../utils/fileDownloader";
+import { downloadMultiple, downloadSingle } from "../utils/fileDownloader";
 import { truncateFileName } from "../utils/fileName";
 import type { ConversionResult } from "../utils/imageConverter";
 import {
@@ -102,12 +102,12 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   }, [cropResults, isCropMode]);
 
   const handleDownloadSingle = useCallback((result: ConversionResult) => {
-    FileDownloader.downloadSingle(result);
+    downloadSingle(result);
   }, []);
 
   const handleCropDownload = useCallback((result: CropResult) => {
     if (!result.success) return;
-    FileDownloader.downloadSingle(result);
+    downloadSingle(result);
   }, []);
 
   const handleDownloadZip = useCallback(async () => {
@@ -117,9 +117,9 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     try {
       if (isCropMode && cropResults) {
         // トリミング結果の一括ダウンロード（ZIPファイル作成）
-        await FileDownloader.downloadMultiple(cropResults);
+        await downloadMultiple(cropResults);
       } else if (results) {
-        await FileDownloader.downloadMultiple(results);
+        await downloadMultiple(results);
       }
     } catch (error) {
       console.error("ダウンロードエラー:", error);
