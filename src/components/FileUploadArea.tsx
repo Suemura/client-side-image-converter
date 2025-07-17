@@ -10,6 +10,7 @@ interface FileUploadAreaProps {
   onFilesSelected: (files: File[]) => void;
   onClearFiles: () => void;
   acceptedTypes?: string[];
+  showFileList?: boolean;
 }
 
 interface FileThumbnail {
@@ -21,7 +22,8 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   files,
   onFilesSelected,
   onClearFiles,
-  acceptedTypes = ["image/jpeg", "image/png", "image/bmp", "image/tiff"],
+  acceptedTypes = ["image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"],
+  showFileList = true,
 }) => {
   const { t } = useTranslation();
   const [thumbnails, setThumbnails] = useState<FileThumbnail[]>([]);
@@ -226,6 +228,62 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
             className={styles.hiddenInput}
           />
         </button>
+      </div>
+    );
+  }
+
+  // showFileListがfalseの場合：ファイルアップロード操作のみ表示
+  if (!showFileList) {
+    return (
+      <div className={styles.container}>
+        <div
+          className={`${styles.dropZone} ${styles.compactDropZone} ${isDragOver ? styles.dropZoneActive : ""}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <div className={styles.compactHeader}>
+            <h4 className={styles.compactTitle}>
+              {t("fileUpload.selectedFiles")} ({files.length}{t("common.files")})
+            </h4>
+            <div className={styles.buttonGroup}>
+              <Button variant="secondary" size="small" onClick={handleClick}>
+                {t("fileUpload.add")}
+              </Button>
+              <Button variant="secondary" size="small" onClick={onClearFiles}>
+                {t("fileUpload.clearList")}
+              </Button>
+            </div>
+          </div>
+
+          {/* ドラッグオーバー時のオーバーレイ */}
+          {isDragOver && (
+            <div className={styles.dragOverlay}>
+              <p className={styles.dragOverlayText}>
+                {t("fileUpload.dropFilesHere")}
+              </p>
+            </div>
+          )}
+
+          {/* 隠しファイル入力 */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={acceptedTypes.join(",")}
+            onChange={handleFileInput}
+            className={styles.hiddenInput}
+          />
+        </div>
+
+        {/* ファイル詳細モーダル */}
+        {selectedFile && (
+          <FileDetailModal
+            file={selectedFile}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+          />
+        )}
       </div>
     );
   }

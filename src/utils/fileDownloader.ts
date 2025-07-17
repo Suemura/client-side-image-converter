@@ -150,4 +150,77 @@ export class FileDownloader {
       await this.downloadAsZip(successResults);
     }
   }
+
+  /**
+   * 単純なファイルダウンロード（File オブジェクト用）
+   */
+  static downloadFile(file: File, filename?: string): void {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * 複数のFileオブジェクトをダウンロード
+   */
+  static async downloadMultipleFiles(files: File[], zipFilename?: string): Promise<void> {
+    if (files.length === 0) return;
+
+    if (files.length === 1) {
+      // 1ファイルの場合は直接ダウンロード
+      this.downloadFile(files[0]);
+    } else {
+      // 複数ファイルの場合はZIPファイルを作成
+      const zip = new JSZip();
+      const fileNameCounts = new Map<string, number>();
+
+      for (const file of files) {
+        let filename = file.name;
+
+        // 重複ファイル名の処理
+        if (fileNameCounts.has(filename)) {
+          const count = (fileNameCounts.get(filename) || 0) + 1;
+          fileNameCounts.set(filename, count);
+
+          const nameWithoutExt =
+            filename.substring(0, filename.lastIndexOf(".")) || filename;
+          const extension = filename.substring(filename.lastIndexOf(".")) || "";
+          filename = `${nameWithoutExt}_${count}${extension}`;
+        } else {
+          fileNameCounts.set(filename, 1);
+        }
+
+        // ファイルをzipに追加
+        zip.file(filename, file);
+      }
+
+      // Zipファイルを生成
+      const zipBlob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 },
+      });
+
+      // デフォルトのZipファイル名を生成
+      const defaultZipFilename = zipFilename || `files_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.zip`;
+
+      // Zipファイルをダウンロード
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = defaultZipFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // URLを解放
+      setTimeout(() => {
+        URL.revokeObjectURL(link.href);
+      }, 1000);
+    }
+  }
 }

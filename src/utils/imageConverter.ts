@@ -1,9 +1,12 @@
+import piexif from "piexifjs";
+
 export interface ConversionOptions {
   format: "jpeg" | "png" | "webp";
   quality: number; // 0-100
   width?: number;
   height?: number;
   maintainAspectRatio: boolean;
+  preserveExif?: boolean;
 }
 
 export interface ConversionResult {
@@ -13,6 +16,7 @@ export interface ConversionResult {
   convertedSize: number;
   filename: string;
   originalFilename: string;
+  file: File;
 }
 
 export class ImageConverter {
@@ -26,8 +30,25 @@ export class ImageConverter {
         return;
       }
 
-      const img = new Image();
-      img.onload = () => {
+      // Exifデータを読み込む（JPEGの場合のみ）
+      let exifData: string | null = null;
+      const shouldPreserveExif = options.preserveExif && 
+        (file.type.includes('jpeg') || file.type.includes('jpg')) &&
+        (options.format === 'jpeg');
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (shouldPreserveExif) {
+          try {
+            const imageData = e.target?.result as string;
+            exifData = piexif.dump(piexif.load(imageData));
+          } catch (error) {
+            console.warn('Failed to read EXIF data:', error);
+          }
+        }
+
+        const img = new Image();
+        img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
           const ctx = canvas.getContext("2d");
@@ -73,36 +94,73 @@ export class ImageConverter {
           // 画像を描画
           ctx.drawImage(img, 0, 0, width, height);
 
+          // 変換後の処理を共通化
+          const handleBlob = (blob: Blob | null) => {
+            if (!blob) {
+              reject(new Error(`${options.format.toUpperCase()}画像の変換に失敗しました`));
+              return;
+            }
+
+            // Exifデータを挿入する処理
+            const processBlob = async (finalBlob: Blob) => {
+              const url = URL.createObjectURL(finalBlob);
+              const originalFilename = file.name;
+              const nameWithoutExt =
+                originalFilename.substring(
+                  0,
+                  originalFilename.lastIndexOf("."),
+                ) || originalFilename;
+              const filename = `${nameWithoutExt}.${options.format}`;
+
+              // ファイルオブジェクトを作成
+              const resultFile = new File([finalBlob], filename, {
+                type: finalBlob.type,
+              });
+
+              resolve({
+                blob: finalBlob,
+                url,
+                originalSize: file.size,
+                convertedSize: finalBlob.size,
+                filename,
+                originalFilename: file.name,
+                file: resultFile,
+              });
+            };
+
+            // ExifデータをBlobに挿入（JPEGのみ）
+            if (exifData && options.format === 'jpeg') {
+              const reader2 = new FileReader();
+              reader2.onload = (e2) => {
+                try {
+                  const dataUrl = e2.target?.result as string;
+                  const newDataUrl = piexif.insert(exifData!, dataUrl);
+                  const base64Data = newDataUrl.split(',')[1];
+                  const binaryData = atob(base64Data);
+                  const uint8Array = new Uint8Array(binaryData.length);
+                  for (let i = 0; i < binaryData.length; i++) {
+                    uint8Array[i] = binaryData.charCodeAt(i);
+                  }
+                  const newBlob = new Blob([uint8Array], { type: blob.type });
+                  processBlob(newBlob);
+                } catch (error) {
+                  console.warn('Failed to insert EXIF data:', error);
+                  processBlob(blob);
+                }
+              };
+              reader2.readAsDataURL(blob);
+            } else {
+              processBlob(blob);
+            }
+          };
+
           // 変換
           if (options.format === "png") {
             // PNG専用の品質制御
             ImageConverter.convertToPngWithQuality(
               canvas,
               options.quality,
-              (blob: Blob | null) => {
-                if (!blob) {
-                  reject(new Error("PNG画像の変換に失敗しました"));
-                  return;
-                }
-
-                const url = URL.createObjectURL(blob);
-                const originalFilename = file.name;
-                const nameWithoutExt =
-                  originalFilename.substring(
-                    0,
-                    originalFilename.lastIndexOf("."),
-                  ) || originalFilename;
-                const filename = `${nameWithoutExt}.${options.format}`;
-
-                resolve({
-                  blob,
-                  url,
-                  originalSize: file.size,
-                  convertedSize: blob.size,
-                  filename,
-                  originalFilename: file.name,
-                });
-              },
+              handleBlob,
             );
           } else {
             // JPEG/WebP用の標準品質制御
@@ -110,30 +168,7 @@ export class ImageConverter {
             const mimeType = `image/${options.format}`;
 
             canvas.toBlob(
-              (blob) => {
-                if (!blob) {
-                  reject(new Error("画像の変換に失敗しました"));
-                  return;
-                }
-
-                const url = URL.createObjectURL(blob);
-                const originalFilename = file.name;
-                const nameWithoutExt =
-                  originalFilename.substring(
-                    0,
-                    originalFilename.lastIndexOf("."),
-                  ) || originalFilename;
-                const filename = `${nameWithoutExt}.${options.format}`;
-
-                resolve({
-                  blob,
-                  url,
-                  originalSize: file.size,
-                  convertedSize: blob.size,
-                  filename,
-                  originalFilename: file.name,
-                });
-              },
+              handleBlob,
               mimeType,
               quality,
             );
@@ -143,11 +178,18 @@ export class ImageConverter {
         }
       };
 
-      img.onerror = () => {
-        reject(new Error("画像の読み込みに失敗しました"));
+        img.onerror = () => {
+          reject(new Error("画像の読み込みに失敗しました"));
+        };
+
+        img.src = e.target?.result as string;
       };
 
-      img.src = URL.createObjectURL(file);
+      reader.onerror = () => {
+        reject(new Error("ファイルの読み込みに失敗しました"));
+      };
+
+      reader.readAsDataURL(file);
     });
   }
 

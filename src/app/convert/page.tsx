@@ -25,6 +25,7 @@ export default function Home() {
       targetFormat: "jpeg",
       quality: 90,
       maintainAspectRatio: true,
+      preserveExif: false,
     });
   const [conversionResults, setConversionResults] = useState<
     ConversionResult[]
@@ -68,6 +69,7 @@ export default function Home() {
           width: conversionSettings.width,
           height: conversionSettings.height,
           maintainAspectRatio: conversionSettings.maintainAspectRatio,
+          preserveExif: conversionSettings.preserveExif,
         },
         (current, total) => {
           setConversionProgress({ current, total });

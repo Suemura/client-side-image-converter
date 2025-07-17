@@ -28,6 +28,7 @@ export default function CropPage() {
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
   const [cropResults, setCropResults] = useState<CropResult[]>([]);
+  const [preserveExif, setPreserveExif] = useState(false);
 
   // プレビューURL管理のためのuseEffect
   useEffect(() => {
@@ -119,6 +120,7 @@ export default function CropPage() {
           setProgressCurrent(completed);
           setProgressTotal(total);
         },
+        preserveExif,
       );
 
       setCropResults(results);
@@ -127,7 +129,7 @@ export default function CropPage() {
     } finally {
       setIsProcessing(false);
     }
-  }, [files, cropArea]);
+  }, [files, cropArea, preserveExif]);
 
   const handleClearResults = useCallback(() => {
     setCropResults([]);
@@ -186,6 +188,24 @@ export default function CropPage() {
                   />
                 </>
               )}
+
+              <div className={styles.cropOptions}>
+                <label className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={preserveExif}
+                    onChange={(e) => setPreserveExif(e.target.checked)}
+                    className={styles.checkbox}
+                  />
+                  <span className={styles.checkboxText}>
+                    {t("crop.preserveExif")}
+                  </span>
+                </label>
+                <div className={styles.helpText}>
+                  {t("crop.preserveExifHelp")}
+                </div>
+
+              </div>
 
               <div className={styles.centerButton}>
                 {isProcessing ? (

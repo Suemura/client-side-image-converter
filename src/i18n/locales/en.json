@@ -10,13 +10,15 @@
   "navigation": {
     "top": "Top",
     "crop": "Crop",
-    "convert": "Convert"
+    "convert": "Convert",
+    "metadata": "Metadata"
   },
   "home": {
     "title": "Client-Side Image Converter",
     "subtitle": "Convert and crop images in batches on the client-side.\nA privacy-focused image conversion tool that never sends images to servers.",
     "startConverting": "Start Converting",
     "tryCropTool": "Try Crop Tool",
+    "tryMetadataTool": "Metadata Manager",
     "viewOnGithub": "View on GitHub",
     "features": {
       "formatConversion": {
@@ -50,7 +52,11 @@
     "pngQualityNotice": "PNG format uses lossless compression, so quality settings are not applied. Output is always at maximum quality.",
     "pngQualityExperimental": "Experimental PNG quality control is supported. Lower values result in smaller file sizes but may reduce image quality.",
     "pngQualityHelp": "PNG Quality: 95+=Standard PNG, 70-94=Medium compression, <70=High compression (quality loss)",
-    "qualityDescription": "Quality: Lower values result in smaller file sizes but reduced image quality"
+    "qualityDescription": "Quality: Lower values result in smaller file sizes but reduced image quality",
+    "metadataSettings": "Metadata Settings",
+    "preserveExif": "Preserve EXIF Information",
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the converted image. Only available for JPEG format.",
+    "preserveExifJpegOnly": "EXIF preservation is only supported for JPEG format."
   },
   "crop": {
     "title": "Image Cropping Tool",
@@ -71,6 +77,8 @@
     "startCropping": "Start Cropping",
     "reCrop": "Re-Crop",
     "croppingInProgress": "Cropping in progress...",
+    "preserveExif": "Preserve EXIF Information",
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the cropped image. Only available for JPEG format.",
     "filesSelected": "Selected Files",
     "cropSettings": "Crop Settings",
     "previewAndCrop": "Preview and Crop",
@@ -160,6 +168,31 @@
     "mb": "MB",
     "gb": "GB",
     "px": "px"
+  },
+  "metadata": {
+    "title": "Image Metadata & Privacy Manager",
+    "subtitle": "View image metadata (EXIF information) and remove privacy-sensitive data. JPEG formats support selective removal, other formats use complete removal.",
+    "uploadedImages": "Uploaded Images",
+    "metadataAnalysis": "Metadata Analysis",
+    "privacyRiskTags": "Privacy Risk Tags",
+    "allExifTags": "All EXIF Tags",
+    "selectTagsToRemove": "Select tags to remove",
+    "removeSelectedMetadata": "Remove Selected Metadata",
+    "downloadCleanedImages": "Download Cleaned Images",
+    "processing": "Processing...",
+    "noMetadataFound": "No metadata found",
+    "metadataRemoved": "Metadata removed successfully",
+    "analyzingMetadata": "Analyzing metadata...",
+    "processingNote": "* JPEG format: Only selected tags removed, Other formats: All metadata removed",
+    "processingMethod": {
+      "selective": "Selective",
+      "allRemoval": "All Removal"
+    },
+    "risk": {
+      "high": "HIGH",
+      "medium": "MED",
+      "low": "LOW"
+    }
   },
   "footer": {
     "privacyMessage": "All image processing is done locally on your device. No images are ever uploaded to any server.",

@@ -10,13 +10,15 @@
   "navigation": {
     "top": "トップ",
     "crop": "トリミング",
-    "convert": "変換"
+    "convert": "変換",
+    "metadata": "メタデータ"
   },
   "home": {
     "title": "Client-Side Image Converter",
     "subtitle": "クライアントサイドで画像を一括で変換・トリミングできます。\nサーバに画像を送信しないプライバシー重視の画像変換ツールです。",
     "startConverting": "変換",
     "tryCropTool": "トリミング",
+    "tryMetadataTool": "メタデータ管理",
     "viewOnGithub": "GitHubで見る",
     "features": {
       "formatConversion": {
@@ -50,7 +52,11 @@
     "pngQualityNotice": "PNG形式は可逆圧縮のため、品質設定は適用されません。常に最高品質で出力されます。",
     "pngQualityExperimental": "PNG形式での品質制御を実験的にサポートしています。低い値ではファイルサイズが小さくなりますが、画質が劣化する場合があります。",
     "pngQualityHelp": "PNG品質: 95以上=標準PNG、70-94=中圧縮、70未満=高圧縮（画質劣化あり）",
-    "qualityDescription": "品質: 低い値ほどファイルサイズが小さくなりますが、画質が劣化します"
+    "qualityDescription": "品質: 低い値ほどファイルサイズが小さくなりますが、画質が劣化します",
+    "metadataSettings": "メタデータ設定",
+    "preserveExif": "EXIF情報を保持",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が変換後の画像に保持されます。JPEG形式でのみ有効です。",
+    "preserveExifJpegOnly": "EXIF情報の保持はJPEG形式でのみ対応しています。"
   },
   "crop": {
     "title": "トリミングツール",
@@ -71,6 +77,8 @@
     "startCropping": "トリミング",
     "reCrop": "再トリミング",
     "croppingInProgress": "トリミング中...",
+    "preserveExif": "EXIF情報を保持",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）がトリミング後の画像に保持されます。JPEG形式でのみ有効です。",
     "filesSelected": "選択中のファイル",
     "cropSettings": "トリミング設定",
     "previewAndCrop": "プレビューとトリミング",
@@ -160,6 +168,31 @@
     "mb": "MB",
     "gb": "GB",
     "px": "px"
+  },
+  "metadata": {
+    "title": "画像メタデータ・プライバシー管理",
+    "subtitle": "画像のメタデータ（EXIF情報）を確認し、プライバシーに関わる情報を削除できます。JPEG形式では選択的削除、その他の形式では全削除となります。",
+    "uploadedImages": "アップロード済み画像",
+    "metadataAnalysis": "メタデータ分析",
+    "privacyRiskTags": "プライバシーリスクのあるタグ",
+    "allExifTags": "すべてのEXIFタグ",
+    "selectTagsToRemove": "削除するタグを選択してください",
+    "removeSelectedMetadata": "選択したメタデータを削除",
+    "downloadCleanedImages": "クリーニング済み画像をダウンロード",
+    "processing": "処理中...",
+    "noMetadataFound": "メタデータが見つかりませんでした",
+    "metadataRemoved": "メタデータが削除されました",
+    "analyzingMetadata": "メタデータを分析中...",
+    "processingNote": "※ JPEG形式: 選択されたタグのみ削除、その他の形式: すべてのメタデータを削除",
+    "processingMethod": {
+      "selective": "選択的削除",
+      "allRemoval": "全削除"
+    },
+    "risk": {
+      "high": "高",
+      "medium": "中",
+      "low": "低"
+    }
   },
   "footer": {
     "privacyMessage": "すべての画像処理はお使いのデバイス内で完結し、サーバーへのアップロードは一切行いません。",

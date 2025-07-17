@@ -9,6 +9,7 @@ export const Navigation: React.FC = () => {
     { label: t("navigation.top"), href: "/" },
     { label: t("navigation.crop"), href: "/crop" },
     { label: t("navigation.convert"), href: "/convert" },
+    { label: t("navigation.metadata"), href: "/metadata" },
   ];
 
   return (
