@@ -1,5 +1,6 @@
 import EXIF from "exif-js";
 import piexif from "piexifjs";
+import { dataUrlToBlob } from "./imageUtils";
 
 export interface ExifData {
   [key: string]: string | number | undefined;
@@ -196,15 +197,19 @@ export const extractExifData = async (file: File): Promise<ExifData> => {
 export const analyzeMetadata = async (
   files: File[],
 ): Promise<MetadataAnalysis> => {
-  const fileMetadata: FileMetadata[] = [];
   const allTags = new Set<string>();
   const privacyRiskTags = new Set<string>();
 
-  for (const file of files) {
+  // 並列処理でEXIFデータを取得
+  const metadataPromises = files.map(async (file) => {
     const exifData = await extractExifData(file);
-    fileMetadata.push({ file, exifData });
+    return { file, exifData };
+  });
 
-    // タグを集計
+  const fileMetadata = await Promise.all(metadataPromises);
+
+  // タグを集計
+  for (const { exifData } of fileMetadata) {
     for (const tag of Object.keys(exifData)) {
       allTags.add(tag);
       if (PRIVACY_RISK_TAGS.has(tag) || tag.toLowerCase().includes("gps")) {
@@ -264,14 +269,7 @@ export const removeMetadataFromImage = async (
         const newImageData = piexif.insert(exifBytes, imageData);
 
         // Base64からBlobに変換
-        const base64Data = newImageData.split(",")[1];
-        const binaryData = atob(base64Data);
-        const uint8Array = new Uint8Array(binaryData.length);
-        for (let i = 0; i < binaryData.length; i++) {
-          uint8Array[i] = binaryData.charCodeAt(i);
-        }
-
-        const modifiedBlob = new Blob([uint8Array], { type: file.type });
+        const modifiedBlob = dataUrlToBlob(newImageData, file.type);
         const modifiedFile = new File([modifiedBlob], file.name, {
           type: file.type,
         });

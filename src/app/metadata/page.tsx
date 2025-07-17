@@ -111,7 +111,7 @@ export default function MetadataPage() {
   }, [imageUrls]);
 
   // プライバシーリスクの表示
-  const getPrivacyRiskBadge = (file: File) => {
+  const getPrivacyRiskBadge = useCallback((file: File) => {
     if (!analysis) return null;
 
     const fileMetadata = analysis.fileMetadata.find(
@@ -132,7 +132,7 @@ export default function MetadataPage() {
         {t(`metadata.risk.${risk}`, risk.toUpperCase())}
       </span>
     );
-  };
+  }, [analysis, t]);
 
   // ファイル形式によるメタデータ処理方法を表示
   const getProcessingMethodBadge = (file: File) => {
@@ -152,12 +152,12 @@ export default function MetadataPage() {
   };
 
   // タグの使用カウントを取得
-  const getTagCount = (tag: string): number => {
+  const getTagCount = useCallback((tag: string): number => {
     if (!analysis) return 0;
     return analysis.fileMetadata.filter((fm) =>
       Object.keys(fm.exifData).includes(tag),
     ).length;
-  };
+  }, [analysis]);
 
   return (
     <LayoutContainer>

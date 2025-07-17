@@ -1,4 +1,5 @@
 import piexif from "piexifjs";
+import { dataUrlToBlob } from "./imageUtils";
 
 export interface CropArea {
   x: number;
@@ -217,13 +218,7 @@ export const cropImage = async (
         });
 
         const newDataUrl = piexif.insert(exifData, dataUrl);
-        const base64Data = newDataUrl.split(",")[1];
-        const binaryData = atob(base64Data);
-        const uint8Array = new Uint8Array(binaryData.length);
-        for (let i = 0; i < binaryData.length; i++) {
-          uint8Array[i] = binaryData.charCodeAt(i);
-        }
-        croppedBlob = new Blob([uint8Array], { type: file.type });
+        croppedBlob = dataUrlToBlob(newDataUrl, file.type);
       } catch (error) {
         console.warn("Failed to insert EXIF data:", error);
       }

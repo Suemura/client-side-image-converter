@@ -1,12 +1,11 @@
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { downloadMultiple, downloadSingle } from "../utils/fileDownloader";
-import { truncateFileName } from "../utils/fileName";
+import { formatFileSize, truncateFileName } from "../utils/fileName";
 import type { ConversionResult } from "../utils/imageConverter";
 import {
   calculateCompressionRatio,
-  formatFileSize,
 } from "../utils/imageConverter";
 import type { CropResult } from "../utils/imageCropper";
 import { Button } from "./Button";
@@ -146,34 +145,49 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     setSelectedCropResult(null);
   }, []);
 
-  if (!isConversionMode && !isCropMode) {
-    return null;
-  }
+  const resultsToShow = useMemo(() => results || [], [results]);
+  const cropResultsToShow = useMemo(() => cropResults || [], [cropResults]);
 
-  const resultsToShow = results || [];
-  const cropResultsToShow = cropResults || [];
-  const fileCount = isCropMode
-    ? cropResultsToShow.length
-    : resultsToShow.length;
+  // 統計情報の計算を最適化
+  const statistics = useMemo(() => {
+    if (!isConversionMode) {
+      return {
+        totalOriginalSize: 0,
+        totalConvertedSize: 0,
+        overallCompressionRatio: 0,
+      };
+    }
 
-  let totalOriginalSize = 0;
-  let totalConvertedSize = 0;
-  let overallCompressionRatio = 0;
-
-  if (isConversionMode) {
-    totalOriginalSize = resultsToShow.reduce(
-      (sum, result) => sum + result.originalSize,
-      0,
+    // 単一の走査で両方の値を計算
+    const { totalOriginalSize, totalConvertedSize } = resultsToShow.reduce(
+      (acc, result) => ({
+        totalOriginalSize: acc.totalOriginalSize + result.originalSize,
+        totalConvertedSize: acc.totalConvertedSize + result.convertedSize,
+      }),
+      { totalOriginalSize: 0, totalConvertedSize: 0 }
     );
-    totalConvertedSize = resultsToShow.reduce(
-      (sum, result) => sum + result.convertedSize,
-      0,
-    );
-    overallCompressionRatio = calculateCompressionRatio(
+
+    const overallCompressionRatio = calculateCompressionRatio(
       totalOriginalSize,
       totalConvertedSize,
     );
+
+    return {
+      totalOriginalSize,
+      totalConvertedSize,
+      overallCompressionRatio,
+    };
+  }, [isConversionMode, resultsToShow]);
+
+  const { totalOriginalSize, totalConvertedSize, overallCompressionRatio } = statistics;
+
+  if (!isConversionMode && !isCropMode) {
+    return null;
   }
+  
+  const fileCount = isCropMode
+    ? cropResultsToShow.length
+    : resultsToShow.length;
 
   return (
     <div className={styles.container}>

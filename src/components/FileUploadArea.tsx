@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
+import { formatFileSize } from "@utils/fileName";
+import { generateThumbnail } from "@utils/imageUtils";
 import styles from "./FileUploadArea.module.css";
 
 interface FileUploadAreaProps {
@@ -39,65 +41,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
-  };
 
-  const generateThumbnail = useCallback(
-    (file: File): Promise<string | null> => {
-      return new Promise((resolve) => {
-        if (!file.type.startsWith("image/")) {
-          resolve(null);
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-
-            // サムネイルのサイズを設定（32x32）
-            const size = 32;
-            canvas.width = size;
-            canvas.height = size;
-
-            if (ctx) {
-              // 画像を正方形にトリミングして描画
-              const minDimension = Math.min(img.width, img.height);
-              const sx = (img.width - minDimension) / 2;
-              const sy = (img.height - minDimension) / 2;
-
-              ctx.drawImage(
-                img,
-                sx,
-                sy,
-                minDimension,
-                minDimension,
-                0,
-                0,
-                size,
-                size,
-              );
-              resolve(canvas.toDataURL("image/jpeg", 0.8));
-            } else {
-              resolve(null);
-            }
-          };
-          img.onerror = () => resolve(null);
-          img.src = e.target?.result as string;
-        };
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(file);
-      });
-    },
-    [],
-  );
 
   // ドラッグ&ドロップハンドラー
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -180,19 +124,21 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   useEffect(() => {
     const generateThumbnails = async () => {
       setIsGeneratingThumbnails(true);
-      const newThumbnails: FileThumbnail[] = [];
-
-      for (const file of files) {
+      
+      // 並列処理でサムネイル生成
+      const thumbnailPromises = files.map(async (file) => {
         const thumbnailUrl = await generateThumbnail(file);
-        newThumbnails.push({ file, thumbnailUrl });
-      }
+        return { file, thumbnailUrl };
+      });
 
+      const newThumbnails = await Promise.all(thumbnailPromises);
+      
       setThumbnails(newThumbnails);
       setIsGeneratingThumbnails(false);
     };
 
     generateThumbnails();
-  }, [files, generateThumbnail]);
+  }, [files]);
 
   // ファイル詳細モーダルハンドラー
   const handleFileClick = useCallback((file: File) => {

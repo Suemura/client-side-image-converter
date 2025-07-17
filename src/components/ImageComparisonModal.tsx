@@ -5,8 +5,8 @@ import type { ConversionResult } from "../utils/imageConverter";
 import {
   calculateCompressionRatio,
   downloadFile,
-  formatFileSize,
 } from "../utils/imageConverter";
+import { formatFileSize } from "../utils/fileName";
 import { Button } from "./Button";
 import styles from "./ImageComparisonModal.module.css";
 

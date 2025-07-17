@@ -1,4 +1,5 @@
 import piexif from "piexifjs";
+import { dataUrlToBlob } from "./imageUtils";
 
 export interface ConversionOptions {
   format: "jpeg" | "png" | "webp";
@@ -147,13 +148,7 @@ export const convertImage = async (
                     return;
                   }
                   const newDataUrl = piexif.insert(exifData, dataUrl);
-                  const base64Data = newDataUrl.split(",")[1];
-                  const binaryData = atob(base64Data);
-                  const uint8Array = new Uint8Array(binaryData.length);
-                  for (let i = 0; i < binaryData.length; i++) {
-                    uint8Array[i] = binaryData.charCodeAt(i);
-                  }
-                  const newBlob = new Blob([uint8Array], { type: blob.type });
+                  const newBlob = dataUrlToBlob(newDataUrl, blob.type);
                   processBlob(newBlob);
                 } catch (error) {
                   console.warn("Failed to insert EXIF data:", error);
@@ -245,16 +240,6 @@ export const downloadMultipleFiles = (results: ConversionResult[]): void => {
   });
 };
 
-/**
- * ファイルサイズを読みやすい形式でフォーマットする
- */
-export const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
-};
 
 /**
  * 圧縮率を計算する
