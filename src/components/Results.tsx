@@ -1,10 +1,10 @@
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileDownloader } from "../utils/fileDownloader";
-import { truncateFileName } from "../utils/fileName";
+import { downloadMultiple, downloadSingle } from "../utils/fileDownloader";
+import { formatFileSize, truncateFileName } from "../utils/fileName";
 import type { ConversionResult } from "../utils/imageConverter";
-import { ImageConverter } from "../utils/imageConverter";
+import { calculateCompressionRatio } from "../utils/imageConverter";
 import type { CropResult } from "../utils/imageCropper";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
@@ -92,17 +92,19 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
 
     // クリーンアップ
     return () => {
-      Object.values(urls).forEach((url) => URL.revokeObjectURL(url));
+      for (const url of Object.values(urls)) {
+        URL.revokeObjectURL(url);
+      }
     };
   }, [cropResults, isCropMode]);
 
   const handleDownloadSingle = useCallback((result: ConversionResult) => {
-    FileDownloader.downloadSingle(result);
+    downloadSingle(result);
   }, []);
 
   const handleCropDownload = useCallback((result: CropResult) => {
     if (!result.success) return;
-    FileDownloader.downloadSingle(result);
+    downloadSingle(result);
   }, []);
 
   const handleDownloadZip = useCallback(async () => {
@@ -112,9 +114,9 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     try {
       if (isCropMode && cropResults) {
         // トリミング結果の一括ダウンロード（ZIPファイル作成）
-        await FileDownloader.downloadMultiple(cropResults);
+        await downloadMultiple(cropResults);
       } else if (results) {
-        await FileDownloader.downloadMultiple(results);
+        await downloadMultiple(results);
       }
     } catch (error) {
       console.error("ダウンロードエラー:", error);
@@ -141,34 +143,50 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     setSelectedCropResult(null);
   }, []);
 
+  const resultsToShow = useMemo(() => results || [], [results]);
+  const cropResultsToShow = useMemo(() => cropResults || [], [cropResults]);
+
+  // 統計情報の計算を最適化
+  const statistics = useMemo(() => {
+    if (!isConversionMode) {
+      return {
+        totalOriginalSize: 0,
+        totalConvertedSize: 0,
+        overallCompressionRatio: 0,
+      };
+    }
+
+    // 単一の走査で両方の値を計算
+    const { totalOriginalSize, totalConvertedSize } = resultsToShow.reduce(
+      (acc, result) => ({
+        totalOriginalSize: acc.totalOriginalSize + result.originalSize,
+        totalConvertedSize: acc.totalConvertedSize + result.convertedSize,
+      }),
+      { totalOriginalSize: 0, totalConvertedSize: 0 },
+    );
+
+    const overallCompressionRatio = calculateCompressionRatio(
+      totalOriginalSize,
+      totalConvertedSize,
+    );
+
+    return {
+      totalOriginalSize,
+      totalConvertedSize,
+      overallCompressionRatio,
+    };
+  }, [isConversionMode, resultsToShow]);
+
+  const { totalOriginalSize, totalConvertedSize, overallCompressionRatio } =
+    statistics;
+
   if (!isConversionMode && !isCropMode) {
     return null;
   }
 
-  const resultsToShow = results || [];
-  const cropResultsToShow = cropResults || [];
   const fileCount = isCropMode
     ? cropResultsToShow.length
     : resultsToShow.length;
-
-  let totalOriginalSize = 0;
-  let totalConvertedSize = 0;
-  let overallCompressionRatio = 0;
-
-  if (isConversionMode) {
-    totalOriginalSize = resultsToShow.reduce(
-      (sum, result) => sum + result.originalSize,
-      0,
-    );
-    totalConvertedSize = resultsToShow.reduce(
-      (sum, result) => sum + result.convertedSize,
-      0,
-    );
-    overallCompressionRatio = ImageConverter.calculateCompressionRatio(
-      totalOriginalSize,
-      totalConvertedSize,
-    );
-  }
 
   return (
     <div className={styles.container}>
@@ -198,13 +216,13 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
           <div>
             <p className={styles.statLabel}>{t("results.originalSize")}</p>
             <p className={styles.statValue}>
-              {ImageConverter.formatFileSize(totalOriginalSize)}
+              {formatFileSize(totalOriginalSize)}
             </p>
           </div>
           <div>
             <p className={styles.statLabel}>{t("results.convertedSize")}</p>
             <p className={styles.statValue}>
-              {ImageConverter.formatFileSize(totalConvertedSize)}
+              {formatFileSize(totalConvertedSize)}
             </p>
           </div>
           <div>
@@ -290,7 +308,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
             ))
           : // コンバージョン結果の表示
             resultsToShow.map((result, index) => {
-              const compressionRatio = ImageConverter.calculateCompressionRatio(
+              const compressionRatio = calculateCompressionRatio(
                 result.originalSize,
                 result.convertedSize,
               );
@@ -321,11 +339,8 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                         <p className={styles.fileName}>{result.filename}</p>
                         <div className={styles.fileSizeInfo}>
                           <span className={styles.fileSizeText}>
-                            {ImageConverter.formatFileSize(result.originalSize)}{" "}
-                            →{" "}
-                            {ImageConverter.formatFileSize(
-                              result.convertedSize,
-                            )}
+                            {formatFileSize(result.originalSize)} →{" "}
+                            {formatFileSize(result.convertedSize)}
                           </span>
                           <span
                             className={
@@ -360,7 +375,9 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
       {showComparison && selectedResult && isModalOpen && (
         <ImageComparisonModal
           result={selectedResult}
-          originalImageUrl={originalImageUrls[selectedResult.originalFilename] || ""}
+          originalImageUrl={
+            originalImageUrls[selectedResult.originalFilename] || ""
+          }
           isOpen={isModalOpen}
           onClose={handleCloseModal}
         />

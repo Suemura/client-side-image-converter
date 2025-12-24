@@ -1,10 +1,10 @@
-declare module 'piexifjs' {
+declare module "piexifjs" {
   interface ExifObj {
-    '0th'?: { [key: number]: string | number | number[] };
-    'Exif'?: { [key: number]: string | number | number[] };
-    'GPS'?: { [key: number]: string | number | number[] };
-    'Interop'?: { [key: number]: string | number | number[] };
-    '1st'?: { [key: number]: string | number | number[] };
+    "0th"?: { [key: number]: string | number | number[] };
+    Exif?: { [key: number]: string | number | number[] };
+    GPS?: { [key: number]: string | number | number[] };
+    Interop?: { [key: number]: string | number | number[] };
+    "1st"?: { [key: number]: string | number | number[] };
     thumbnail?: string | null;
   }
 

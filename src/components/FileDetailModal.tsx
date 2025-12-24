@@ -1,3 +1,4 @@
+import { formatFileSize } from "@utils/fileName";
 import EXIF from "exif-js";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
@@ -26,25 +27,23 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
     height: number;
   } | null>(null);
 
-  const formatFileSize = useCallback((bytes: number): string => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
-  }, []);
-
-  const formatDateTime = useCallback((dateValue?: string | number): string => {
-    if (!dateValue) return t("fileDetails.unknown");
-    try {
-      // 数値の場合はそのまま、文字列の場合はparseIntまたはそのまま使用
-      const date = typeof dateValue === 'number' ? new Date(dateValue) : new Date(dateValue);
-      if (Number.isNaN(date.getTime())) return t("fileDetails.unknown");
-      return date.toLocaleString(i18n.language === "ja" ? "ja-JP" : "en-US");
-    } catch {
-      return t("fileDetails.unknown");
-    }
-  }, [t, i18n.language]);
+  const formatDateTime = useCallback(
+    (dateValue?: string | number): string => {
+      if (!dateValue) return t("fileDetails.unknown");
+      try {
+        // 数値の場合はそのまま、文字列の場合はparseIntまたはそのまま使用
+        const date =
+          typeof dateValue === "number"
+            ? new Date(dateValue)
+            : new Date(dateValue);
+        if (Number.isNaN(date.getTime())) return t("fileDetails.unknown");
+        return date.toLocaleString(i18n.language === "ja" ? "ja-JP" : "en-US");
+      } catch {
+        return t("fileDetails.unknown");
+      }
+    },
+    [t, i18n.language],
+  );
 
   const extractExifData = useCallback((file: File): Promise<ExifData> => {
     return new Promise((resolve) => {
@@ -53,10 +52,8 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
         return;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (EXIF as any).getData(file, function (this: any) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const allMetaData = (EXIF as any).getAllTags(this);
+      EXIF.getData(file, function (this) {
+        const allMetaData = EXIF.getAllTags(this);
         const relevantData: ExifData = {};
 
         // 主要なEXIF情報を抽出

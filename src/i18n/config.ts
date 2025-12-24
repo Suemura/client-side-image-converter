@@ -2,9 +2,9 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { setStoredLanguage } from "../utils/languageStorage";
 
+import enTranslations from "./locales/en.json";
 // JSONファイルから翻訳リソースをインポート
 import jaTranslations from "./locales/ja.json";
-import enTranslations from "./locales/en.json";
 
 // 翻訳リソースの定義
 const resources = {
@@ -34,8 +34,8 @@ if (!i18n.isInitialized) {
   });
 
   // 言語変更時にローカルストレージに保存
-  i18n.on('languageChanged', (lng) => {
-    if (lng === 'ja' || lng === 'en') {
+  i18n.on("languageChanged", (lng) => {
+    if (lng === "ja" || lng === "en") {
       setStoredLanguage(lng);
     }
   });

@@ -11,7 +11,7 @@ export const LanguageManager: React.FC = () => {
 
   useEffect(() => {
     // HTMLのlang属性を現在の言語に更新
-    if (typeof document !== 'undefined') {
+    if (typeof document !== "undefined") {
       document.documentElement.lang = i18n.language;
     }
   }, [i18n.language]);

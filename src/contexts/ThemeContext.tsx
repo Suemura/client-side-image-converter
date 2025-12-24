@@ -1,7 +1,13 @@
 "use client";
 
 import type React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 type Theme = "light" | "dark";
 
@@ -29,7 +35,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     // クライアントサイドでのみ初期化
     // 現在のdata-theme属性を確認
-    const currentTheme = document.documentElement.getAttribute("data-theme") as Theme;
+    const currentTheme = document.documentElement.getAttribute(
+      "data-theme",
+    ) as Theme;
     if (currentTheme === "dark" || currentTheme === "light") {
       setTheme(currentTheme);
     } else {
@@ -38,7 +46,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       if (savedTheme) {
         setTheme(savedTheme);
       } else {
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
         setTheme(prefersDark ? "dark" : "light");
       }
     }
@@ -57,9 +67,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [theme, isInitialized]);
 
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
-  };
+  const toggleTheme = useCallback(() => {
+    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
