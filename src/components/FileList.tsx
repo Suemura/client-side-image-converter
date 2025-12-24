@@ -24,11 +24,10 @@ export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-
   useEffect(() => {
     const generateThumbnails = async () => {
       setIsGeneratingThumbnails(true);
-      
+
       // 並列処理でサムネイル生成
       const thumbnailPromises = files.map(async (file) => {
         const thumbnailUrl = await generateThumbnail(file);
@@ -36,7 +35,7 @@ export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
       });
 
       const newThumbnails = await Promise.all(thumbnailPromises);
-      
+
       setThumbnails(newThumbnails);
       setIsGeneratingThumbnails(false);
     };

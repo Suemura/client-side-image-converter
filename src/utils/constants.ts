@@ -6,7 +6,7 @@
 export const IMAGE_CONSTANTS = {
   // サムネイルサイズ
   THUMBNAIL_SIZE: 32,
-  
+
   // 画像品質設定
   QUALITY: {
     LOW: 0.8,
@@ -14,10 +14,10 @@ export const IMAGE_CONSTANTS = {
     HIGH: 0.95,
     MAXIMUM: 0.98,
   },
-  
+
   // デフォルトタイムアウト（ミリ秒）
   DEFAULT_TIMEOUT: 1000,
-  
+
   // ファイルサイズ計算基数
   FILE_SIZE_BASE: 1024,
 } as const;
@@ -25,12 +25,8 @@ export const IMAGE_CONSTANTS = {
 // サポートされる画像フォーマット
 export const SUPPORTED_IMAGE_FORMATS = {
   // 変換でサポートされる形式
-  CONVERSION_FORMATS: [
-    "image/jpeg",
-    "image/png", 
-    "image/webp",
-  ],
-  
+  CONVERSION_FORMATS: ["image/jpeg", "image/png", "image/webp"],
+
   // アップロードでサポートされる形式
   UPLOAD_FORMATS: [
     "image/jpeg",
@@ -39,22 +35,13 @@ export const SUPPORTED_IMAGE_FORMATS = {
     "image/bmp",
     "image/tiff",
   ],
-  
+
   // JPEG形式の別名
-  JPEG_VARIANTS: [
-    "image/jpeg",
-    "image/jpg",
-  ],
+  JPEG_VARIANTS: ["image/jpeg", "image/jpg"],
 } as const;
 
 // ファイルサイズ表示用の単位
-export const FILE_SIZE_UNITS = [
-  "Bytes",
-  "KB", 
-  "MB",
-  "GB",
-  "TB",
-] as const;
+export const FILE_SIZE_UNITS = ["Bytes", "KB", "MB", "GB", "TB"] as const;
 
 // 画像変換のフォーマット
 export const IMAGE_FORMATS = {
@@ -74,13 +61,13 @@ export const MIME_TYPE_MAPPING = {
 export const UI_CONSTANTS = {
   // モーダルのz-index
   MODAL_Z_INDEX: 1000,
-  
+
   // プログレスバーのアニメーション時間
   PROGRESS_ANIMATION_DURATION: 200,
-  
+
   // デバウンス時間
   DEBOUNCE_DELAY: 300,
-  
+
   // 最大ファイル名表示長
   MAX_FILENAME_LENGTH: 12,
 } as const;
@@ -109,7 +96,7 @@ export const EXIF_CONSTANTS = {
     "BodySerialNumber",
     "LensSerialNumber",
   ],
-  
+
   // 安全とされるタグ
   SAFE_TAGS: [
     "ImageWidth",
@@ -131,13 +118,13 @@ export const DEFAULT_SETTINGS = {
     maintainAspectRatio: true,
     preserveExif: false,
   },
-  
+
   // トリミングのデフォルト設定
   CROP: {
     preserveExif: false,
     aspectRatio: null,
   },
-  
+
   // メタデータ処理のデフォルト設定
   METADATA: {
     removePrivacyTags: true,

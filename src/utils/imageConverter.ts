@@ -240,7 +240,6 @@ export const downloadMultipleFiles = (results: ConversionResult[]): void => {
   });
 };
 
-
 /**
  * 圧縮率を計算する
  */

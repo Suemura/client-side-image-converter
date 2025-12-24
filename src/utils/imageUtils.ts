@@ -41,7 +41,7 @@ export const generateThumbnail = (file: File): Promise<string | null> => {
             0,
             0,
             size,
-            size
+            size,
           );
 
           const thumbnailUrl = canvas.toDataURL("image/png");
@@ -71,7 +71,9 @@ export const generateThumbnail = (file: File): Promise<string | null> => {
  * @param canvas - Canvas要素
  * @returns Canvas context または null
  */
-export const getCanvasContext = (canvas: HTMLCanvasElement): CanvasRenderingContext2D | null => {
+export const getCanvasContext = (
+  canvas: HTMLCanvasElement,
+): CanvasRenderingContext2D | null => {
   return canvas.getContext("2d");
 };
 
@@ -122,12 +124,12 @@ export const base64ToUint8Array = (base64: string): Uint8Array => {
   const binaryString = atob(base64);
   const length = binaryString.length;
   const uint8Array = new Uint8Array(length);
-  
+
   // 効率的な文字列からUint8Arrayへの変換
   for (let i = 0; i < length; i++) {
     uint8Array[i] = binaryString.charCodeAt(i);
   }
-  
+
   return uint8Array;
 };
 

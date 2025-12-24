@@ -4,9 +4,7 @@ import { useTranslation } from "react-i18next";
 import { downloadMultiple, downloadSingle } from "../utils/fileDownloader";
 import { formatFileSize, truncateFileName } from "../utils/fileName";
 import type { ConversionResult } from "../utils/imageConverter";
-import {
-  calculateCompressionRatio,
-} from "../utils/imageConverter";
+import { calculateCompressionRatio } from "../utils/imageConverter";
 import type { CropResult } from "../utils/imageCropper";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
@@ -164,7 +162,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
         totalOriginalSize: acc.totalOriginalSize + result.originalSize,
         totalConvertedSize: acc.totalConvertedSize + result.convertedSize,
       }),
-      { totalOriginalSize: 0, totalConvertedSize: 0 }
+      { totalOriginalSize: 0, totalConvertedSize: 0 },
     );
 
     const overallCompressionRatio = calculateCompressionRatio(
@@ -179,12 +177,13 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     };
   }, [isConversionMode, resultsToShow]);
 
-  const { totalOriginalSize, totalConvertedSize, overallCompressionRatio } = statistics;
+  const { totalOriginalSize, totalConvertedSize, overallCompressionRatio } =
+    statistics;
 
   if (!isConversionMode && !isCropMode) {
     return null;
   }
-  
+
   const fileCount = isCropMode
     ? cropResultsToShow.length
     : resultsToShow.length;

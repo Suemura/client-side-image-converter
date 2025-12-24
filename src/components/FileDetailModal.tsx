@@ -1,8 +1,8 @@
+import { formatFileSize } from "@utils/fileName";
 import EXIF from "exif-js";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { formatFileSize } from "@utils/fileName";
 
 interface FileDetailModalProps {
   file: File;
@@ -26,7 +26,6 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
     width: number;
     height: number;
   } | null>(null);
-
 
   const formatDateTime = useCallback(
     (dateValue?: string | number): string => {

@@ -111,28 +111,31 @@ export default function MetadataPage() {
   }, [imageUrls]);
 
   // プライバシーリスクの表示
-  const getPrivacyRiskBadge = useCallback((file: File) => {
-    if (!analysis) return null;
+  const getPrivacyRiskBadge = useCallback(
+    (file: File) => {
+      if (!analysis) return null;
 
-    const fileMetadata = analysis.fileMetadata.find(
-      (fm) => fm.file.name === file.name,
-    );
-    if (!fileMetadata) return null;
+      const fileMetadata = analysis.fileMetadata.find(
+        (fm) => fm.file.name === file.name,
+      );
+      if (!fileMetadata) return null;
 
-    const risk = assessPrivacyRisk(fileMetadata.exifData);
-    const riskClass =
-      risk === "high"
-        ? styles.privacyRiskHigh
-        : risk === "medium"
-          ? styles.privacyRiskMedium
-          : styles.privacyRiskLow;
+      const risk = assessPrivacyRisk(fileMetadata.exifData);
+      const riskClass =
+        risk === "high"
+          ? styles.privacyRiskHigh
+          : risk === "medium"
+            ? styles.privacyRiskMedium
+            : styles.privacyRiskLow;
 
-    return (
-      <span className={`${styles.privacyRiskBadge} ${riskClass}`}>
-        {t(`metadata.risk.${risk}`, risk.toUpperCase())}
-      </span>
-    );
-  }, [analysis, t]);
+      return (
+        <span className={`${styles.privacyRiskBadge} ${riskClass}`}>
+          {t(`metadata.risk.${risk}`, risk.toUpperCase())}
+        </span>
+      );
+    },
+    [analysis, t],
+  );
 
   // ファイル形式によるメタデータ処理方法を表示
   const getProcessingMethodBadge = (file: File) => {
@@ -152,12 +155,15 @@ export default function MetadataPage() {
   };
 
   // タグの使用カウントを取得
-  const getTagCount = useCallback((tag: string): number => {
-    if (!analysis) return 0;
-    return analysis.fileMetadata.filter((fm) =>
-      Object.keys(fm.exifData).includes(tag),
-    ).length;
-  }, [analysis]);
+  const getTagCount = useCallback(
+    (tag: string): number => {
+      if (!analysis) return 0;
+      return analysis.fileMetadata.filter((fm) =>
+        Object.keys(fm.exifData).includes(tag),
+      ).length;
+    },
+    [analysis],
+  );
 
   return (
     <LayoutContainer>

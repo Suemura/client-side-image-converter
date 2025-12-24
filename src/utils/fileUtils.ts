@@ -3,52 +3,51 @@
  */
 
 /**
- * URL管理のためのヘルパークラス
+ * URL管理のためのヘルパー関数群
  */
-export class URLManager {
-  private static urlMap = new Map<string, string>();
+const urlMap = new Map<string, string>();
 
-  /**
-   * ファイルからオブジェクトURLを作成し、管理する
-   * @param file - ファイルオブジェクト
-   * @param key - URL管理のためのキー
-   * @returns オブジェクトURL
-   */
-  static createObjectURL(file: File, key?: string): string {
-    const url = URL.createObjectURL(file);
-    const mapKey = key || `${file.name}_${file.size}`;
-    
-    // 既存のURLがある場合は削除
-    if (this.urlMap.has(mapKey)) {
-      URL.revokeObjectURL(this.urlMap.get(mapKey)!);
-    }
-    
-    this.urlMap.set(mapKey, url);
-    return url;
+/**
+ * ファイルからオブジェクトURLを作成し、管理する
+ * @param file - ファイルオブジェクト
+ * @param key - URL管理のためのキー
+ * @returns オブジェクトURL
+ */
+export const createObjectURL = (file: File, key?: string): string => {
+  const url = URL.createObjectURL(file);
+  const mapKey = key || `${file.name}_${file.size}`;
+
+  // 既存のURLがある場合は削除
+  const existingUrl = urlMap.get(mapKey);
+  if (existingUrl) {
+    URL.revokeObjectURL(existingUrl);
   }
 
-  /**
-   * 指定されたキーのURLを削除する
-   * @param key - 削除するURLのキー
-   */
-  static revokeObjectURL(key: string): void {
-    const url = this.urlMap.get(key);
-    if (url) {
-      URL.revokeObjectURL(url);
-      this.urlMap.delete(key);
-    }
-  }
+  urlMap.set(mapKey, url);
+  return url;
+};
 
-  /**
-   * 全てのURLを削除する
-   */
-  static revokeAllObjectURLs(): void {
-    for (const url of this.urlMap.values()) {
-      URL.revokeObjectURL(url);
-    }
-    this.urlMap.clear();
+/**
+ * 指定されたキーのURLを削除する
+ * @param key - 削除するURLのキー
+ */
+export const revokeObjectURL = (key: string): void => {
+  const url = urlMap.get(key);
+  if (url) {
+    URL.revokeObjectURL(url);
+    urlMap.delete(key);
   }
-}
+};
+
+/**
+ * 全てのURLを削除する
+ */
+export const revokeAllObjectURLs = (): void => {
+  for (const url of urlMap.values()) {
+    URL.revokeObjectURL(url);
+  }
+  urlMap.clear();
+};
 
 /**
  * 圧縮率を計算する
@@ -58,7 +57,7 @@ export class URLManager {
  */
 export const calculateCompressionRatio = (
   originalSize: number,
-  compressedSize: number
+  compressedSize: number,
 ): number => {
   if (originalSize === 0) return 0;
   return ((originalSize - compressedSize) / originalSize) * 100;
@@ -72,7 +71,7 @@ export const calculateCompressionRatio = (
  */
 export const calculateProgressPercentage = (
   current: number,
-  total: number
+  total: number,
 ): number => {
   if (total === 0) return 0;
   return (current / total) * 100;
@@ -87,7 +86,7 @@ export const calculateProgressPercentage = (
 export const isDuplicateFile = (files: File[], newFile: File): boolean => {
   return files.some(
     (existingFile) =>
-      existingFile.name === newFile.name && existingFile.size === newFile.size
+      existingFile.name === newFile.name && existingFile.size === newFile.size,
   );
 };
 
@@ -99,10 +98,10 @@ export const isDuplicateFile = (files: File[], newFile: File): boolean => {
  */
 export const addUniqueFiles = (
   existingFiles: File[],
-  newFiles: File[]
+  newFiles: File[],
 ): File[] => {
   const uniqueNewFiles = newFiles.filter(
-    (newFile) => !isDuplicateFile(existingFiles, newFile)
+    (newFile) => !isDuplicateFile(existingFiles, newFile),
   );
   return [...existingFiles, ...uniqueNewFiles];
 };
@@ -124,7 +123,7 @@ export const isImageFile = (file: File): boolean => {
  */
 export const isAcceptedFileType = (
   file: File,
-  acceptedTypes: string[]
+  acceptedTypes: string[],
 ): boolean => {
   return acceptedTypes.includes(file.type);
 };
@@ -137,7 +136,7 @@ export const isAcceptedFileType = (
  */
 export const filterValidFiles = (
   files: File[],
-  acceptedTypes: string[]
+  acceptedTypes: string[],
 ): File[] => {
   return files.filter((file) => isAcceptedFileType(file, acceptedTypes));
 };
@@ -189,7 +188,7 @@ export const getFileNameWithoutExtension = (fileName: string): string => {
  */
 export const changeFileExtension = (
   fileName: string,
-  newExtension: string
+  newExtension: string,
 ): string => {
   const nameWithoutExtension = getFileNameWithoutExtension(fileName);
   return `${nameWithoutExtension}${newExtension}`;
@@ -213,9 +212,10 @@ export const addFileNameSuffix = (fileName: string, suffix: string): string => {
  * @returns 統計情報
  */
 export const calculateFileStatistics = (files: File[] | number[]) => {
-  const sizes = Array.isArray(files) && files.length > 0 && typeof files[0] === "number"
-    ? files as number[]
-    : (files as File[]).map(file => file.size);
+  const sizes =
+    Array.isArray(files) && files.length > 0 && typeof files[0] === "number"
+      ? (files as number[])
+      : (files as File[]).map((file) => file.size);
 
   if (sizes.length === 0) {
     return {

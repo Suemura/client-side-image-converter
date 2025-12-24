@@ -1,12 +1,12 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { formatFileSize } from "../utils/fileName";
 import type { ConversionResult } from "../utils/imageConverter";
 import {
   calculateCompressionRatio,
   downloadFile,
 } from "../utils/imageConverter";
-import { formatFileSize } from "../utils/fileName";
 import { Button } from "./Button";
 import styles from "./ImageComparisonModal.module.css";
 

@@ -1,10 +1,10 @@
+import { formatFileSize } from "@utils/fileName";
+import { generateThumbnail } from "@utils/imageUtils";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
-import { formatFileSize } from "@utils/fileName";
-import { generateThumbnail } from "@utils/imageUtils";
 import styles from "./FileUploadArea.module.css";
 
 interface FileUploadAreaProps {
@@ -40,8 +40,6 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-
 
   // ドラッグ&ドロップハンドラー
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -124,7 +122,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   useEffect(() => {
     const generateThumbnails = async () => {
       setIsGeneratingThumbnails(true);
-      
+
       // 並列処理でサムネイル生成
       const thumbnailPromises = files.map(async (file) => {
         const thumbnailUrl = await generateThumbnail(file);
@@ -132,7 +130,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
       });
 
       const newThumbnails = await Promise.all(thumbnailPromises);
-      
+
       setThumbnails(newThumbnails);
       setIsGeneratingThumbnails(false);
     };
