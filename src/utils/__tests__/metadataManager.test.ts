@@ -114,6 +114,21 @@ describe("removeMetadataFromImage", () => {
     expect(exif["0th"]?.[piexif.ImageIFD.Model]).toBe("TestModel");
   });
 
+  it("GPSLatitudeRef / GPSLongitudeRef など Ref 系の GPS タグも個別削除できる", async () => {
+    const file = createJpegFileWithExif();
+    const result = await removeMetadataFromImage(file, [
+      "GPSLatitude",
+      "GPSLatitudeRef",
+      "GPSLongitude",
+      "GPSLongitudeRef",
+    ]);
+    const exif = await loadExifFromFile(result);
+
+    // Ref 系タグの取りこぼしがないこと（過去に GPSLatitudeRef 等が残存するバグがあった）
+    expect(Object.keys(exif.GPS ?? {})).toHaveLength(0);
+    expect(exif["0th"]?.[piexif.ImageIFD.Make]).toBe("TestMake");
+  });
+
   it("削除対象タグが空の場合は元のファイルをそのまま返す", async () => {
     const file = createJpegFileWithExif();
     const result = await removeMetadataFromImage(file, []);

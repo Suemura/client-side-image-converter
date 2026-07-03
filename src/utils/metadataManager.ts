@@ -76,15 +76,9 @@ const removeTagsFromExifObj = (
     LensSerialNumber: { ifd: "Exif", tag: piexif.ExifIFD.LensSerialNumber },
   };
 
-  // GPS関連のタグを処理
-  const gpsTagMapping: Record<string, number> = {
-    GPSLatitude: piexif.GPSIFD.GPSLatitude,
-    GPSLongitude: piexif.GPSIFD.GPSLongitude,
-    GPSAltitude: piexif.GPSIFD.GPSAltitude,
-    GPSImgDirection: piexif.GPSIFD.GPSImgDirection,
-    GPSDateStamp: piexif.GPSIFD.GPSDateStamp,
-    GPSTimeStamp: piexif.GPSIFD.GPSTimeStamp,
-  };
+  // GPS関連のタグは piexif.GPSIFD の定義（全 GPS タグ名 → タグ ID）を参照して削除する
+  // （個別マッピングだと GPSLatitudeRef / GPSLongitudeRef 等の Ref 系タグが漏れるため）
+  const gpsTagMapping = piexif.GPSIFD as unknown as Record<string, number>;
 
   for (const tagName of tagsToRemove) {
     // GPS全体を削除する場合
