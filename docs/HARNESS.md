@@ -28,14 +28,14 @@ flowchart TD
 
 ### 1. 検証コマンド（完了条件）
 
-| コマンド | 内容 |
-| --- | --- |
-| `npm run lint` | Biome によるリント・フォーマットチェック |
-| `npm run typecheck` | TypeScript 型チェック（`tsc --noEmit`） |
-| `npm run test` | vitest による単体テスト（`src/utils/__tests__/`） |
-| `npm run build` | 本番ビルド（静的エクスポート + sitemap 生成） |
+| コマンド | 内容 | 実行タイミング |
+| --- | --- | --- |
+| `npm run lint` | Biome によるリント・フォーマットチェック | 常時（完了条件）+ CI |
+| `npm run typecheck` | TypeScript 型チェック（`tsc --noEmit`） | 常時（完了条件）+ CI |
+| `npm run test` | vitest による単体テスト（`src/utils/__tests__/`） | 常時（完了条件）+ CI |
+| `npm run build` | 本番ビルド（静的エクスポート + sitemap 生成） | PR 時に CI が検証 |
 
-コード変更を伴うタスクは、上記がすべて成功した状態で完了とする（CLAUDE.md「完了条件」）。
+コード変更を伴うタスクの完了条件は lint / typecheck / test の 3 つがすべて成功していること（CLAUDE.md「完了条件」。Stop フックが自動実行するのも同じ 3 つ）。build は完了条件には含まれず、PR 時に CI が検証する。
 
 ### 2. フック（`.claude/settings.json`）
 
