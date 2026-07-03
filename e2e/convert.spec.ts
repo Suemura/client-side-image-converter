@@ -12,9 +12,12 @@ test.describe("画像フォーマット変換", () => {
       timeout: 15_000,
     });
 
+    // 1 ファイル時は ZIP 化されず単一ファイルとしてダウンロードされる
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      page.getByRole("button", { name: "ダウンロード" }).click(),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
     ]);
 
     expect(download.suggestedFilename()).toBe("sample.jpeg");
@@ -33,9 +36,12 @@ test.describe("画像フォーマット変換", () => {
       timeout: 15_000,
     });
 
+    // 1 ファイル時は ZIP 化されず単一ファイルとしてダウンロードされる
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      page.getByRole("button", { name: "ダウンロード" }).click(),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
     ]);
 
     expect(download.suggestedFilename()).toBe("sample.webp");

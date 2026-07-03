@@ -18,6 +18,8 @@ const createJpegFileWithExif = (): File => {
       [piexif.ExifIFD.DateTimeOriginal]: "2024:01:01 00:00:00",
     },
     GPS: {
+      // GPSVersionID はタグ ID が 0 のため、truthiness 判定による削除漏れの回帰検知に使う
+      [piexif.GPSIFD.GPSVersionID]: [2, 3, 0, 0] as unknown as number[],
       [piexif.GPSIFD.GPSLatitudeRef]: "N",
       [piexif.GPSIFD.GPSLatitude]: [
         [35, 1],
@@ -117,6 +119,7 @@ describe("removeMetadataFromImage", () => {
   it("GPSLatitudeRef / GPSLongitudeRef など Ref 系の GPS タグも個別削除できる", async () => {
     const file = createJpegFileWithExif();
     const result = await removeMetadataFromImage(file, [
+      "GPSVersionID",
       "GPSLatitude",
       "GPSLatitudeRef",
       "GPSLongitude",
@@ -125,6 +128,7 @@ describe("removeMetadataFromImage", () => {
     const exif = await loadExifFromFile(result);
 
     // Ref 系タグの取りこぼしがないこと（過去に GPSLatitudeRef 等が残存するバグがあった）
+    // GPSVersionID（タグ ID = 0）も削除され、GPS IFD が完全に空になること
     expect(Object.keys(exif.GPS ?? {})).toHaveLength(0);
     expect(exif["0th"]?.[piexif.ImageIFD.Make]).toBe("TestMake");
   });

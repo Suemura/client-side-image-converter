@@ -94,7 +94,12 @@ const removeTagsFromExifObj = (
     }
 
     // GPSタグの個別削除
-    if (tagName.startsWith("GPS") && gpsTagMapping[tagName] && exifObj.GPS) {
+    // GPSVersionID はタグ ID が 0（falsy）のため、undefined チェックで判定する
+    if (
+      tagName.startsWith("GPS") &&
+      gpsTagMapping[tagName] !== undefined &&
+      exifObj.GPS
+    ) {
       delete exifObj.GPS[gpsTagMapping[tagName]];
     }
   }

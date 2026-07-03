@@ -19,9 +19,12 @@ test.describe("画像トリミング", () => {
       timeout: 15_000,
     });
 
+    // 1 ファイル時は ZIP 化されず単一ファイルとしてダウンロードされる
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      page.getByRole("button", { name: "ダウンロード" }).click(),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
     ]);
 
     // トリミング結果には _cropped サフィックスが付与される

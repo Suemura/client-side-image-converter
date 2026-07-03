@@ -32,6 +32,8 @@ export const jpegFileWithExif = (name = "with-exif.jpg") => {
       [piexif.ExifIFD.DateTimeOriginal]: "2024:01:01 00:00:00",
     },
     GPS: {
+      // GPSVersionID はタグ ID が 0 のため、truthiness 判定による削除漏れの回帰検知に使う
+      [piexif.GPSIFD.GPSVersionID]: [2, 3, 0, 0] as unknown as number[],
       [piexif.GPSIFD.GPSLatitudeRef]: "N",
       [piexif.GPSIFD.GPSLatitude]: [
         [35, 1],
