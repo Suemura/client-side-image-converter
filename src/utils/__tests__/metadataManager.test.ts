@@ -23,13 +23,13 @@ const createJpegFileWithExif = (): File => {
         [35, 1],
         [40, 1],
         [0, 1],
-      ] as unknown as number[],
+      ],
       [piexif.GPSIFD.GPSLongitudeRef]: "E",
       [piexif.GPSIFD.GPSLongitude]: [
         [139, 1],
         [45, 1],
         [0, 1],
-      ] as unknown as number[],
+      ],
     },
   };
   const exifBytes = piexif.dump(exifObj);
