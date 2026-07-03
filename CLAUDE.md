@@ -107,6 +107,14 @@ npm run preview
 
 ## Claude Code ハーネス
 
+全体像・設計意図・運用上の注意は `docs/HARNESS.md` を参照。
+
+### CI（`.github/workflows/ci.yml`）
+
+- すべての PR と main への push で `npm ci` → lint → typecheck → test → build を自動実行
+- CI の Node は 24 に固定（npm 10 系では lockfile 検証の挙動差で `npm ci` が失敗するため変更しない）
+- `package-lock.json` が壊れた場合（CI の `npm ci` だけが失敗する場合）は `rm -rf node_modules package-lock.json && npm install` でゼロから再生成する
+
 ### フック（`.claude/settings.json`）
 
 - **PostToolUse (Write|Edit)**: ファイル編集後に Biome で自動フォーマット。編集直後にファイルが書き換わることがあるため、編集が失敗する場合はファイルを読み直すこと
@@ -152,6 +160,5 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
-- `feat/claude-agents` ブランチでサブエージェント（planner / reviewer）・コマンド（/review-pr / /resolve-pr-comments）・PR 自動レビューフローを導入
-- `feat/test-harness` ブランチで検証ハーネスを整備（vitest 導入、typecheck/test スクリプト追加、Claude Code フック設定）
+- 開発ハーネスを整備（詳細は `docs/HARNESS.md`）: vitest による単体テスト、Claude Code フック（自動フォーマット / 完了時チェック）、サブエージェント（planner / reviewer）、PR 自動レビューフロー、GitHub Actions CI
 - `feat/exif-editor` ブランチで EXIF メタデータの選択的削除機能を実装
