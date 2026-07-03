@@ -19,9 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ローカル開発環境（Node 24 / npm 11）と揃える。
+      # npm 10（Node 22 同梱）は同じ lockfile を不完全と判定し npm ci が失敗するため
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: 依存関係のインストール
