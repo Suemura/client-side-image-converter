@@ -1,10 +1,14 @@
 declare module "piexifjs" {
+  // EXIF の有理数は [分子, 分母] のペアで表現される（例: 露出時間）。
+  // GPS 座標（度・分・秒）のようにペアの配列を取るタグもあるため number[][] も許容する
+  type ExifValue = string | number | number[] | number[][];
+
   interface ExifObj {
-    "0th"?: { [key: number]: string | number | number[] };
-    Exif?: { [key: number]: string | number | number[] };
-    GPS?: { [key: number]: string | number | number[] };
-    Interop?: { [key: number]: string | number | number[] };
-    "1st"?: { [key: number]: string | number | number[] };
+    "0th"?: { [key: number]: ExifValue };
+    Exif?: { [key: number]: ExifValue };
+    GPS?: { [key: number]: ExifValue };
+    Interop?: { [key: number]: ExifValue };
+    "1st"?: { [key: number]: ExifValue };
     thumbnail?: string | null;
   }
 

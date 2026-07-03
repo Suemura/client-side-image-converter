@@ -44,3 +44,6 @@ next-env.d.ts
 # sitemap
 /public/sitemap*.xml
 /public/robots.txt
+
+# Claude Code の個人設定（共有しない）
+.claude/settings.local.json

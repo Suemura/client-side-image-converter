@@ -120,7 +120,7 @@ export const fileToImage = (file: File): Promise<HTMLImageElement> => {
  * @param base64 - Base64文字列
  * @returns Uint8Array
  */
-export const base64ToUint8Array = (base64: string): Uint8Array => {
+export const base64ToUint8Array = (base64: string): Uint8Array<ArrayBuffer> => {
   const binaryString = atob(base64);
   const length = binaryString.length;
   const uint8Array = new Uint8Array(length);

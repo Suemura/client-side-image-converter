@@ -26,6 +26,9 @@
     "start": "next start",
     "lint": "npx @biomejs/biome check src/",
     "lint:fix": "npx @biomejs/biome check src/ --write --unsafe",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "deploy": "npm run build && wrangler pages deploy out",
     "preview": "wrangler pages dev out"
   },
@@ -50,9 +53,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9.30.1",
     "eslint-config-next": "^15.3.5",
+    "happy-dom": "^20.10.6",
     "next-sitemap": "^4.2.3",
     "typescript": "^5",
+    "vitest": "^4.1.9",
     "wrangler": "^4.24.3"
-  },
-  "packageManager": "yarn@4.7.0+sha256.293632d8a095d8ea4786eb2c5798c83c37544abed17ed31186a3ec4549a07c06"
+  }
 }
