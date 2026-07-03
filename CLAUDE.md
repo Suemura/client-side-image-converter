@@ -105,12 +105,38 @@ npm run preview
 - EXIF 処理のテストは piexifjs でフィクスチャ（EXIF 入り JPEG）を生成して実データで検証する（`metadataManager.test.ts` 参照）
 - Canvas API に依存する処理（描画・変換）は happy-dom では動作しないため、単体テストの対象外とする（純粋ロジック部分を切り出してテストする）
 
-## Claude Code フック
+## Claude Code ハーネス
 
-`.claude/settings.json` に以下のフックが設定されている：
+### フック（`.claude/settings.json`）
 
 - **PostToolUse (Write|Edit)**: ファイル編集後に Biome で自動フォーマット。編集直後にファイルが書き換わることがあるため、編集が失敗する場合はファイルを読み直すこと
+- **PostToolUse (Bash: gh pr create)**: PR 作成を検知し、自動レビューフロー（下記）の開始を指示（スクリプト: `.claude/hooks/pr-created.sh`）
 - **Stop**: 応答終了時、TS/TSX ファイルに未コミットの変更があれば lint + typecheck + test を自動実行（スクリプト: `.claude/hooks/check-on-stop.sh`）。失敗するとエラー内容が差し戻されるので修正して再度終了すること
+
+### サブエージェント（`.claude/agents/`）
+
+- **planner**: 非自明なタスク（3ステップ以上）の実装計画を策定し、Sprint Contract（完了条件）を返す
+- **reviewer**: タスク完了前の独立コンテキストレビュー。Pass/Fail 判定を返す。Fail があれば修正して再レビュー
+
+### コマンド（`.claude/commands/`）
+
+- **/review-pr <PR番号>**: PR のコードレビューを実施し、インラインコメントを投稿
+- **/resolve-pr-comments <PR番号>**: PR のレビューコメントを読み取り、修正対応・返信を実施
+
+### PR 自動レビューフロー
+
+`gh pr create` で PR を作成すると、フックが以下のフローを自動起動する：
+
+1. サブエージェントが `/review-pr` の手順で PR をレビューし、インラインコメントを投稿
+2. 別のサブエージェントが `/resolve-pr-comments` の手順でコメントに対応（修正・返信）
+3. 対応結果のサマリーを報告
+
+※ PR 作成コマンドは単独で実行すること（`git push && gh pr create` のような複合コマンドではフックが発火しない）
+
+### ルール（`.claude/rules/`）
+
+- **workflow-orchestration**: planner / reviewer / サブエージェントの使い分けと完了前検証の指針
+- **self-review**: タスク完了前に reviewer エージェントによるレビューを必須とするルール
 
 ## コードスタイルガイドライン
 - コードは TypeScript で記述する
@@ -126,5 +152,6 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
+- `feat/claude-agents` ブランチでサブエージェント（planner / reviewer）・コマンド（/review-pr / /resolve-pr-comments）・PR 自動レビューフローを導入
 - `feat/test-harness` ブランチで検証ハーネスを整備（vitest 導入、typecheck/test スクリプト追加、Claude Code フック設定）
 - `feat/exif-editor` ブランチで EXIF メタデータの選択的削除機能を実装
