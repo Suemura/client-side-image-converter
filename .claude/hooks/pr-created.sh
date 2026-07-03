@@ -5,8 +5,15 @@
 
 input=$(cat)
 
+# gh pr create 以外のコマンドでは何もしない（if フィルタのフェイルオープン対策）
+cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty' 2>/dev/null)
+case "$cmd" in
+  "gh pr create"*) ;;
+  *) exit 0 ;;
+esac
+
 # tool_response から PR の URL を抽出
-url=$(echo "$input" | jq -r '.tool_response | tostring' 2>/dev/null \
+url=$(printf '%s' "$input" | jq -r '.tool_response | tostring' 2>/dev/null \
   | grep -oE 'https://github\.com/[^"[:space:]\\]+/pull/[0-9]+' | head -1)
 [ -z "$url" ] && exit 0
 
