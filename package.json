@@ -29,6 +29,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
     "deploy": "npm run build && wrangler pages deploy out",
     "preview": "wrangler pages dev out"
   },
@@ -45,6 +47,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@playwright/test": "^1.61.1",
     "@types/exif-js": "^2.3.1",
     "@types/jszip": "^3.4.0",
     "@types/node": "^20",
