@@ -1,0 +1,40 @@
+# PR と main への push で lint / typecheck / test / build を自動実行する CI
+# public リポジトリのため標準ランナーは無料（分数無制限）
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 同一ブランチで新しい push があったら古い実行をキャンセルする
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 依存関係のインストール
+        run: npm ci
+
+      - name: Lint（Biome）
+        run: npm run lint
+
+      - name: 型チェック
+        run: npm run typecheck
+
+      - name: 単体テスト（vitest）
+        run: npm run test
+
+      - name: ビルド（静的エクスポート）
+        run: npm run build
