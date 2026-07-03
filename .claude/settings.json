@@ -11,6 +11,18 @@
             "statusMessage": "Biome でフォーマット中..."
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(gh pr create*)",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pr-created.sh\"",
+            "timeout": 15,
+            "statusMessage": "PR 作成を検知..."
+          }
+        ]
       }
     ],
     "Stop": [
