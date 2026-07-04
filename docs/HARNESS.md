@@ -19,7 +19,7 @@ flowchart TD
     G -- Pass --> H[gh pr create]
     H -- フックが検知 --> I[サブエージェントが<br>/review-pr を実行<br>インラインコメント投稿]
     I --> J[別サブエージェントが<br>/resolve-pr-comments を実行<br>修正・返信・push]
-    H --> K[GitHub Actions CI<br>lint / typecheck / test / build]
+    H --> K[GitHub Actions CI<br>lint / typecheck / test / build<br>+ Playwright E2E]
     H --> P[Deploy ワークフロー<br>プレビュー URL を PR にコメント]
     K -- 緑 --> L[人間がマージ判断]
     P --> L
@@ -37,8 +37,9 @@ flowchart TD
 | `npm run typecheck` | TypeScript 型チェック（`tsc --noEmit`） | 常時（完了条件）+ CI |
 | `npm run test` | vitest による単体テスト（`src/utils/__tests__/`） | 常時（完了条件）+ CI |
 | `npm run build` | 本番ビルド（静的エクスポート + sitemap 生成） | PR 時に CI が検証 |
+| `npm run e2e` | Playwright E2E（実ブラウザでの動作検証） | PR 時に CI が検証（ローカルは `npm run e2e` / `npm run e2e:ui`） |
 
-コード変更を伴うタスクの完了条件は lint / typecheck / test の 3 つがすべて成功していること（CLAUDE.md「完了条件」。Stop フックが自動実行するのも同じ 3 つ）。build は完了条件には含まれず、PR 時に CI が検証する。
+コード変更を伴うタスクの完了条件は lint / typecheck / test の 3 つがすべて成功していること（CLAUDE.md「完了条件」。Stop フックが自動実行するのも同じ 3 つ）。build と e2e は完了条件には含まれず、PR 時に CI が検証する。
 
 ### 2. フック（`.claude/settings.json`）
 
@@ -84,11 +85,13 @@ flowchart TD
 ### 7. CI（`.github/workflows/ci.yml`）
 
 - **トリガー**: すべての PR + main への push
-- **内容**: `npm ci` → lint → typecheck → test → build（1 回あたり約 1 分）
+- **内容**: 2 ジョブを並列実行（いずれも約 1 分）
+  - `check`: `npm ci` → lint → typecheck → test → build
+  - `e2e`: Playwright E2E（下記 9 節）。失敗時は playwright-report をアーティファクト保存
 - **コスト**: public リポジトリのため標準ランナーは分数無制限で無料
 - **Node は 24 に固定**（ローカル開発環境と一致させる。npm 10 系は lockfile の検証挙動が異なり `npm ci` が失敗するため）
 - 同一ブランチへの連続 push では `concurrency` により古い実行を自動キャンセル
-- **main はブランチ保護済み**: CI のジョブ `check` が緑でないとマージ不可（管理者含む）。force push・ブランチ削除も禁止
+- **main はブランチ保護済み**: `check` と `e2e` の両方が緑でないとマージ不可（管理者含む）。force push・ブランチ削除も禁止
 
 ### 8. デプロイ自動化（`.github/workflows/deploy.yml`）
 
@@ -97,9 +100,9 @@ flowchart TD
 - フォークからの PR ではシークレットを参照できないためスキップされる
 - プロジェクト名・出力ディレクトリは `wrangler.jsonc` から解決される
 
-#### 必要なシークレット（未設定の間はデプロイをスキップして成功扱い）
+#### 必要なシークレット（登録済み。未設定の間はデプロイをスキップして成功扱い）
 
-リポジトリの Settings > Secrets and variables > Actions で以下を登録する:
+リポジトリの Settings > Secrets and variables > Actions に以下を登録する（**登録済み**）:
 
 | シークレット | 取得方法 |
 | --- | --- |
@@ -107,6 +110,20 @@ flowchart TD
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare ダッシュボードの Workers & Pages 画面右側に表示される Account ID |
 
 CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_ACCOUNT_ID`（対話プロンプトで値を入力）でも登録できる。
+
+#### ローカルの認証情報
+
+- ローカル用の Cloudflare 認証情報（API トークン / Account ID / R2 アクセスキー等）はプロジェクト直下の `.env` に置く。wrangler が自動で読み込む
+- `.env*` は `.gitignore` で除外済み。**認証情報の値をリポジトリ内のファイル（ドキュメント含む）に書かないこと**
+
+### 9. E2E テスト（`e2e/` + Playwright）
+
+- 実ブラウザ（Chromium）で「アップロード → 変換/トリミング/EXIF 削除 → ダウンロード」を検証する
+- **ダウンロード物の中身まで検証する**: マジックナンバー（JPEG/PNG/WebP）、piexifjs によるバイナリ解析（GPS 削除の確認）
+- フィクスチャ（EXIF 入り JPEG 等）はバイナリを置かず `e2e/helpers/fixtures.ts` で実行時生成
+- dev サーバーは **E2E 専用ポート 3100** で自動起動（他プロジェクトの 3000 番と衝突しない）
+- 実行: `npm run e2e`（UI モード: `npm run e2e:ui`）。CI では `e2e` ジョブとして全 PR で実行
+- 導入初回の実績: GPS Ref 系タグの削除漏れ・GPSVersionID（タグ ID=0）の truthiness バグの 2 件を検出し修正につながった
 
 ## 運用上の注意
 
@@ -118,5 +135,6 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-05: Playwright E2E（9 節）を追加し CI を 2 ジョブ構成に。デプロイのシークレット登録が完了し本番・プレビューとも有効化。必須チェックに `e2e` を追加
 - 2026-07-04: main のブランチ保護（CI 必須化）とデプロイ自動化（本番 + PR プレビュー）を追加
 - 2026-07-04: 初版（PR #3 検証ハーネス / PR #4 エージェント・PR 自動レビュー / PR #5 CI）

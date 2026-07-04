@@ -30,6 +30,12 @@ npm run test
 # 単体テストのウォッチモード
 npm run test:watch
 
+# E2E テストの実行（Playwright / dev サーバーをポート 3100 で自動起動）
+npm run e2e
+
+# E2E テストの UI モード
+npm run e2e:ui
+
 # 本番用ビルド（静的エクスポート）
 npm run build
 
@@ -104,16 +110,23 @@ npm run preview
 - `src/utils/` のロジックを追加・変更した場合は、対応する単体テストを追加・更新すること
 - EXIF 処理のテストは piexifjs でフィクスチャ（EXIF 入り JPEG）を生成して実データで検証する（`metadataManager.test.ts` 参照）
 - Canvas API に依存する処理（描画・変換）は happy-dom では動作しないため、単体テストの対象外とする（純粋ロジック部分を切り出してテストする）
+- Canvas 依存の動作は Playwright E2E（`e2e/`）で実ブラウザ検証する。ダウンロード物はマジックナンバーや piexifjs のバイナリ解析で中身まで検証する（`e2e/metadata.spec.ts` 参照）
+- E2E のフィクスチャはバイナリを置かず `e2e/helpers/fixtures.ts` で実行時生成する
 
 ## Claude Code ハーネス
 
 全体像・設計意図・運用上の注意は `docs/HARNESS.md` を参照。
 
-### CI（`.github/workflows/ci.yml`）
+### CI / デプロイ（`.github/workflows/`）
 
-- すべての PR と main への push で `npm ci` → lint → typecheck → test → build を自動実行
+- **ci.yml**: すべての PR と main への push で 2 ジョブを自動実行
+  - `check`: `npm ci` → lint → typecheck → test → build
+  - `e2e`: Playwright E2E（Chromium）。失敗時は playwright-report をアーティファクト保存
+- **deploy.yml**: main への push で Cloudflare Pages へ本番デプロイ、PR ではプレビューデプロイ + URL を PR にコメント
+- **main はブランチ保護済み**: `check` と `e2e` の両方が緑でないとマージ不可（管理者含む）
 - CI の Node は 24 に固定（npm 10 系では lockfile 検証の挙動差で `npm ci` が失敗するため変更しない）
 - `package-lock.json` が壊れた場合（CI の `npm ci` だけが失敗する場合）は `rm -rf node_modules package-lock.json && npm install` でゼロから再生成する
+- Cloudflare 認証情報は GitHub Actions シークレットとローカルの `.env`（gitignore 済み）にのみ置く。**リポジトリにコミットしないこと**
 
 ### フック（`.claude/settings.json`）
 
