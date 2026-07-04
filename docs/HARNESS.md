@@ -20,8 +20,11 @@ flowchart TD
     H -- フックが検知 --> I[サブエージェントが<br>/review-pr を実行<br>インラインコメント投稿]
     I --> J[別サブエージェントが<br>/resolve-pr-comments を実行<br>修正・返信・push]
     H --> K[GitHub Actions CI<br>lint / typecheck / test / build]
+    H --> P[Deploy ワークフロー<br>プレビュー URL を PR にコメント]
     K -- 緑 --> L[人間がマージ判断]
+    P --> L
     J --> L
+    L -- main へマージ --> M[Deploy ワークフロー<br>本番デプロイ]
 ```
 
 ## 構成要素
@@ -85,6 +88,25 @@ flowchart TD
 - **コスト**: public リポジトリのため標準ランナーは分数無制限で無料
 - **Node は 24 に固定**（ローカル開発環境と一致させる。npm 10 系は lockfile の検証挙動が異なり `npm ci` が失敗するため）
 - 同一ブランチへの連続 push では `concurrency` により古い実行を自動キャンセル
+- **main はブランチ保護済み**: CI のジョブ `check` が緑でないとマージ不可（管理者含む）。force push・ブランチ削除も禁止
+
+### 8. デプロイ自動化（`.github/workflows/deploy.yml`）
+
+- **main への push** → Cloudflare Pages へ本番デプロイ
+- **PR** → プレビューデプロイを行い、プレビュー URL を PR にコメント（push のたびに同じコメントを更新）
+- フォークからの PR ではシークレットを参照できないためスキップされる
+- プロジェクト名・出力ディレクトリは `wrangler.jsonc` から解決される
+
+#### 必要なシークレット（未設定の間はデプロイをスキップして成功扱い）
+
+リポジトリの Settings > Secrets and variables > Actions で以下を登録する:
+
+| シークレット | 取得方法 |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare ダッシュボード > My Profile > API Tokens > Create Token。権限は「Account > Cloudflare Pages > Edit」のカスタムトークン |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare ダッシュボードの Workers & Pages 画面右側に表示される Account ID |
+
+CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_ACCOUNT_ID`（対話プロンプトで値を入力）でも登録できる。
 
 ## 運用上の注意
 
@@ -96,4 +118,5 @@ flowchart TD
 
 ## 変更履歴
 
+- 2026-07-04: main のブランチ保護（CI 必須化）とデプロイ自動化（本番 + PR プレビュー）を追加
 - 2026-07-04: 初版（PR #3 検証ハーネス / PR #4 エージェント・PR 自動レビュー / PR #5 CI）
