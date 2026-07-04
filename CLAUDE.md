@@ -137,6 +137,7 @@ npm run preview
 ### サブエージェント（`.claude/agents/`）
 
 - **planner**: 非自明なタスク（3ステップ以上）の実装計画を策定し、Sprint Contract（完了条件）を返す
+- **docs-sync**: reviewer の前に起動するドキュメント同期。コード変更に合わせて CLAUDE.md / docs/HARNESS.md / README（日英セット）を更新する。変更がドキュメント記載事項（コマンド・構成・ワークフロー・ユーザー向け機能）に触れる場合のみ
 - **reviewer**: タスク完了前の独立コンテキストレビュー。Pass/Fail 判定を返す。Fail があれば修正して再レビュー
 
 ### コマンド（`.claude/commands/`）
@@ -156,8 +157,8 @@ npm run preview
 
 ### ルール（`.claude/rules/`）
 
-- **workflow-orchestration**: planner / reviewer / サブエージェントの使い分けと完了前検証の指針
-- **self-review**: タスク完了前に reviewer エージェントによるレビューを必須とするルール
+- **workflow-orchestration**: planner / docs-sync / reviewer / サブエージェントの使い分けと完了前検証の指針
+- **self-review**: タスク完了前に docs-sync によるドキュメント同期と reviewer エージェントによるレビューを必須とするルール
 
 ## コードスタイルガイドライン
 - コードは TypeScript で記述する
@@ -173,5 +174,5 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
-- 開発ハーネスを整備（詳細は `docs/HARNESS.md`）: vitest による単体テスト、Claude Code フック（自動フォーマット / 完了時チェック）、サブエージェント（planner / reviewer）、PR 自動レビューフロー、GitHub Actions CI
+- 開発ハーネスを整備（詳細は `docs/HARNESS.md`）: vitest による単体テスト、Claude Code フック（自動フォーマット / 完了時チェック）、サブエージェント（planner / docs-sync / reviewer）、PR 自動レビューフロー、GitHub Actions CI
 - `feat/exif-editor` ブランチで EXIF メタデータの選択的削除機能を実装
