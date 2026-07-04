@@ -14,8 +14,9 @@ flowchart TD
     D -- ファイル編集のたび --> E[PostToolUse フック<br>Biome 自動フォーマット]
     D -- 応答終了時 --> F[Stop フック<br>lint + typecheck + test]
     F -- 失敗 --> D
-    F -- 成功 --> N[docs-sync エージェント<br>関連ドキュメントを同期]
-    N --> G[reviewer エージェント<br>独立コンテキストでレビュー]
+    F -- 成功（ドキュメント関連の変更あり） --> N[docs-sync エージェント<br>関連ドキュメントを同期]
+    F -- 成功（ドキュメント無関係） --> G[reviewer エージェント<br>独立コンテキストでレビュー]
+    N --> G
     G -- Fail --> D
     G -- Pass --> H[gh pr create]
     H -- フックが検知 --> I[サブエージェントが<br>/review-pr を実行<br>インラインコメント投稿]
