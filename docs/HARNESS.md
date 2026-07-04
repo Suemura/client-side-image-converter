@@ -14,7 +14,9 @@ flowchart TD
     D -- ファイル編集のたび --> E[PostToolUse フック<br>Biome 自動フォーマット]
     D -- 応答終了時 --> F[Stop フック<br>lint + typecheck + test]
     F -- 失敗 --> D
-    F -- 成功 --> G[reviewer エージェント<br>独立コンテキストでレビュー]
+    F -- 成功（ドキュメント関連の変更あり） --> N[docs-sync エージェント<br>関連ドキュメントを同期]
+    F -- 成功（ドキュメント無関係） --> G[reviewer エージェント<br>独立コンテキストでレビュー]
+    N --> G
     G -- Fail --> D
     G -- Pass --> H[gh pr create]
     H -- フックが検知 --> I[サブエージェントが<br>/review-pr を実行<br>インラインコメント投稿]
@@ -54,6 +56,7 @@ flowchart TD
 | エージェント | 役割 |
 | --- | --- |
 | **planner** | 非自明なタスク（3ステップ以上）の実装計画を策定。変更ファイル一覧・実装順序・Sprint Contract（検証可能な完了条件）を返す |
+| **docs-sync** | 実装完了後・レビュー前のドキュメント同期。merge-base からの全差分 + 未追跡ファイルを基に、`CLAUDE.md` / `docs/HARNESS.md` / README（日英セット）等の記載を更新する。新規ドキュメントは作成せず提案にとどめ、**コードは修正しない**。変更がドキュメント記載事項（コマンド・構成・ワークフロー・ユーザー向け機能）に触れる場合のみ起動する |
 | **reviewer** | タスク完了前の品質レビュー。実装とは独立したコンテキストで動作し、merge-base からの全差分 + 未追跡ファイルを確認。信頼度 80 以上の問題のみ報告し、Pass/Fail を判定。**コードは修正しない** |
 
 ### 4. コマンド（`.claude/commands/`）
@@ -67,8 +70,8 @@ flowchart TD
 
 | ルール | 内容 |
 | --- | --- |
-| `workflow-orchestration.md` | planner / reviewer / サブエージェントの使い分け、完了前検証、PR 自動レビューフローの指針 |
-| `self-review.md` | タスク完了前に reviewer エージェントによる独立レビューを必須とするルール（自己レビュー禁止） |
+| `workflow-orchestration.md` | planner / docs-sync / reviewer / サブエージェントの使い分け、完了前検証、PR 自動レビューフローの指針 |
+| `self-review.md` | タスク完了前に docs-sync によるドキュメント同期と reviewer エージェントによる独立レビューを必須とするルール（自己レビュー禁止） |
 
 ### 6. PR 自動レビューフロー
 
@@ -135,6 +138,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-05: docs-sync エージェントを追加（レビュー前に関連ドキュメントの同期を自動化）
 - 2026-07-05: Playwright E2E（9 節）を追加し CI を 2 ジョブ構成に。デプロイのシークレット登録が完了し本番・プレビューとも有効化。必須チェックに `e2e` を追加
 - 2026-07-04: main のブランチ保護（CI 必須化）とデプロイ自動化（本番 + PR プレビュー）を追加
 - 2026-07-04: 初版（PR #3 検証ハーネス / PR #4 エージェント・PR 自動レビュー / PR #5 CI）
