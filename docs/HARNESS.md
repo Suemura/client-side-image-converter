@@ -43,13 +43,22 @@ flowchart TD
 
 コード変更を伴うタスクの完了条件は lint / typecheck / test の 3 つがすべて成功していること（CLAUDE.md「完了条件」。Stop フックが自動実行するのも同じ 3 つ）。build と e2e は完了条件には含まれず、PR 時に CI が検証する。
 
-### 2. フック（`.claude/settings.json`）
+### 2. フック・権限（`.claude/settings.json`）
 
 | フック | トリガー | 動作 |
 | --- | --- | --- |
 | Biome 自動フォーマット | PostToolUse（Write\|Edit） | 編集されたファイル（ts/tsx/js/jsx/json/css）を `biome check --write` で即整形 |
 | 完了時チェック<br>`.claude/hooks/check-on-stop.sh` | Stop（応答終了時） | TS/TSX に未コミット変更があれば lint + typecheck + test を実行。失敗すると exit 2 でエラー内容が Claude に差し戻され、自動修正を促す。`stop_hook_active` 判定で無限ループを防止 |
 | PR 作成検知<br>`.claude/hooks/pr-created.sh` | PostToolUse（Bash: `gh pr create`） | 出力から PR URL を抽出し、PR 自動レビューフロー（後述）の開始指示をコンテキスト注入。コマンド検証つき（`gh pr create` で始まるコマンドのみ反応） |
+
+#### 権限ガード（`permissions`）
+
+同じ `.claude/settings.json` で、危険な操作を事前にガードしている:
+
+| 区分 | 対象 |
+| --- | --- |
+| **deny**（常に拒否） | `sudo`、`git push --force`（`-f` 含む）、`.env` 系・`.dev.vars` 系ファイルの Read / Edit / Write（認証情報の読み書き防止） |
+| **ask**（都度ユーザーに確認） | `gh pr merge`、`git reset --hard`、`git clean`、`npm run deploy`、`wrangler pages deploy`（マージ・破壊的操作・本番デプロイ） |
 
 ### 3. サブエージェント（`.claude/agents/`）
 
@@ -95,6 +104,7 @@ flowchart TD
 - **Node は 24 に固定**（ローカル開発環境と一致させる。npm 10 系は lockfile の検証挙動が異なり `npm ci` が失敗するため）
 - 同一ブランチへの連続 push では `concurrency` により古い実行を自動キャンセル
 - **main はブランチ保護済み**: `check` と `e2e` の両方が緑でないとマージ不可（管理者含む）。force push・ブランチ削除も禁止
+- **依存関係の自動更新（`.github/dependabot.yml`）**: npm と GitHub Actions の依存を毎週月曜 09:00（JST）にチェックし更新 PR を作成。minor / patch は 1 つの PR にグループ化（major は個別 PR）、open PR は上限 5。更新 PR にも CI（check + e2e）が自動で走る（プレビューデプロイは Dependabot 起動の workflow が Actions シークレットを参照できないためスキップされる）
 
 ### 8. デプロイ自動化（`.github/workflows/deploy.yml`）
 
@@ -124,7 +134,8 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 - 実ブラウザ（Chromium）で「アップロード → 変換/トリミング/EXIF 削除 → ダウンロード」を検証する
 - **ダウンロード物の中身まで検証する**: マジックナンバー（JPEG/PNG/WebP）、piexifjs によるバイナリ解析（GPS 削除の確認）
 - フィクスチャ（EXIF 入り JPEG 等）はバイナリを置かず `e2e/helpers/fixtures.ts` で実行時生成
-- dev サーバーは **E2E 専用ポート 3100** で自動起動（他プロジェクトの 3000 番と衝突しない）
+- webServer は `npm run build && npx serve out -l 3100` により**本番同等の静的エクスポート（`out/`）を配信**して検証する。ポートは E2E 専用の 3100（他プロジェクトの 3000 番と衝突しない）
+- ローカルで高速に回したい場合は `npm run dev -- --port 3100` を別途起動しておけば `reuseExistingServer` によりそちらが再利用される（CI では常に build + 静的配信）
 - 実行: `npm run e2e`（UI モード: `npm run e2e:ui`）。CI では `e2e` ジョブとして全 PR で実行
 - 導入初回の実績: GPS Ref 系タグの削除漏れ・GPSVersionID（タグ ID=0）の truthiness バグの 2 件を検出し修正につながった
 
@@ -138,6 +149,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-05: Dependabot による依存の週次自動更新、permissions による危険操作のガード（deny / ask）を追加。E2E の webServer を本番同等の静的配信（build + serve）に変更
 - 2026-07-05: docs-sync エージェントを追加（レビュー前に関連ドキュメントの同期を自動化）
 - 2026-07-05: Playwright E2E（9 節）を追加し CI を 2 ジョブ構成に。デプロイのシークレット登録が完了し本番・プレビューとも有効化。必須チェックに `e2e` を追加
 - 2026-07-04: main のブランチ保護（CI 必須化）とデプロイ自動化（本番 + PR プレビュー）を追加
