@@ -145,6 +145,7 @@ npm run preview
 
 ### コマンド（`.claude/commands/`）
 
+- **/start-issue <Issue番号>**: GitHub Issue を起点にタスクを開始。ブランチ作成 → planner → 実装 → 検証 → docs-sync → reviewer → PR 作成（自動レビューフロー起動）まで自走
 - **/review-pr <PR番号>**: PR のコードレビューを実施し、インラインコメントを投稿
 - **/resolve-pr-comments <PR番号>**: PR のレビューコメントを読み取り、修正対応・返信を実施
 
@@ -160,7 +161,7 @@ npm run preview
 
 ### ルール（`.claude/rules/`）
 
-- **workflow-orchestration**: planner / docs-sync / reviewer / サブエージェントの使い分けと完了前検証の指針
+- **workflow-orchestration**: Issue 起点のタスク開始（/start-issue）、planner / docs-sync / reviewer / サブエージェントの使い分けと完了前検証の指針
 - **self-review**: タスク完了前に docs-sync によるドキュメント同期と reviewer エージェントによるレビューを必須とするルール
 
 ## コードスタイルガイドライン
