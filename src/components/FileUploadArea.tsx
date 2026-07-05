@@ -4,7 +4,7 @@ import {
   addUniqueFiles,
   buildAcceptAttribute,
   filterValidFiles,
-  getFileExtension,
+  getFileTypeBadgeLabel,
 } from "@utils/fileUtils";
 import { generateThumbnail } from "@utils/imageUtils";
 import type React from "react";
@@ -286,12 +286,8 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
                   thumbnail.file.type.startsWith("image/") ? (
                   <div className={styles.thumbnailLoading}>...</div>
                 ) : (
-                  // MIME タイプが空のファイル（HEIC 等）は拡張子でフォールバック表示
-                  thumbnail.file.type.split("/")[1]?.toUpperCase() ||
-                  getFileExtension(thumbnail.file.name)
-                    .replace(".", "")
-                    .toUpperCase() ||
-                  "FILE"
+                  // MIME タイプが特定できないファイル（HEIC 等）は拡張子でフォールバック表示
+                  getFileTypeBadgeLabel(thumbnail.file)
                 )}
               </div>
               <div className={styles.fileInfo}>

@@ -13,10 +13,12 @@ import {
   formatAcceptedTypesLabel,
   getFileExtension,
   getFileNameWithoutExtension,
+  getFileTypeBadgeLabel,
   isAcceptedFileType,
   isDuplicateFile,
   isHeicFile,
   isImageFile,
+  isUnknownMimeType,
 } from "../fileUtils";
 
 /** テスト用の File オブジェクトを生成する */
@@ -94,6 +96,51 @@ describe("isImageFile / isAcceptedFileType / filterValidFiles", () => {
     ];
     const valid = filterValidFiles(files, ["image/jpeg", "image/png"]);
     expect(valid.map((f) => f.name)).toEqual(["a.png", "c.jpg"]);
+  });
+});
+
+describe("isUnknownMimeType", () => {
+  it("MIME タイプが空文字または application/octet-stream の場合に true を返す", () => {
+    expect(isUnknownMimeType(createFile("a.heic", 10, ""))).toBe(true);
+    expect(
+      isUnknownMimeType(createFile("a.heic", 10, "application/octet-stream")),
+    ).toBe(true);
+  });
+
+  it("MIME タイプが特定できている場合は false を返す", () => {
+    expect(isUnknownMimeType(createFile("a.png", 10, "image/png"))).toBe(false);
+    expect(isUnknownMimeType(createFile("a.pdf", 10, "application/pdf"))).toBe(
+      false,
+    );
+  });
+});
+
+describe("getFileTypeBadgeLabel", () => {
+  it("MIME タイプが特定できている場合はサブタイプを大文字で返す", () => {
+    expect(getFileTypeBadgeLabel(createFile("a.png", 10, "image/png"))).toBe(
+      "PNG",
+    );
+    expect(getFileTypeBadgeLabel(createFile("a.heic", 10, "image/heic"))).toBe(
+      "HEIC",
+    );
+  });
+
+  it("MIME タイプが特定できない場合は拡張子でフォールバック表示する", () => {
+    expect(getFileTypeBadgeLabel(createFile("photo.heic", 10, ""))).toBe(
+      "HEIC",
+    );
+    // isHeicFile と同じ基準: application/octet-stream も拡張子フォールバックの対象
+    expect(
+      getFileTypeBadgeLabel(
+        createFile("photo.heic", 10, "application/octet-stream"),
+      ),
+    ).toBe("HEIC");
+  });
+
+  it("MIME も拡張子も特定できない場合は FILE を返す", () => {
+    expect(getFileTypeBadgeLabel(createFile("noextension", 10, ""))).toBe(
+      "FILE",
+    );
   });
 });
 

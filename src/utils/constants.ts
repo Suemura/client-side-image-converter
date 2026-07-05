@@ -48,6 +48,9 @@ export const SUPPORTED_IMAGE_FORMATS = {
   ],
 
   // HEIC/HEIF 形式（ブラウザの Image ではデコードできず WASM デコーダーを使用する）
+  // sequence 系（image/heic-sequence / image/heif-sequence、バースト写真等）は
+  // 実ファイルでのデコード検証ができていないため意図的に対象外とする
+  // （対応する場合はフィクスチャの用意と E2E 検証をセットで行うこと）
   HEIC_FORMATS: ["image/heic", "image/heif"],
 
   // JPEG形式の別名
