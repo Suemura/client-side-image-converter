@@ -2,12 +2,15 @@ import type React from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
 import { FileUploadArea } from "../../../components/FileUploadArea";
+import { SUPPORTED_IMAGE_FORMATS } from "../../../utils/constants";
+import { formatAcceptedTypesLabel } from "../../../utils/fileUtils";
 import styles from "./ImageUploadSection.module.css";
 
 interface ImageUploadSectionProps {
   files: File[];
   onFilesSelected: (files: File[]) => void;
   onClearFiles: () => void;
+  acceptedTypes?: readonly string[];
   showFileList?: boolean;
 }
 
@@ -15,6 +18,7 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
   files,
   onFilesSelected,
   onClearFiles,
+  acceptedTypes = SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
   showFileList = true,
 }) => {
   const { t } = useTranslation();
@@ -29,11 +33,14 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
             files={files}
             onFilesSelected={onFilesSelected}
             onClearFiles={onClearFiles}
+            acceptedTypes={acceptedTypes}
             showFileList={showFileList}
           />
 
           <p className={styles.supportedFormats}>
-            Supported formats: JPG, PNG, WebP, BMP, TIFF
+            {t("fileUpload.supportedFormats", {
+              formats: formatAcceptedTypesLabel(acceptedTypes),
+            })}
           </p>
         </>
       ) : (
@@ -42,6 +49,7 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
             files={files}
             onFilesSelected={onFilesSelected}
             onClearFiles={onClearFiles}
+            acceptedTypes={acceptedTypes}
             showFileList={showFileList}
           />
           {!showFileList && (

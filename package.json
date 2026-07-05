@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "exif-js": "^2.3.0",
+    "heic-decode": "^2.1.0",
     "i18next": "^25.10.9",
     "jszip": "^3.10.1",
     "next": "^15.3.5",
