@@ -4,6 +4,7 @@
 
 A completely privacy-focused image conversion web application built with Next.js App Router.
 All image processing is performed within the browser, ensuring your images are never sent to any server.
+Converts images between JPEG, PNG, and WebP. HEIC/HEIF photos (such as those taken on iPhone) are also accepted as input on the convert page and decoded entirely in the browser.
 
 ## 🔗 Live Demo
 
@@ -92,9 +93,10 @@ This project is published under the [MIT License](LICENSE).
 
 This project uses open-source libraries with the following licenses:
 
-- **MIT License**: Major libraries including Next.js, React, TypeScript
-- **Apache-2.0 License**: Some utility libraries
-- **LGPL-3.0 License**: Sharp image processing library (used as a library)
+- **MIT License**: Major libraries including Next.js and React
+- **Apache-2.0 License**: Some libraries including TypeScript
+- **ISC License**: heic-decode (HEIC/HEIF decoding)
+- **LGPL-3.0 License**: libheif-js (WASM build of libheif used for HEIC/HEIF decoding; used as an unmodified npm package and isolated in a separate dynamically imported chunk)
 - **MPL-2.0 License**: Axe Core (accessibility validation)
 
 All dependencies are commercially usable. Please refer to each library's license file for details.

@@ -75,11 +75,12 @@ npm run preview
 - `src/components/` - 再利用可能な React コンポーネント
 - `src/utils/` - コアユーティリティクラス
   - `imageConverter.ts` - 画像フォーマット変換処理
+  - `heicDecoder.ts` - HEIC/HEIF デコード処理（libheif WASM、動的 import）
   - `imageCropper.ts` - 画像トリミング処理
   - `metadataManager.ts` - EXIF データ管理
   - `__tests__/` - 単体テスト
 - `src/i18n/` - 国際化設定
-- `src/types/` - 外部ライブラリの型定義（piexifjs / exif-js）
+- `src/types/` - 外部ライブラリの型定義（piexifjs / exif-js / heic-decode）
 
 ### パスエイリアス
 プロジェクトでは `tsconfig.json` で設定された TypeScript パスエイリアスを使用：
@@ -90,14 +91,15 @@ npm run preview
 ※ vitest 用のエイリアスは `vitest.config.ts` にも定義されている。エイリアスを追加する場合は両方を更新すること。
 
 ### コア機能
-1. **画像フォーマット変換** - JPEG、PNG、WebP 形式間の変換（品質制御付き）
+1. **画像フォーマット変換** - JPEG、PNG、WebP 形式間の変換（品質制御付き）。HEIC/HEIF（iPhone 写真）は変換ページのみ入力として受理（crop / metadata はブラウザがプレビュー描画できないため対象外）
 2. **画像トリミング** - プレビュー付きのビジュアルトリミングインターフェース
 3. **EXIF メタデータ管理** - EXIF データの表示、編集、選択的削除
 4. **バッチ処理** - 複数画像の一括処理
-5. **プライバシーファースト** - Canvas API を使用したクライアントサイドでの全処理
+5. **プライバシーファースト** - Canvas API / WASM を使用したクライアントサイドでの全処理
 
 ### 重要なパターン
-- すべての画像処理はクライアントサイド操作のために Canvas API を使用
+- すべての画像処理はクライアントサイド操作のために Canvas API を使用。ただし HEIC/HEIF のデコードのみ libheif の WASM ビルド（`heic-decode` + `libheif-js`）を使用し、動的 import により HEIC 変換時のみロードする（初期バンドルに影響なし）
+- HEIC は MIME タイプが空になるブラウザがあるため、拡張子（.heic/.heif）によるフォールバック判定を行う（`fileUtils.ts` の `isHeicFile`）
 - EXIF データ処理は保存に `piexifjs`、読み取りに `exif-js` を使用
 - テーマ切り替え（ライト/ダーク）は CSS カスタムプロパティで処理
 - 言語設定は localStorage に保存
@@ -178,5 +180,6 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
+- 変換ページに HEIC/HEIF 入力対応を追加（libheif WASM による動的デコード、Issue #28）
 - 開発ハーネスを整備（詳細は `docs/HARNESS.md`）: vitest による単体テスト、Claude Code フック（自動フォーマット / 完了時チェック）、サブエージェント（planner / docs-sync / reviewer）、PR 自動レビューフロー、GitHub Actions CI
 - `feat/exif-editor` ブランチで EXIF メタデータの選択的削除機能を実装
