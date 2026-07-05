@@ -21,7 +21,7 @@ jobs:
 
       # ローカル開発環境（Node 24 / npm 11）と揃える。
       # npm 10（Node 22 同梱）は同じ lockfile を不完全と判定し npm ci が失敗するため
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -47,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm

@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v5
         if: steps.config.outputs.configured == 'true'
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         if: steps.config.outputs.configured == 'true'
         with:
           node-version: 24
