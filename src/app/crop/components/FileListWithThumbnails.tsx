@@ -69,7 +69,7 @@ export const FileListWithThumbnails: React.FC<FileListWithThumbnailsProps> = ({
     <div className={styles.container}>
       <h4 className={styles.title}>{title}</h4>
       <div className={styles.fileCount}>
-        {t("fileUpload.filesSelectedCount", { total: files.length })}
+        {t("fileUpload.filesSelectedCount", { count: files.length })}
       </div>
       <div className={styles.fileList}>
         {filesWithThumbnails.map(({ file, thumbnail }) => (

@@ -106,7 +106,8 @@
     "dropFilesHere": "Drop files here",
     "viewDetails": "View details for {{name}}",
     "dropAreaLabel": "Drag & drop files or click to select",
-    "filesSelectedCount": "{{total}} files selected"
+    "filesSelectedCount_one": "{{count}} file selected",
+    "filesSelectedCount_other": "{{count}} files selected"
   },
   "fileDetails": {
     "title": "File Details",
