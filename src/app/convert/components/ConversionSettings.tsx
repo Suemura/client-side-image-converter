@@ -55,7 +55,8 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
     setLocalHeight(settings.height?.toString() || "");
   }, [settings.height]);
 
-  const formatOptions = [
+  // value に型注釈を付け、選択肢と ConversionFormat の整合を型で担保する
+  const formatOptions: { label: string; value: ConversionFormat }[] = [
     { label: "JPEG", value: "jpeg" },
     { label: "PNG", value: "png" },
     { label: "WebP", value: "webp" },

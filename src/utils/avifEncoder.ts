@@ -6,11 +6,14 @@
  * WASM（約 3.5MB）は動的 import により AVIF 変換実行時のみロードされる。
  */
 
-/** AVIF エンコードに渡す品質値のデフォルト（@jsquash/avif の quality は 0-100） */
+/** AVIF エンコードに渡す品質値のデフォルト */
 const DEFAULT_AVIF_QUALITY = 90;
 
 /**
- * 品質値を @jsquash/avif が受け付ける 1-100 の整数に正規化する
+ * 品質値を UI と同じ 1-100 の整数に正規化する
+ *
+ * @jsquash/avif 自体は 0-100 を受け付けるが、下限は UI 側のクランプ
+ * （ConversionSettings.tsx の 1-100）に合わせて 1 とする
  */
 export const normalizeAvifQuality = (quality: number): number => {
   if (!Number.isFinite(quality)) {
