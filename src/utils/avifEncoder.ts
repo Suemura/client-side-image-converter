@@ -3,7 +3,7 @@
  *
  * Canvas の toBlob("image/avif") は全ブラウザ未実装（PNG にフォールバックする）ため、
  * Squoosh 由来の WASM エンコーダー @jsquash/avif を使用する。
- * WASM（約 1MB）は動的 import により AVIF 変換実行時のみロードされる。
+ * WASM（約 3.5MB）は動的 import により AVIF 変換実行時のみロードされる。
  */
 
 /** AVIF エンコードに渡す品質値のデフォルト（@jsquash/avif の quality は 0-100） */
