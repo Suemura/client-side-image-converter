@@ -175,7 +175,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
               type="button"
               className={styles.closeButton}
               onClick={onClose}
-              aria-label="閉じる"
+              aria-label={t("common.close")}
             >
               ×
             </button>

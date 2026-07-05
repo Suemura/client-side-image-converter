@@ -326,14 +326,14 @@ export default function MetadataPage() {
                         onClick={selectAllPrivacyTags}
                         disabled={analysis.privacyRiskTags.size === 0}
                       >
-                        リスクタグを選択
+                        {t("metadata.selectRiskTags")}
                       </Button>
                       <Button
                         variant="secondary"
                         onClick={clearSelection}
                         disabled={selectedTags.size === 0}
                       >
-                        選択クリア
+                        {t("metadata.clearSelection")}
                       </Button>
                       <Button
                         variant="primary"
@@ -363,7 +363,10 @@ export default function MetadataPage() {
                   {t("metadata.processing")}
                 </h3>
                 <p className={styles.progressInfo}>
-                  {progressCurrent} / {progressTotal} ファイル
+                  {t("metadata.progressFiles", {
+                    current: progressCurrent,
+                    total: progressTotal,
+                  })}
                 </p>
                 <div className={styles.progressBar}>
                   <div
