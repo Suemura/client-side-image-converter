@@ -59,7 +59,7 @@
     "happy-dom": "^20.10.6",
     "next-sitemap": "^4.2.3",
     "serve": "^14.2.6",
-    "typescript": "^5",
+    "typescript": "^6",
     "vitest": "^4.1.9",
     "wrangler": "^4.24.3"
   }
