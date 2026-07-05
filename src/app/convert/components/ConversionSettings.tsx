@@ -4,10 +4,11 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
 import { Input } from "../../../components/Input";
 import { RadioButtonGroup } from "../../../components/RadioButtonGroup";
+import type { ConversionFormat } from "../../../utils/imageConverter";
 import styles from "./ConversionSettings.module.css";
 
 export interface ConversionSettings {
-  targetFormat: "jpeg" | "png" | "webp";
+  targetFormat: ConversionFormat;
   quality: number;
   width?: number;
   height?: number;
@@ -58,12 +59,13 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
     { label: "JPEG", value: "jpeg" },
     { label: "PNG", value: "png" },
     { label: "WebP", value: "webp" },
+    { label: "AVIF", value: "avif" },
   ];
 
   const handleFormatChange = (format: string) => {
     onSettingsChange({
       ...settings,
-      targetFormat: format as "jpeg" | "png" | "webp",
+      targetFormat: format as ConversionFormat,
     });
   };
 
