@@ -34,6 +34,8 @@ git pull --ff-only origin "$BASE"
 ```
 
 > ※ この BASE 解決スニペットは `.claude/agents/reviewer.md` / `.claude/agents/docs-sync.md` と意図的に重複させている（定義の自己完結性を優先）。変更する場合は 3 ファイルを同時に更新すること。
+>
+> ※ 第一候補の `gh pr view` は「現在チェックアウト中のブランチに紐づく PR」のベースを返す。このコマンドの実行時点では新しい PR はまだ存在しないため、たまたまチェックアウトしていたブランチに main 以外をベースとする open PR がある場合（stacked PR 等）は BASE が誤解決されうる。解決した BASE が想定（通常は `main`）と異なる場合は、そのまま進めずユーザーに確認すること。
 
 - `git pull --ff-only` が失敗した場合（ローカルの BASE がリモートと分岐している場合）は中断して報告する。**`git reset --hard` で復旧を試みない**（ask 権限に該当し自走が止まるうえ、破壊的なため）
 
@@ -101,7 +103,7 @@ npm run test
 ### 10. push と PR 作成
 
 - `git push -u origin <ブランチ名>` を**単独で**実行する
-- PR 本文をファイルに書き出し、`--body-file` で渡して PR を作成する。本文に `Closes #{Issue番号}` を必ず含める（マージ時に Issue が自動クローズされる）
+- PR 本文を**リポジトリ外の一時ファイル**（例: `/tmp/pr-body.md`。`review-pr.md` の `/tmp/review_comments.json` と同じ流儀）に書き出し、`--body-file` で渡して PR を作成する。本文に `Closes #{Issue番号}` を必ず含める（マージ時に Issue が自動クローズされる）。作業ツリー内に書き出すと、untracked ファイルとして残留して後続コミットに混入したり、次回 `/start-issue` 実行時の dirty チェック（手順 2）で不要な中断を招くため
 
 **重要**: `gh pr create` はコマンド文字列の**先頭**から始まる単独コマンドとして実行すること。PR 検知フック（`.claude/hooks/pr-created.sh`）はコマンド文字列の先頭一致で検証しているため、`git push && gh pr create` のような複合コマンドや、環境変数プレフィックス付き（`GH_PAGER= gh pr create ...`）では発火せず、自動レビューフローが始まらない。
 
