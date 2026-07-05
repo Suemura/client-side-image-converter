@@ -23,15 +23,18 @@
     "features": {
       "formatConversion": {
         "title": "Format Conversion",
-        "description": "Convert between image formats\nsuch as JPEG, PNG, WebP\nwhile adjusting quality and size."
+        "description": "Convert between image formats\nsuch as JPEG, PNG, WebP\nwhile adjusting quality and size.",
+        "iconAlt": "Format conversion icon"
       },
       "imageCropping": {
         "title": "Image Cropping",
-        "description": "Crop images to perfect sizes\nwith intuitive operations."
+        "description": "Crop images to perfect sizes\nwith intuitive operations.",
+        "iconAlt": "Image cropping icon"
       },
       "batchProcessing": {
         "title": "Batch Processing",
-        "description": "Process multiple images at once\nand download them together."
+        "description": "Process multiple images at once\nand download them together.",
+        "iconAlt": "Batch processing icon"
       }
     }
   },
@@ -87,7 +90,9 @@
     "previewImage": "Preview Image",
     "batchCropDescription": "Select multiple images to crop them together",
     "previousImage": "Previous Image",
-    "nextImage": "Next Image"
+    "nextImage": "Next Image",
+    "dragToMove": "Drag to move",
+    "dragToResize": "Drag to resize"
   },
   "fileUpload": {
     "dropFiles": "Drop files here",
@@ -99,7 +104,9 @@
     "clearList": "Clear List",
     "dragDropLabel": "Drag & Drop Images",
     "dropFilesHere": "Drop files here",
-    "viewDetails": "View details for"
+    "viewDetails": "View details for {{name}}",
+    "dropAreaLabel": "Drag & drop files or click to select",
+    "filesSelectedCount": "{{total}} files selected"
   },
   "fileDetails": {
     "title": "File Details",
@@ -154,7 +161,11 @@
     "preview": "Preview",
     "originalImage": "Original Image",
     "convertedImage": "Converted Image",
-    "croppedImage": "Cropped Image"
+    "croppedImage": "Cropped Image",
+    "viewDetails": "View details for {{name}}",
+    "viewComparison": "Show before/after comparison for {{name}}",
+    "processingError": "Processing error",
+    "downloadError": "Failed to download files."
   },
   "comparison": {
     "original": "Original",
@@ -167,7 +178,9 @@
     "kb": "KB",
     "mb": "MB",
     "gb": "GB",
-    "px": "px"
+    "px": "px",
+    "close": "Close",
+    "image": "Image"
   },
   "metadata": {
     "title": "Image Metadata & Privacy Manager",
@@ -192,7 +205,10 @@
       "high": "HIGH",
       "medium": "MED",
       "low": "LOW"
-    }
+    },
+    "selectRiskTags": "Select Risk Tags",
+    "clearSelection": "Clear Selection",
+    "progressFiles": "{{current}} / {{total}} files"
   },
   "footer": {
     "privacyMessage": "All image processing is done locally on your device. No images are ever uploaded to any server.",

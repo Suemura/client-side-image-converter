@@ -23,15 +23,18 @@
     "features": {
       "formatConversion": {
         "title": "フォーマット変換",
-        "description": "JPEG、PNG、WebPなどの\n画像フォーマット間で\n品質･サイズを調整しながら\n変換できます。"
+        "description": "JPEG、PNG、WebPなどの\n画像フォーマット間で\n品質･サイズを調整しながら\n変換できます。",
+        "iconAlt": "フォーマット変換アイコン"
       },
       "imageCropping": {
         "title": "画像トリミング",
-        "description": "直感的な操作で画像を\n完璧なサイズにトリミングできます。"
+        "description": "直感的な操作で画像を\n完璧なサイズにトリミングできます。",
+        "iconAlt": "画像トリミングアイコン"
       },
       "batchProcessing": {
         "title": "バッチ処理",
-        "description": "複数の画像を一度に処理し、\nダウンロードできます。"
+        "description": "複数の画像を一度に処理し、\nダウンロードできます。",
+        "iconAlt": "バッチ処理アイコン"
       }
     }
   },
@@ -87,7 +90,9 @@
     "previewImage": "画像をプレビュー",
     "batchCropDescription": "複数の画像を選択してまとめてトリミングできます",
     "previousImage": "前の画像",
-    "nextImage": "次の画像"
+    "nextImage": "次の画像",
+    "dragToMove": "ドラッグして移動",
+    "dragToResize": "ドラッグしてリサイズ"
   },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",
@@ -99,7 +104,9 @@
     "clearList": "リストをクリア",
     "dragDropLabel": "画像をドラッグ&ドロップ",
     "dropFilesHere": "ファイルをここにドロップ",
-    "viewDetails": "の詳細を表示"
+    "viewDetails": "{{name}}の詳細を表示",
+    "dropAreaLabel": "ファイルをドラッグ&ドロップまたはクリックして選択",
+    "filesSelectedCount": "{{total}}個のファイル選択済み"
   },
   "fileDetails": {
     "title": "ファイル詳細",
@@ -154,7 +161,11 @@
     "preview": "プレビュー",
     "originalImage": "元画像",
     "convertedImage": "変換後画像",
-    "croppedImage": "トリミング後画像"
+    "croppedImage": "トリミング後画像",
+    "viewDetails": "{{name}}の詳細を表示",
+    "viewComparison": "{{name}}の変換前後比較を表示",
+    "processingError": "処理エラー",
+    "downloadError": "ファイルのダウンロードに失敗しました。"
   },
   "comparison": {
     "original": "変換前",
@@ -167,7 +178,9 @@
     "kb": "KB",
     "mb": "MB",
     "gb": "GB",
-    "px": "px"
+    "px": "px",
+    "close": "閉じる",
+    "image": "画像"
   },
   "metadata": {
     "title": "画像メタデータ・プライバシー管理",
@@ -192,7 +205,10 @@
       "high": "高",
       "medium": "中",
       "low": "低"
-    }
+    },
+    "selectRiskTags": "リスクタグを選択",
+    "clearSelection": "選択クリア",
+    "progressFiles": "{{current}} / {{total}} ファイル"
   },
   "footer": {
     "privacyMessage": "すべての画像処理はお使いのデバイス内で完結し、サーバーへのアップロードは一切行いません。",

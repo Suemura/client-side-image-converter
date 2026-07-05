@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./FileListWithThumbnails.module.css";
 
 interface FileListWithThumbnailsProps {
@@ -18,6 +19,7 @@ export const FileListWithThumbnails: React.FC<FileListWithThumbnailsProps> = ({
   title,
   currentFile,
 }) => {
+  const { t } = useTranslation();
   const [filesWithThumbnails, setFilesWithThumbnails] = useState<
     FileWithThumbnail[]
   >([]);
@@ -66,7 +68,9 @@ export const FileListWithThumbnails: React.FC<FileListWithThumbnailsProps> = ({
   return (
     <div className={styles.container}>
       <h4 className={styles.title}>{title}</h4>
-      <div className={styles.fileCount}>{files.length}個のファイル選択済み</div>
+      <div className={styles.fileCount}>
+        {t("fileUpload.filesSelectedCount", { total: files.length })}
+      </div>
       <div className={styles.fileList}>
         {filesWithThumbnails.map(({ file, thumbnail }) => (
           <div
@@ -90,7 +94,7 @@ export const FileListWithThumbnails: React.FC<FileListWithThumbnailsProps> = ({
                 {(file.size / 1024 / 1024).toFixed(2)} MB
               </div>
               <div className={styles.fileType}>
-                {file.type.split("/")[1]?.toUpperCase() || "画像"}
+                {file.type.split("/")[1]?.toUpperCase() || t("common.image")}
               </div>
             </div>
           </div>

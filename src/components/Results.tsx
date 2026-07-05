@@ -119,12 +119,12 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
         await downloadMultiple(results);
       }
     } catch (error) {
-      console.error("ダウンロードエラー:", error);
-      alert("ファイルのダウンロードに失敗しました。");
+      console.error("Download error:", error);
+      alert(t("results.downloadError"));
     } finally {
       setIsDownloading(false);
     }
-  }, [results, cropResults, isCropMode, isDownloading]);
+  }, [results, cropResults, isCropMode, isDownloading, t]);
 
   const handleImageClick = useCallback((result: ConversionResult) => {
     setSelectedResult(result);
@@ -257,7 +257,9 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                       type="button"
                       className={styles.previewImage}
                       onClick={() => handleCropImageClick(result)}
-                      aria-label={`${result.fileName}の詳細を表示`}
+                      aria-label={t("results.viewDetails", {
+                        name: result.fileName,
+                      })}
                     >
                       {result.success &&
                       cropPreviewUrls[`${result.fileName}-${index}`] ? (
@@ -285,7 +287,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                           </span>
                         ) : (
                           <span className={styles.errorText}>
-                            {result.error || "処理エラー"}
+                            {result.error || t("results.processingError")}
                           </span>
                         )}
                       </div>
@@ -325,7 +327,9 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                         type="button"
                         className={styles.previewImage}
                         onClick={() => handleImageClick(result)}
-                        aria-label={`${result.filename}の変換前後比較を表示`}
+                        aria-label={t("results.viewComparison", {
+                          name: result.filename,
+                        })}
                       >
                         <img
                           src={result.url}

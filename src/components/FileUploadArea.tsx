@@ -161,7 +161,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
           onDrop={handleDrop}
           onClick={handleClick}
           onKeyDown={handleKeyDown}
-          aria-label="ファイルをドラッグ&ドロップまたはクリックして選択"
+          aria-label={t("fileUpload.dropAreaLabel")}
         >
           <div className={styles.dropZoneContent}>
             <p className={styles.dropZoneTitle}>{t("fileUpload.dropFiles")}</p>
@@ -278,7 +278,9 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
             key={`${thumbnail.file.name}-${thumbnail.file.size}-${index}`}
             className={styles.fileItem}
             onClick={() => handleFileClick(thumbnail.file)}
-            aria-label={`${thumbnail.file.name}の詳細を表示`}
+            aria-label={t("fileUpload.viewDetails", {
+              name: thumbnail.file.name,
+            })}
           >
             <div className={styles.fileItemContent}>
               <div
