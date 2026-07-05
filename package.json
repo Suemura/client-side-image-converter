@@ -55,7 +55,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9.30.1",
-    "eslint-config-next": "^15.3.5",
+    "eslint-config-next": "^16.2.10",
     "happy-dom": "^20.10.6",
     "next-sitemap": "^4.2.3",
     "serve": "^14.2.6",
