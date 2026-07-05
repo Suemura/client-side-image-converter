@@ -7,6 +7,8 @@
 
 ```mermaid
 flowchart TD
+    S["/start-issue Issue番号"] --> S2[Issue 取得・担当者設定<br>ブランチ作成]
+    S2 --> B
     A[タスク依頼] --> B{非自明なタスク?}
     B -- Yes --> C[planner エージェント<br>実装計画 + Sprint Contract]
     B -- No --> D[実装]
@@ -72,6 +74,7 @@ flowchart TD
 
 | コマンド | 役割 |
 | --- | --- |
+| `/start-issue <Issue番号>` | GitHub Issue を起点にタスクを開始する入口。Issue 把握 → ブランチ作成（ラベルから prefix を決定）→ planner → 実装 → 検証 → docs-sync → reviewer → push → PR 作成（`Closes #N` 付き）まで自走し、PR 自動レビューフローに接続する。中断条件（dirty な作業ツリー、クローズ済み Issue、reviewer 3 回不通過等）に該当する場合のみユーザーに確認する |
 | `/review-pr <PR番号>` | PR をレビューし、GitHub API でインラインコメント付きレビューを投稿（AI である旨を明記、[重要]/[改善]/[軽微]/[質問] のプレフィックス） |
 | `/resolve-pr-comments <PR番号>` | PR のレビューコメントを読み取り、妥当な指摘は修正して push、質問には回答、不当な指摘には理由を返信（[修正済み]/[対応不要]/[回答]/[確認]） |
 
@@ -79,7 +82,7 @@ flowchart TD
 
 | ルール | 内容 |
 | --- | --- |
-| `workflow-orchestration.md` | planner / docs-sync / reviewer / サブエージェントの使い分け、完了前検証、PR 自動レビューフローの指針 |
+| `workflow-orchestration.md` | Issue 起点のタスク開始（`/start-issue`）、planner / docs-sync / reviewer / サブエージェントの使い分け、完了前検証、PR 自動レビューフローの指針 |
 | `self-review.md` | タスク完了前に docs-sync によるドキュメント同期と reviewer エージェントによる独立レビューを必須とするルール（自己レビュー禁止） |
 
 ### 6. PR 自動レビューフロー
@@ -149,6 +152,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-05: `/start-issue` コマンドを追加（Issue 起点でブランチ作成から PR 作成・自動レビューフローまでハーネス全体を自走させる入口）
 - 2026-07-05: Dependabot による依存の週次自動更新、permissions による危険操作のガード（deny / ask）を追加。E2E の webServer を本番同等の静的配信（build + serve）に変更
 - 2026-07-05: docs-sync エージェントを追加（レビュー前に関連ドキュメントの同期を自動化）
 - 2026-07-05: Playwright E2E（9 節）を追加し CI を 2 ジョブ構成に。デプロイのシークレット登録が完了し本番・プレビューとも有効化。必須チェックに `e2e` を追加
