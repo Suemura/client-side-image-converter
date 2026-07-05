@@ -92,10 +92,9 @@ This project is published under the [MIT License](LICENSE).
 
 This project uses open-source libraries with the following licenses:
 
-- **MIT License**: Major libraries including Next.js, React, TypeScript
-- **Apache-2.0 License**: Some utility libraries
-- **LGPL-3.0 License**: Sharp image processing library (used as a library)
-- **MPL-2.0 License**: Axe Core (accessibility validation)
+- **MIT License**: Major libraries including Next.js, React, TypeScript, piexifjs, exif-js, and i18next
+- **MIT OR GPL-3.0-or-later**: JSZip
+- **MIT AND Zlib**: pako
 
 All dependencies are commercially usable. Please refer to each library's license file for details.
 
