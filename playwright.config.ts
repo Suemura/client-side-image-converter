@@ -15,9 +15,12 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "npm run dev -- --port 3100",
+    // 本番同等の検証のため、静的エクスポート（out/）を serve で配信する
+    // ローカルで高速に回したい場合は `npm run dev -- --port 3100` を別途起動しておけば
+    // reuseExistingServer によりそちらが再利用される（CI では常に build + 静的配信）
+    command: "npm run build && npx serve out -l 3100",
     url: "http://localhost:3100",
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });

@@ -1,4 +1,33 @@
 {
+  "permissions": {
+    "deny": [
+      "Bash(sudo *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push * --force)",
+      "Bash(git push * --force *)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)",
+      "Read(.env*)",
+      "Edit(.env*)",
+      "Write(.env*)",
+      "Read(.dev.vars*)",
+      "Edit(.dev.vars*)",
+      "Write(.dev.vars*)"
+    ],
+    "ask": [
+      "Bash(gh pr merge)",
+      "Bash(gh pr merge *)",
+      "Bash(git reset --hard)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean)",
+      "Bash(git clean *)",
+      "Bash(npm run deploy)",
+      "Bash(npm run deploy *)",
+      "Bash(wrangler pages deploy *)",
+      "Bash(npx wrangler pages deploy *)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {

@@ -1,0 +1,30 @@
+# Dependabot による依存関係の自動更新
+# - 更新 PR には CI（check + e2e）が自動で走る
+#   （プレビューデプロイは Dependabot secrets 未登録のためスキップされる。必要なら
+#     Settings > Secrets and variables > Dependabot に Cloudflare のシークレットを登録する）
+# - minor / patch は 1 つの PR にグループ化してレビューノイズを抑える（major は個別 PR）
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions（actions/checkout 等）のバージョン更新
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
