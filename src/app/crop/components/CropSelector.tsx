@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   type CropArea,
   clampCropArea,
+  clampCropAreaToAspect,
   enforceAspectRatio,
   fitAspectRatio,
   type ResizeHandle,
@@ -53,6 +54,9 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
   // 最新の表示領域を参照するための ref（アスペクト比変更の副作用で使用）
   const cropAreaRef = useRef(cropArea);
   cropAreaRef.current = cropArea;
+
+  // 表示サイズ未確定時の初期化リトライ用タイマー（アンマウント時に clear する）
+  const initRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getScaleFactor = useCallback(() => {
     const img = imageRef.current;
@@ -105,9 +109,9 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     }
     const displayWidth = img.offsetWidth;
     const displayHeight = img.offsetHeight;
-    // 表示サイズが未確定なら少し待って再試行する
+    // 表示サイズが未確定なら少し待って再試行する（アンマウント後に発火しないよう id を保持）
     if (displayWidth === 0 || displayHeight === 0) {
-      setTimeout(() => initializeCropArea(), 60);
+      initRetryTimerRef.current = setTimeout(() => initializeCropArea(), 60);
       return;
     }
 
@@ -146,6 +150,15 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     setImageLoaded(true);
     initializeCropArea();
   }, [initializeCropArea]);
+
+  // アンマウント時に初期化リトライタイマーを解除する（key 変更での頻繁な再マウント対策）
+  useEffect(() => {
+    return () => {
+      if (initRetryTimerRef.current) {
+        clearTimeout(initRetryTimerRef.current);
+      }
+    };
+  }, []);
 
   // アスペクト比プリセット変更時、現在の領域へ比率を当てはめる。
   // 現在の領域は cropAreaRef 経由で参照し、比率変更時のみ再適用したいため emitNaturalArea は依存に含めない。
@@ -264,18 +277,27 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
           break;
       }
 
-      // アスペクト比が指定されていればリサイズ時に比率を強制する
+      const displayWidth = imageRef.current.offsetWidth;
+      const displayHeight = imageRef.current.offsetHeight;
+
+      // アスペクト比が指定されていればリサイズ時に比率を強制する。
+      // 境界クランプも比率を保つ版を使い、端でも正方形などが崩れないようにする。
       if (aspectRatio && activeHandle !== "move") {
         newCropArea = enforceAspectRatio(
           newCropArea,
           activeHandle,
           aspectRatio,
         );
+        newCropArea = clampCropAreaToAspect(
+          newCropArea,
+          activeHandle,
+          aspectRatio,
+          displayWidth,
+          displayHeight,
+        );
+      } else {
+        newCropArea = clampCropArea(newCropArea, displayWidth, displayHeight);
       }
-
-      const displayWidth = imageRef.current.offsetWidth;
-      const displayHeight = imageRef.current.offsetHeight;
-      newCropArea = clampCropArea(newCropArea, displayWidth, displayHeight);
       setCropArea(newCropArea);
       setDragStart({ x, y });
     };

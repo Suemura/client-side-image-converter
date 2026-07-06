@@ -260,6 +260,120 @@ export const enforceAspectRatio = (
   return { x, y, width, height };
 };
 
+/**
+ * アスペクト比を保ったままトリミング領域を境界内へ収める。
+ *
+ * `clampCropArea` は幅・高さを独立にクランプするため、比率固定リサイズ中に領域が
+ * 画像の端へ到達すると片方の寸法だけが詰められて比率が崩れる。この関数は操作中の
+ * ハンドルが示す固定端（アンカー）を保ちつつ、比率を維持したまま境界内へ収まる
+ * 最大寸法へ一様に縮小する（`ratio` が null / `move` の場合は通常の `clampCropArea`）。
+ * 呼び出し側は `enforceAspectRatio` で比率を整えた領域を渡す想定。
+ */
+export const clampCropAreaToAspect = (
+  area: CropArea,
+  handle: ResizeHandle,
+  ratio: number | null,
+  boundsWidth: number,
+  boundsHeight: number,
+  minSize = MIN_CROP_SIZE,
+): CropArea => {
+  if (!ratio || handle === "move") {
+    return clampCropArea(area, boundsWidth, boundsHeight, minSize);
+  }
+
+  const right = area.x + area.width;
+  const bottom = area.y + area.height;
+  const centerX = area.x + area.width / 2;
+  const centerY = area.y + area.height / 2;
+
+  // ハンドルごとに、固定端（アンカー）から各軸へ伸ばせる境界内の最大寸法を求める
+  let maxWidth: number;
+  let maxHeight: number;
+  switch (handle) {
+    case "se":
+      maxWidth = boundsWidth - area.x;
+      maxHeight = boundsHeight - area.y;
+      break;
+    case "nw":
+      maxWidth = right;
+      maxHeight = bottom;
+      break;
+    case "ne":
+      maxWidth = boundsWidth - area.x;
+      maxHeight = bottom;
+      break;
+    case "sw":
+      maxWidth = right;
+      maxHeight = boundsHeight - area.y;
+      break;
+    case "n":
+      // 水平中心を維持するため左右どちらの余白も超えない幅に制限する
+      maxWidth = 2 * Math.min(centerX, boundsWidth - centerX);
+      maxHeight = bottom;
+      break;
+    case "s":
+      maxWidth = 2 * Math.min(centerX, boundsWidth - centerX);
+      maxHeight = boundsHeight - area.y;
+      break;
+    case "e":
+      maxWidth = boundsWidth - area.x;
+      maxHeight = 2 * Math.min(centerY, boundsHeight - centerY);
+      break;
+    default:
+      // "w"
+      maxWidth = right;
+      maxHeight = 2 * Math.min(centerY, boundsHeight - centerY);
+      break;
+  }
+
+  // 比率を保ったまま境界内へ収める（1 を上限にして拡大はしない）
+  const scale = Math.min(1, maxWidth / area.width, maxHeight / area.height);
+  let width = area.width * scale;
+  let height = area.height * scale;
+
+  // 最小サイズを下回った場合も比率を保って引き上げる
+  if (width < minSize || height < minSize) {
+    const upscale = Math.max(minSize / width, minSize / height);
+    width *= upscale;
+    height *= upscale;
+  }
+
+  // アンカー（固定端）を保つよう原点を再計算する
+  let x = area.x;
+  let y = area.y;
+  switch (handle) {
+    case "se":
+      break;
+    case "nw":
+      x = right - width;
+      y = bottom - height;
+      break;
+    case "ne":
+      y = bottom - height;
+      break;
+    case "sw":
+      x = right - width;
+      break;
+    case "n":
+      x = centerX - width / 2;
+      y = bottom - height;
+      break;
+    case "s":
+      x = centerX - width / 2;
+      break;
+    case "e":
+      y = centerY - height / 2;
+      break;
+    default:
+      // "w"
+      x = right - width;
+      y = centerY - height / 2;
+      break;
+  }
+
+  return { x, y, width, height };
+};
+
 /** crop ページが保持するトリミング状態（一括 / 画像ごとの両モード） */
 export interface CropState {
   /** true: 全画像へ共有領域・共有変換を適用 / false: 画像ごとに保持 */

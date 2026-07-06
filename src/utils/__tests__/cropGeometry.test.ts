@@ -3,6 +3,7 @@ import {
   ASPECT_RATIO_PRESETS,
   type CropState,
   clampCropArea,
+  clampCropAreaToAspect,
   enforceAspectRatio,
   fitAspectRatio,
   IDENTITY_TRANSFORM,
@@ -78,6 +79,109 @@ describe("clampCropArea", () => {
     expect(result.width).toBe(10);
     expect(result.y).toBe(90);
     expect(result.height).toBe(10);
+  });
+});
+
+describe("clampCropAreaToAspect", () => {
+  it("ratio が null のときは clampCropArea と同じ挙動（比率非考慮）", () => {
+    const area = { x: 80, y: 80, width: 50, height: 50 };
+    expect(clampCropAreaToAspect(area, "se", null, 100, 100)).toEqual(
+      clampCropArea(area, 100, 100),
+    );
+  });
+
+  it("move ハンドルは通常の clampCropArea へ委譲する", () => {
+    const area = { x: 80, y: 80, width: 50, height: 50 };
+    expect(clampCropAreaToAspect(area, "move", 1, 100, 100)).toEqual(
+      clampCropArea(area, 100, 100),
+    );
+  });
+
+  it("se（左上固定）で右下端に到達しても 1:1 が崩れない", () => {
+    // maxWidth = maxHeight = 20 → 一様に 0.5 倍
+    const result = clampCropAreaToAspect(
+      { x: 80, y: 80, width: 40, height: 40 },
+      "se",
+      1,
+      100,
+      100,
+    );
+    expect(result).toEqual({ x: 80, y: 80, width: 20, height: 20 });
+    expect(result.x + result.width).toBeLessThanOrEqual(100);
+    expect(result.y + result.height).toBeLessThanOrEqual(100);
+  });
+
+  it("se で幅・高さの余白が異なる場合は厳しい方に合わせて比率を保つ", () => {
+    // maxWidth = 30, maxHeight = 20 → scale = 0.5
+    const result = clampCropAreaToAspect(
+      { x: 70, y: 80, width: 40, height: 40 },
+      "se",
+      1,
+      100,
+      100,
+    );
+    expect(result.width).toBeCloseTo(result.height, 5);
+    expect(result.x + result.width).toBeLessThanOrEqual(100);
+    expect(result.y + result.height).toBeLessThanOrEqual(100);
+  });
+
+  it("nw（右下固定）は原点が負でも右下角を保ち境界内へ収める", () => {
+    const result = clampCropAreaToAspect(
+      { x: -10, y: -10, width: 50, height: 50 },
+      "nw",
+      1,
+      100,
+      100,
+    );
+    // 右下角 (40, 40) を固定したまま比率維持で境界内へ
+    expect(result.x).toBeGreaterThanOrEqual(0);
+    expect(result.y).toBeGreaterThanOrEqual(0);
+    expect(result.x + result.width).toBeCloseTo(40, 5);
+    expect(result.y + result.height).toBeCloseTo(40, 5);
+    expect(result.width).toBeCloseTo(result.height, 5);
+  });
+
+  it("n（下端固定・水平中心維持）は比率を保ちアンカーを維持する", () => {
+    const result = clampCropAreaToAspect(
+      { x: 10, y: -20, width: 80, height: 80 },
+      "n",
+      1,
+      100,
+      100,
+    );
+    expect(result.width).toBeCloseTo(result.height, 5);
+    // 下端 60 を固定
+    expect(result.y + result.height).toBeCloseTo(60, 5);
+    // 水平中心 50 を維持
+    expect(result.x + result.width / 2).toBeCloseTo(50, 5);
+    expect(result.y).toBeGreaterThanOrEqual(0);
+  });
+
+  it("非正方形の比率（2:1）も端で維持される", () => {
+    // se: maxWidth = maxHeight = 40 → scale = min(1, 40/60, 40/30) = 2/3
+    const result = clampCropAreaToAspect(
+      { x: 60, y: 60, width: 60, height: 30 },
+      "se",
+      2,
+      100,
+      100,
+    );
+    expect(result.width / result.height).toBeCloseTo(2, 5);
+    expect(result.x + result.width).toBeLessThanOrEqual(100);
+    expect(result.y + result.height).toBeLessThanOrEqual(100);
+  });
+
+  it("極端に小さくなる場合も最小サイズと比率を保つ", () => {
+    const result = clampCropAreaToAspect(
+      { x: 95, y: 95, width: 40, height: 40 },
+      "se",
+      1,
+      100,
+      100,
+    );
+    expect(result.width).toBeGreaterThanOrEqual(10);
+    expect(result.height).toBeGreaterThanOrEqual(10);
+    expect(result.width).toBeCloseTo(result.height, 5);
   });
 });
 

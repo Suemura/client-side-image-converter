@@ -81,8 +81,10 @@ export default function CropPage() {
     [applyToAll, currentPreviewIndex],
   );
 
+  // 変換を適用する。回転（90 度刻みで寸法が入れ替わる）時のみ領域をリセットし、
+  // 反転は寸法が変わらないため選択済み領域を保持する。
   const applyTransform = useCallback(
-    (next: CropTransform) => {
+    (next: CropTransform, resetArea = false) => {
       if (applyToAll) {
         setSharedTransform(next);
       } else {
@@ -91,8 +93,10 @@ export default function CropPage() {
           [currentPreviewIndex]: next,
         }));
       }
-      // 向きが変わるためトリミング領域はリセットし、再読込時に全体へ初期化する
-      setCurrentArea(null);
+      if (resetArea) {
+        // 向きが変わり寸法が入れ替わるためトリミング領域はリセットし、再読込時に全体へ初期化する
+        setCurrentArea(null);
+      }
     },
     [applyToAll, currentPreviewIndex, setCurrentArea],
   );
@@ -188,17 +192,24 @@ export default function CropPage() {
   }, [files.length]);
 
   const handleRotateLeft = useCallback(() => {
-    applyTransform({
-      ...currentTransform,
-      rotation: rotateLeft(currentTransform.rotation),
-    });
+    // 回転は寸法が入れ替わるため領域をリセットする
+    applyTransform(
+      {
+        ...currentTransform,
+        rotation: rotateLeft(currentTransform.rotation),
+      },
+      true,
+    );
   }, [applyTransform, currentTransform]);
 
   const handleRotateRight = useCallback(() => {
-    applyTransform({
-      ...currentTransform,
-      rotation: rotateRight(currentTransform.rotation),
-    });
+    applyTransform(
+      {
+        ...currentTransform,
+        rotation: rotateRight(currentTransform.rotation),
+      },
+      true,
+    );
   }, [applyTransform, currentTransform]);
 
   const handleToggleFlipHorizontal = useCallback(() => {
