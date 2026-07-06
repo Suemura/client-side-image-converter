@@ -55,6 +55,12 @@ export const SUPPORTED_IMAGE_FORMATS = {
   JPEG_VARIANTS: ["image/jpeg", "image/jpg"],
 } as const;
 
+// 一度に取り込めるファイルの上限件数
+// フォルダドロップ（サブフォルダ再帰取込）や multiple 選択で巨大なツリーを誤投入すると、
+// サムネイル生成（各画像を readAsDataURL でメモリ展開し一斉デコード）でタブがフリーズ/
+// メモリ圧迫する。真のボトルネックを有界化するためのハード上限（超過分は取り込まず警告する）。
+export const MAX_INPUT_FILES = 200;
+
 // HEIC/HEIF の拡張子（MIME タイプが空になるブラウザ向けのフォールバック判定に使用）
 export const HEIC_EXTENSIONS = [".heic", ".heif"] as const;
 

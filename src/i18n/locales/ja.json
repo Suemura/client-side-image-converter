@@ -114,7 +114,8 @@
     "dropAreaLabel": "ファイルをドラッグ&ドロップまたはクリックして選択",
     "filesSelectedCount": "{{count}}個のファイル選択済み",
     "supportedFormats": "対応形式: {{formats}}",
-    "pasteAndFolderHint": "クリップボードから貼り付け（Ctrl/⌘+V）やフォルダのドロップにも対応"
+    "pasteAndFolderHint": "クリップボードから貼り付け（Ctrl/⌘+V）やフォルダのドロップにも対応",
+    "limitExceeded": "一度に扱えるファイルは最大 {{max}} 件です。上限を超えた分は取り込まれませんでした。"
   },
   "fileDetails": {
     "title": "ファイル詳細",
