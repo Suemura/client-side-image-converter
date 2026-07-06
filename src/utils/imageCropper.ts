@@ -44,14 +44,23 @@ const fileToDataUrl = (file: File): Promise<string> => {
 };
 
 /**
- * 画像ファイルをHTMLImageElementとして読み込む
+ * 画像ファイルをHTMLImageElementとして読み込む。
+ * 読み込み完了・失敗のいずれでも ObjectURL を revoke してリークを防ぐ
+ * （デコード済みの HTMLImageElement は revoke 後もそのまま描画に使える）。
  */
 const loadImage = (file: File): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Failed to load image"));
+    };
+    img.src = objectUrl;
   });
 };
 
