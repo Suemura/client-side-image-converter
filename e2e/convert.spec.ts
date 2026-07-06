@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import JSZip from "jszip";
 import piexif from "piexifjs";
 import {
   bmpFile,
@@ -411,5 +412,95 @@ test.describe("画像フォーマット変換", () => {
     const exif = loadExifFromWebpBuffer(buf);
     expect(exif["0th"]?.[piexif.ImageIFD.Make]).toBe("TestMake");
     expect(exif.GPS?.[piexif.GPSIFD.GPSLatitudeRef]).toBe("N");
+  });
+
+  test("複数ファイルを一括で JPEG に変換し ZIP に全件が含まれる（Worker プール）", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    // 3 枚を一括投入する（ワーカープールで並列変換される。順序・件数・中身を検証）
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles([pngFile("a.png"), pngFile("b.png"), pngFile("c.png")]);
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    // 複数ファイルは ZIP でまとめてダウンロードされる
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toMatch(/\.zip$/);
+    const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+    const names = Object.keys(zip.files).sort();
+    expect(names).toEqual(["a.jpeg", "b.jpeg", "c.jpeg"]);
+
+    // 各エントリが有効な JPEG であること（欠落・取り違えがない）
+    for (const name of names) {
+      const entry = zip.file(name);
+      expect(entry).not.toBeNull();
+      const buf = await entry!.async("nodebuffer");
+      expect(magicNumber.isJpeg(buf)).toBe(true);
+    }
+  });
+
+  test("複数ファイルを一括で AVIF に変換できる（Worker で WASM エンコード）", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles([pngFile("one.png"), pngFile("two.png")]);
+
+    // ラジオの input は不可視のためラベルテキストをクリックする
+    await page.getByText("AVIF", { exact: true }).click();
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    // WASM エンコーダーの初回ロードがあるためタイムアウトを長めにとる
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+    const names = Object.keys(zip.files).sort();
+    expect(names).toEqual(["one.avif", "two.avif"]);
+    for (const name of names) {
+      const buf = await zip.file(name)!.async("nodebuffer");
+      expect(magicNumber.isAvif(buf)).toBe(true);
+    }
+  });
+
+  test("変換時に Web Worker が生成される（処理がメインスレッド外で実行される）", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    // Worker の生成を待ち受ける（PNG→JPEG は @jsquash を使わないため、生成される Worker は
+    // 本アプリの画像処理 Worker であることを保証できる）
+    const workerPromise = page.waitForEvent("worker", { timeout: 15_000 });
+
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles([pngFile("w1.png"), pngFile("w2.png")]);
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+
+    const worker = await workerPromise;
+    // Next.js がバンドルした静的チャンクとして Worker がロードされている
+    expect(worker.url()).toContain("/_next/static/");
+
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 20_000,
+    });
   });
 });

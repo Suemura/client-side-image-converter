@@ -7,16 +7,30 @@
  */
 
 import { ERROR_MESSAGES } from "./constants";
+import type { DecodedImage } from "./decodedImage";
 
 /**
- * HEIC/HEIF ファイルをデコードして Canvas に展開する
+ * HEIC/HEIF ファイルをデコードして RGBA の生ピクセル（`ImageData` 化できる形）に展開する。
+ *
+ * Canvas / DOM 非依存なので Web Worker（OffscreenCanvas 経路）からも利用できる。
+ * @param buffer - HEIC ファイルの中身
+ */
+export const decodeHeicToImageData = async (
+  buffer: Uint8Array,
+): Promise<DecodedImage> => {
+  const { default: decode } = await import("heic-decode");
+  const { width, height, data } = await decode({ buffer });
+  return { data, width, height };
+};
+
+/**
+ * HEIC/HEIF ファイルをデコードして Canvas に展開する（メインスレッド用）
  */
 export const decodeHeicToCanvas = async (
   file: File,
 ): Promise<HTMLCanvasElement> => {
   const buffer = new Uint8Array(await file.arrayBuffer());
-  const { default: decode } = await import("heic-decode");
-  const { width, height, data } = await decode({ buffer });
+  const { data, width, height } = await decodeHeicToImageData(buffer);
 
   const canvas = document.createElement("canvas");
   canvas.width = width;

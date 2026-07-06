@@ -1,175 +1,38 @@
+import {
+  convertFilesWithWorkerPool,
+  isOffscreenPipelineSupported,
+} from "../workers/imageProcessingPool";
 import { encodeCanvasToAvifBlob } from "./avifEncoder";
+import {
+  type BatchConversionResult,
+  type ConversionFailure,
+  type ConversionOptions,
+  type ConversionResult,
+  calculateTargetSize,
+  searchQualityForTargetSize,
+} from "./conversionCore";
+import { buildConversionResult } from "./conversionResult";
 import { insertExifIntoBlob, readExifTiffFromDataUrl } from "./exifTransfer";
 import { isHeicFile, isTiffFile } from "./fileUtils";
 import { decodeHeicToCanvas } from "./heicDecoder";
+import { PNG_COMPRESSED_QUALITY_HINT, pngQualityStrategy } from "./pngQuality";
 import { decodeTiffToCanvas } from "./tiffDecoder";
 
-export type ConversionFormat = "jpeg" | "png" | "webp" | "avif";
-
-export interface ConversionOptions {
-  format: ConversionFormat;
-  quality: number; // 0-100
-  width?: number;
-  height?: number;
-  maintainAspectRatio: boolean;
-  preserveExif?: boolean;
-  /**
-   * 目標ファイルサイズ（KB）。指定すると品質値を二分探索し、目標サイズ以下で最大品質の結果を採用する。
-   * JPEG / WebP でのみ有効（PNG は可逆・AVIF は WASM エンコードが低速なため対象外）。
-   * 未指定または 0 以下の場合は quality をそのまま使う。
-   */
-  targetFileSizeKB?: number;
-}
-
-export interface ConversionResult {
-  blob: Blob;
-  url: string;
-  originalSize: number;
-  convertedSize: number;
-  filename: string;
-  originalFilename: string;
-  file: File;
-  /**
-   * 目標ファイルサイズ探索を行った場合の達成可否。
-   * 探索を行わなかった場合は undefined、達成できなかった場合（最小サイズで出力）は false。
-   */
-  targetSizeAchieved?: boolean;
-}
-
-export interface QualitySearchOptions {
-  minQuality?: number; // 既定 1
-  maxQuality?: number; // 既定 100
-  maxIterations?: number; // 既定 8（1-100 の整数範囲は ceil(log2(100))=7 で十分絞れる）
-}
-
-export interface QualitySearchResult {
-  blob: Blob;
-  quality: number;
-  achieved: boolean; // 目標サイズ以下を達成できたか
-}
-
-/**
- * エンコード関数を注入し、目標ファイルサイズ以下で最大品質となる品質値を二分探索する純粋ロジック。
- *
- * Canvas / Image / WASM に非依存（`encode` を差し替えれば happy-dom でも単体テスト可能）。
- * 「品質↑でサイズ↑」という近似単調性を前提とするが、破れても以下の性質により常に妥当な結果を返す:
- * - 探索した品質のいずれかで目標以下になれば、その中で最大品質の Blob（目標以下）を必ず返す
- * - どの品質でも目標を超える場合は、探索中に見つけた最小 Blob を `achieved: false` で返す（フォールバック）
- *
- * @param encode - 品質値（1-100）を受け取り Blob を返すエンコード関数
- * @param targetSizeBytes - 目標ファイルサイズ（バイト）
- * @param options - 探索範囲・反復回数の上書き
- */
-export const searchQualityForTargetSize = async (
-  encode: (quality: number) => Promise<Blob>,
-  targetSizeBytes: number,
-  options?: QualitySearchOptions,
-): Promise<QualitySearchResult> => {
-  const minQuality = options?.minQuality ?? 1;
-  const maxQuality = options?.maxQuality ?? 100;
-  const maxIterations = options?.maxIterations ?? 8;
-
-  let lo = minQuality;
-  let hi = maxQuality;
-  // 目標以下で見つかった最大品質の候補
-  let best: QualitySearchResult | null = null;
-  // 全探索点のうち最小サイズの Blob（達成不可時のフォールバック）
-  let smallest: QualitySearchResult | null = null;
-
-  let iterations = 0;
-  while (lo <= hi && iterations < maxIterations) {
-    const mid = Math.floor((lo + hi) / 2);
-    const blob = await encode(mid);
-    iterations++;
-
-    if (smallest === null || blob.size < smallest.blob.size) {
-      smallest = { blob, quality: mid, achieved: false };
-    }
-
-    if (blob.size <= targetSizeBytes) {
-      // 目標達成: より高品質を狙って範囲を上へ
-      best = { blob, quality: mid, achieved: true };
-      lo = mid + 1;
-    } else {
-      // 目標超過: 品質を下げる
-      hi = mid - 1;
-    }
-  }
-
-  if (best) {
-    return best;
-  }
-  if (smallest) {
-    // どの品質でも目標を超えた: 最小サイズの結果を返す
-    return smallest;
-  }
-  // maxIterations <= 0 等で一度もエンコードしなかった場合のガード
-  const fallbackBlob = await encode(minQuality);
-  return {
-    blob: fallbackBlob,
-    quality: minQuality,
-    achieved: fallbackBlob.size <= targetSizeBytes,
-  };
-};
-
-/**
- * 変換に失敗したファイルの情報（ユーザーへの通知表示に使用する）
- * エラー詳細は console.error に記録されるため、表示に必要なファイル名のみを保持する
- */
-export interface ConversionFailure {
-  fileName: string;
-}
-
-/** 一括変換の結果（成功した変換結果と失敗したファイルの両方を返す） */
-export interface BatchConversionResult {
-  results: ConversionResult[];
-  failures: ConversionFailure[];
-}
-
-/**
- * 変換オプションから出力サイズを計算する
- * @param srcWidth - 元画像の幅
- * @param srcHeight - 元画像の高さ
- * @param options - 変換オプション（サイズ指定・アスペクト比維持）
- * @returns 出力する幅と高さ
- */
-export const calculateTargetSize = (
-  srcWidth: number,
-  srcHeight: number,
-  options: Pick<ConversionOptions, "width" | "height" | "maintainAspectRatio">,
-): { width: number; height: number } => {
-  let width = srcWidth;
-  let height = srcHeight;
-
-  if (options.width || options.height) {
-    if (options.maintainAspectRatio) {
-      const aspectRatio = srcWidth / srcHeight;
-
-      if (options.width && options.height) {
-        // 両方指定されている場合、アスペクト比を維持して小さい方に合わせる
-        const targetRatio = options.width / options.height;
-        if (aspectRatio > targetRatio) {
-          width = options.width;
-          height = options.width / aspectRatio;
-        } else {
-          height = options.height;
-          width = options.height * aspectRatio;
-        }
-      } else if (options.width) {
-        width = options.width;
-        height = options.width / aspectRatio;
-      } else if (options.height) {
-        height = options.height;
-        width = options.height * aspectRatio;
-      }
-    } else {
-      width = options.width || width;
-      height = options.height || height;
-    }
-  }
-
-  return { width, height };
-};
+// 型・純粋ロジックは Canvas 非依存の conversionCore に集約している。
+// 既存のインポート経路を壊さないよう imageConverter からも再エクスポートする。
+export type {
+  BatchConversionResult,
+  ConversionFailure,
+  ConversionFormat,
+  ConversionOptions,
+  ConversionResult,
+  QualitySearchOptions,
+  QualitySearchResult,
+} from "./conversionCore";
+export {
+  calculateTargetSize,
+  searchQualityForTargetSize,
+} from "./conversionCore";
 
 /**
  * 画像を指定されたオプションで変換する
@@ -232,32 +95,16 @@ export const convertImage = async (
             return;
           }
 
-          // Exifデータを挿入する処理
-          const processBlob = async (finalBlob: Blob) => {
-            const url = URL.createObjectURL(finalBlob);
-            const originalFilename = file.name;
-            const nameWithoutExt =
-              originalFilename.substring(
-                0,
-                originalFilename.lastIndexOf("."),
-              ) || originalFilename;
-            const filename = `${nameWithoutExt}.${options.format}`;
-
-            // ファイルオブジェクトを作成
-            const resultFile = new File([finalBlob], filename, {
-              type: finalBlob.type,
-            });
-
-            resolve({
-              blob: finalBlob,
-              url,
-              originalSize: file.size,
-              convertedSize: finalBlob.size,
-              filename,
-              originalFilename: file.name,
-              file: resultFile,
-              targetSizeAchieved,
-            });
+          // Exif データを挿入し ConversionResult を組み立てて解決する
+          const processBlob = (finalBlob: Blob) => {
+            resolve(
+              buildConversionResult(
+                file,
+                finalBlob,
+                options.format,
+                targetSizeAchieved,
+              ),
+            );
           };
 
           // Exif データを出力形式（JPEG / PNG / WebP）に応じて Blob に挿入する
@@ -388,12 +235,22 @@ export const convertImage = async (
 /**
  * 複数の画像を一括変換する
  * 変換に失敗したファイルがあっても処理を続行し、失敗情報を failures として返す
+ *
+ * 対応環境では Web Worker + OffscreenCanvas のプールで並列処理し、メインスレッド（UI）の
+ * ブロックを避ける（Issue #32・#47）。非対応環境ではメインスレッドで逐次処理する。
  */
 export const convertMultipleImages = async (
   files: File[],
   options: ConversionOptions,
   onProgress?: (current: number, total: number) => void,
 ): Promise<BatchConversionResult> => {
+  // OffscreenCanvas / Worker が使える環境ではワーカープールで並列処理する。
+  // Worker が個別に失敗した場合は convertImage（メインスレッド）でフォールバックする。
+  if (isOffscreenPipelineSupported()) {
+    return convertFilesWithWorkerPool(files, options, onProgress, convertImage);
+  }
+
+  // フォールバック: メインスレッドで逐次変換する（従来挙動）
   const results: ConversionResult[] = [];
   const failures: ConversionFailure[] = [];
 
@@ -455,13 +312,14 @@ export const convertToPngWithQuality = (
   callback: (blob: Blob | null) => void,
 ): void => {
   // PNG品質制御: Canvas APIの標準的なPNG出力を使用
-  // 品質値に基づいて出力戦略を変更
-  if (quality >= 95) {
+  // 品質ティア判定は Worker（OffscreenCanvas 版）と共有する純粋関数に集約している
+  const strategy = pngQualityStrategy(quality);
+  if (strategy === "lossless") {
     // 高品質: 標準PNG出力
     canvas.toBlob(callback, "image/png");
-  } else if (quality >= 70) {
+  } else if (strategy === "compressed") {
     // 中品質: 少し圧縮
-    canvas.toBlob(callback, "image/png", 0.92);
+    canvas.toBlob(callback, "image/png", PNG_COMPRESSED_QUALITY_HINT);
   } else {
     // 低品質: より積極的な圧縮のため、一度JPEGに変換してからPNGに
     const tempCanvas = document.createElement("canvas");
