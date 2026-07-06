@@ -60,12 +60,17 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
         validFiles,
         MAX_INPUT_FILES,
       );
-      if (mergedFiles.length > files.length) {
+      const added = mergedFiles.length > files.length;
+      if (added) {
         onFilesSelected(mergedFiles);
       }
-      // 既存が上限に達していて新規が全て弾かれた場合も警告を出すため、
-      // truncated は取り込み件数の増減と独立に反映する
-      setLimitExceeded(truncated);
+      // 取り込み件数が増えたか、上限で切り詰めた場合のみ警告状態を更新する。
+      // 重複のみで件数が変わらない no-op（例: 上限到達中に重複を貼り付け）では、
+      // 直前の「上限を超えて取りこぼした」警告を消さず、上限に張り付いた状態を保つ。
+      // truncated=true は取り込み件数の増減と独立に警告を出す（既存が上限で新規が全て弾かれた場合も含む）
+      if (added || truncated) {
+        setLimitExceeded(truncated);
+      }
     },
     [files, onFilesSelected, acceptedTypes],
   );
