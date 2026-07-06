@@ -40,7 +40,7 @@ flowchart TD
 | `npm run lint` | Biome によるリント・フォーマットチェック | 常時（完了条件）+ CI |
 | `npm run typecheck` | TypeScript 型チェック（`tsc --noEmit`） | 常時（完了条件）+ CI |
 | `npm run test` | vitest による単体テスト（`src/utils/__tests__/`） | 常時（完了条件）+ CI |
-| `npm run build` | 本番ビルド（静的エクスポート + sitemap 生成）。Next.js 16 の Turbopack ビルドが無限ハングする上流バグの回避のため `next build --webpack` を使用（暫定、詳細は CLAUDE.md「開発コマンド」の注記参照） | PR 時に CI が検証 |
+| `npm run build` | 本番ビルド（静的エクスポート）。`postbuild` で sitemap（next-sitemap）と Service Worker（`scripts/generate-sw.ts` が `out/` を走査して `out/sw.js` を生成）を続けて生成する。Next.js 16 の Turbopack ビルドが無限ハングする上流バグの回避のため `next build --webpack` を使用（暫定、詳細は CLAUDE.md「開発コマンド」の注記参照） | PR 時に CI が検証 |
 | `npm run e2e` | Playwright E2E（実ブラウザでの動作検証） | PR 時に CI が検証（ローカルは `npm run e2e` / `npm run e2e:ui`） |
 
 コード変更を伴うタスクの完了条件は lint / typecheck / test の 3 つがすべて成功していること（CLAUDE.md「完了条件」。Stop フックが自動実行するのも同じ 3 つ）。build と e2e は完了条件には含まれず、PR 時に CI が検証する。
@@ -152,6 +152,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-06: PWA 化（Issue #33）に伴い、`npm run build` の postbuild チェーンに Service Worker 生成を追加（`next-sitemap && node scripts/generate-sw.ts`。`out/` を走査して `out/sw.js` を生成）。`scripts/` は Node の TypeScript 型ストリップで実行するため tsc 対象外にする（`tsconfig.json` の `exclude` に `scripts` を追加）。E2E に `e2e/pwa.spec.ts` を追加（manifest / theme-color の出力確認と、SW 登録後に `context.setOffline(true)` で全ルートがキャッシュから描画されるオフライン検証）
 - 2026-07-06: EXIF 対応拡張（Issue #34）に伴い、E2E の検証範囲を拡大（WebP の EXIF 読み取り、GPS の市区町村レベル丸め、JPEG→PNG / →WebP 変換時の EXIF 保持）。フィクスチャに WebP（EXIF 入り）生成と PNG/WebP からの EXIF 読み出しヘルパーを追加
 - 2026-07-06: `/start-issue` を git worktree 対応に変更（Issue ごとに `.claude/worktrees/issue-{番号}/` へ worktree を作成して作業し、複数 Issue の並列作業を可能に。未コミット変更チェックとベースブランチへの switch / pull は廃止）。あわせて Stop フック（`check-on-stop.sh`）を worktree 対応にし、変更検知を `CLAUDE_PROJECT_DIR` から フック stdin の `cwd` 基準に変更（worktree 内の TS/TSX 変更を取りこぼさないように）
 - 2026-07-06: Next.js 16 更新（PR #45）に伴い、`npm run build` を `next build --webpack` に変更（Turbopack 本番ビルドの上流バグ回避の暫定対応）
