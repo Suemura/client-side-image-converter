@@ -142,6 +142,22 @@ export const addUniqueFilesWithLimit = (
 };
 
 /**
+ * 上限警告を「件数の減少（削除・クリア）」で消してよいか判定する
+ * 「件数 < 上限」だけを条件にすると、フォルダ走査が上限で打ち切られた際に件数が
+ * 上限未満でも出す警告を追加操作直後に消してしまうため、「件数が減少し、かつ上限未満」
+ * を条件にする（追加操作では消さない）
+ * @param prevLength - 直前のファイル件数
+ * @param nextLength - 現在のファイル件数
+ * @param limit - 件数の上限
+ * @returns 警告を消すべきなら true
+ */
+export const shouldClearLimitWarningOnDecrease = (
+  prevLength: number,
+  nextLength: number,
+  limit: number,
+): boolean => nextLength < prevLength && nextLength < limit;
+
+/**
  * ファイルタイプが画像かどうかを確認する
  * @param file - チェックするファイル
  * @returns 画像の場合はtrue

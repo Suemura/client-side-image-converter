@@ -9,6 +9,8 @@ import {
   buildAcceptAttribute,
   filterValidFiles,
   getFileTypeBadgeLabel,
+  isAcceptedFileType,
+  shouldClearLimitWarningOnDecrease,
 } from "@utils/fileUtils";
 import { generateThumbnail } from "@utils/imageUtils";
 import type React from "react";
@@ -50,9 +52,10 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ファイル投入の共通処理（ドロップ・ファイル選択・貼り付け・フォルダドロップで共有）
-  // MIME フィルタ → 重複除外 → 上限件数で切り詰め、増えた場合のみ通知する
+  // MIME フィルタ → 重複除外 → 上限件数で切り詰め、増えた場合のみ通知する。
+  // collectionTruncated はフォルダ走査自体が上限で打ち切られたか（フォルダドロップ経路のみ）。
   const addFiles = useCallback(
-    (rawFiles: File[]) => {
+    (rawFiles: File[], collectionTruncated = false) => {
       const validFiles = filterValidFiles(rawFiles, acceptedTypes);
       // 重複ファイルを除外（ファイル名とサイズで判定）し、合計を上限件数まで切り詰める
       const { files: mergedFiles, truncated } = addUniqueFilesWithLimit(
@@ -64,12 +67,15 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
       if (added) {
         onFilesSelected(mergedFiles);
       }
-      // 取り込み件数が増えたか、上限で切り詰めた場合のみ警告状態を更新する。
+      // マージ後の切り詰め（truncated）に加え、フォルダ走査自体が上限で打ち切られた
+      // （collectionTruncated）場合も取りこぼしとして警告する。後者は「重複が多く最終
+      // 件数は上限以下だが、収集は上限で打ち切った」ケースの取りこぼし見逃しを防ぐ。
+      // 取り込み件数が増えたか overflow のときだけ警告状態を更新する。
       // 重複のみで件数が変わらない no-op（例: 上限到達中に重複を貼り付け）では、
       // 直前の「上限を超えて取りこぼした」警告を消さず、上限に張り付いた状態を保つ。
-      // truncated=true は取り込み件数の増減と独立に警告を出す（既存が上限で新規が全て弾かれた場合も含む）
-      if (added || truncated) {
-        setLimitExceeded(truncated);
+      const overflow = truncated || collectionTruncated;
+      if (added || overflow) {
+        setLimitExceeded(overflow);
       }
     },
     [files, onFilesSelected, acceptedTypes],
@@ -102,19 +108,22 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
 
       if (entries.length > 0) {
         // 巨大ツリーの再帰走査で File 参照が無制限に積み上がらないよう収集件数を有界化する。
-        // MAX_INPUT_FILES + 1 まで集めることで「ちょうど上限」と「上限超過」を区別できる
-        const collectedFiles = await collectFilesFromEntries(
-          entries,
-          MAX_INPUT_FILES + 1,
-        );
-        addFiles(collectedFiles);
+        // accept で有効画像だけをバジェットに数え（サイドカー等はバジェットを消費しない）、
+        // MAX_INPUT_FILES + 1 まで集めることで「ちょうど上限」と「上限超過」を区別できる。
+        // reachedLimit（収集自体の打ち切り）は取りこぼし警告に連動させるため addFiles へ渡す。
+        const { files: collectedFiles, reachedLimit } =
+          await collectFilesFromEntries(entries, {
+            maxFiles: MAX_INPUT_FILES + 1,
+            accept: (file) => isAcceptedFileType(file, acceptedTypes),
+          });
+        addFiles(collectedFiles, reachedLimit);
         return;
       }
 
       // webkitGetAsEntry 非対応環境は従来どおり dataTransfer.files を使う
       addFiles(Array.from(e.dataTransfer.files));
     },
-    [addFiles],
+    [addFiles, acceptedTypes],
   );
 
   // ファイル選択ハンドラー
@@ -158,10 +167,23 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
     generateThumbnails();
   }, [files]);
 
-  // 件数が上限未満に戻ったら stale な上限警告を消す
-  // （全クリアはもちろん、将来 1 件ずつ削除する UI で上限未満まで減った場合にも対応）
+  // 直前のファイル件数。件数の「減少」を検知して stale な警告を消すために保持する。
+  const prevFilesLengthRef = useRef(files.length);
+
+  // 件数が減って上限未満になった（クリア・削除）ときだけ stale な上限警告を消す。
+  // 「件数 < 上限」だけを条件にすると、フォルダ走査が上限で打ち切られた際に件数が
+  // 上限未満でも出す警告（collectionTruncated）を、直後の再描画で消してしまうため、
+  // 「件数が減少した」ことを条件にして追加操作では消さないようにする。
   useEffect(() => {
-    if (files.length < MAX_INPUT_FILES) {
+    const prevLength = prevFilesLengthRef.current;
+    prevFilesLengthRef.current = files.length;
+    if (
+      shouldClearLimitWarningOnDecrease(
+        prevLength,
+        files.length,
+        MAX_INPUT_FILES,
+      )
+    ) {
       setLimitExceeded(false);
     }
   }, [files.length]);
