@@ -1,10 +1,13 @@
 import piexif from "piexifjs";
+import { encodeCanvasToAvifBlob } from "./avifEncoder";
 import { isHeicFile } from "./fileUtils";
 import { decodeHeicToCanvas } from "./heicDecoder";
 import { dataUrlToBlob } from "./imageUtils";
 
+export type ConversionFormat = "jpeg" | "png" | "webp" | "avif";
+
 export interface ConversionOptions {
-  format: "jpeg" | "png" | "webp";
+  format: ConversionFormat;
   quality: number; // 0-100
   width?: number;
   height?: number;
@@ -176,6 +179,11 @@ export const convertImage = async (
         if (options.format === "png") {
           // PNG専用の品質制御
           convertToPngWithQuality(canvas, options.quality, handleBlob);
+        } else if (options.format === "avif") {
+          // AVIF は Canvas ネイティブ未対応のため WASM エンコーダーを使用
+          encodeCanvasToAvifBlob(canvas, options.quality)
+            .then(handleBlob)
+            .catch(reject);
         } else {
           // JPEG/WebP用の標準品質制御
           const quality = options.quality / 100;

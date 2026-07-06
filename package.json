@@ -35,9 +35,10 @@
     "preview": "wrangler pages dev out"
   },
   "dependencies": {
+    "@jsquash/avif": "^2.1.1",
     "exif-js": "^2.3.0",
     "heic-decode": "^2.1.0",
-    "i18next": "^25.10.9",
+    "i18next": "^26.3.4",
     "jszip": "^3.10.1",
     "next": "^15.3.5",
     "pako": "^2.1.0",
@@ -55,7 +56,7 @@
     "@types/pako": "^2.0.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9.30.1",
+    "eslint": "^10.6.0",
     "eslint-config-next": "^16.2.10",
     "happy-dom": "^20.10.6",
     "next-sitemap": "^4.2.3",

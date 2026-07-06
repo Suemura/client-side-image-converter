@@ -89,4 +89,6 @@ export const magicNumber = {
   isWebp: (buf: Buffer) =>
     buf.subarray(0, 4).toString("ascii") === "RIFF" &&
     buf.subarray(8, 12).toString("ascii") === "WEBP",
+  // ISOBMFF コンテナの ftyp ボックス（オフセット 4-12 が "ftypavif"）
+  isAvif: (buf: Buffer) => buf.subarray(4, 12).toString("ascii") === "ftypavif",
 };

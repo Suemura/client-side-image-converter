@@ -49,6 +49,31 @@ test.describe("画像フォーマット変換", () => {
     expect(magicNumber.isWebp(buf)).toBe(true);
   });
 
+  test("PNG を AVIF に変換してダウンロードできる", async ({ page }) => {
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(pngFile());
+
+    // ラジオの input は不可視のためラベルテキストをクリックする
+    await page.getByText("AVIF", { exact: true }).click();
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    // WASM エンコーダーの初回ロードがあるためタイムアウトを長めにとる
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // 1 ファイル時は ZIP 化されず単一ファイルとしてダウンロードされる
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("sample.avif");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isAvif(buf)).toBe(true);
+  });
+
   test("HEIC を JPEG に変換してダウンロードできる", async ({ page }) => {
     await page.goto("/convert/");
     await page.locator('input[type="file"]').setInputFiles(heicFile());
