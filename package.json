@@ -22,11 +22,11 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --webpack",
-    "postbuild": "next-sitemap",
+    "postbuild": "next-sitemap && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generate-sw.ts",
     "start": "next start",
     "lint": "npx @biomejs/biome check src/",
     "lint:fix": "npx @biomejs/biome check src/ --write --unsafe",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p scripts/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
