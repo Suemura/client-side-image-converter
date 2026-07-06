@@ -1,10 +1,49 @@
 import EXIF from "exif-js";
 import piexif from "piexifjs";
+import {
+  buildSyntheticJpegFromTiff,
+  extractPngExif,
+  extractWebpExif,
+} from "./exifBinary";
 import { dataUrlToBlob } from "./imageUtils";
 
 export interface ExifData {
   [key: string]: string | number | undefined;
 }
+
+/**
+ * piexifjs で読み込んだ EXIF オブジェクトを可変操作するための型。
+ * GPS 緯度・経度は度分秒のペア配列（number[][]）を取るため、値の型に number[][] も含める
+ */
+type MutableExifObj = Record<
+  string,
+  Record<number, string | number | number[] | number[][]>
+>;
+
+/** GPS 座標を丸める既定精度（十進度の小数点以下の桁数）。2 桁 ≈ 約 1.1km で市区町村レベル */
+export const GPS_ROUNDING_DECIMALS = 2;
+
+/** メタデータ削除処理のオプション */
+export interface RemoveMetadataOptions {
+  /**
+   * true の場合、選択された GPS 緯度・経度は削除せず市区町村レベルに丸め、
+   * 標高・撮影時刻などその他の選択された GPS サブタグは通常どおり削除する。
+   * piexifjs を使う JPEG のみ有効（その他の形式は Canvas 全削除のため無効）
+   */
+  roundGpsInsteadOfRemove?: boolean;
+}
+
+/**
+ * GPS 丸めモードで「削除せず丸める」対象とする GPS タグ（緯度・経度とその Ref）。
+ * これ以外の GPS サブタグ（GPSAltitude / GPSTimeStamp / GPSDateStamp など）は
+ * 丸めモードでも通常どおり削除し、位置以外の情報が残存しないようにする。
+ */
+const GPS_ROUND_TAGS = new Set([
+  "GPSLatitude",
+  "GPSLatitudeRef",
+  "GPSLongitude",
+  "GPSLongitudeRef",
+]);
 
 export interface FileMetadata {
   file: File;
@@ -45,7 +84,7 @@ const PRIVACY_RISK_TAGS = new Set([
  * piexifjsのExifObjから指定されたタグを削除
  */
 const removeTagsFromExifObj = (
-  exifObj: Record<string, Record<number, string | number | number[]>>,
+  exifObj: MutableExifObj,
   tagsToRemove: string[],
 ): void => {
   // タグ名とpiexifjsの定数のマッピング
@@ -114,6 +153,81 @@ const removeTagsFromExifObj = (
 };
 
 /**
+ * GPS の度分秒（有理数配列 [[度,分母],[分,分母],[秒,分母]]）と参照（N/S/E/W）から
+ * 十進度に変換する。S / W は負値になる
+ */
+export const gpsRationalsToDecimal = (dms: number[][], ref: string): number => {
+  const toNumber = (pair: number[] | undefined): number => {
+    if (!pair) return 0;
+    const [num, den] = pair;
+    return den === 0 ? 0 : num / den;
+  };
+  const deg = toNumber(dms[0]);
+  const min = toNumber(dms[1]);
+  const sec = toNumber(dms[2]);
+  const decimal = deg + min / 60 + sec / 3600;
+  return ref === "S" || ref === "W" ? -decimal : decimal;
+};
+
+/**
+ * 十進度の絶対値を GPS の度分秒（有理数配列）に変換する。
+ * 秒は 1/100 秒単位の有理数で表現し、丸め後の値を保持できるようにする
+ */
+export const decimalToGpsRationals = (decimalAbs: number): number[][] => {
+  const abs = Math.abs(decimalAbs);
+  const deg = Math.floor(abs);
+  const minFloat = (abs - deg) * 60;
+  const min = Math.floor(minFloat);
+  const secFloat = (minFloat - min) * 60;
+  const sec = Math.round(secFloat * 100);
+  return [
+    [deg, 1],
+    [min, 1],
+    [sec, 100],
+  ];
+};
+
+/**
+ * ExifObj 内の GPS 緯度・経度を指定精度に丸める（完全削除の代替）。
+ * Ref（N/S/E/W）は保持する。GPS がなければ何もしない
+ */
+export const roundGpsInExifObj = (
+  exifObj: MutableExifObj,
+  decimals: number = GPS_ROUNDING_DECIMALS,
+): void => {
+  const gps = exifObj.GPS;
+  if (!gps) {
+    return;
+  }
+
+  const factor = 10 ** decimals;
+  const round = (decimal: number): number =>
+    Math.round(decimal * factor) / factor;
+
+  const roundCoordinate = (
+    valueTag: number,
+    refTag: number,
+    defaultRef: string,
+  ): void => {
+    const value = gps[valueTag];
+    if (!Array.isArray(value)) {
+      return;
+    }
+    const ref = (gps[refTag] as string) || defaultRef;
+    const decimal = gpsRationalsToDecimal(value as number[][], ref);
+    // 丸めは絶対値に対して行い、符号は Ref（N/S/E/W）で表現されるため Ref は維持する
+    gps[valueTag] = decimalToGpsRationals(round(decimal));
+  };
+
+  roundCoordinate(piexif.GPSIFD.GPSLatitude, piexif.GPSIFD.GPSLatitudeRef, "N");
+  roundCoordinate(
+    piexif.GPSIFD.GPSLongitude,
+    piexif.GPSIFD.GPSLongitudeRef,
+    "E",
+  );
+};
+
+/**
  * Canvas APIを使用してすべてのメタデータを削除（フォールバック）
  */
 const removeAllMetadataWithCanvas = async (file: File): Promise<File> => {
@@ -167,26 +281,53 @@ export const extractExifData = async (file: File): Promise<ExifData> => {
       return;
     }
 
-    // WebPは現在EXIF読み取りサポート対象外
-    if (file.type.includes("webp")) {
-      resolve({});
+    // exif-js の getAllTags 結果を ExifData に整形する（JPEG / WebP 共通）
+    const collectTags = (source: File): void => {
+      EXIF.getData(source, function (this) {
+        const allMetaData = EXIF.getAllTags(this);
+        const relevantData: ExifData = {};
+
+        // すべてのEXIF情報を抽出（元のFileDetailModalより包括的）
+        for (const [key, value] of Object.entries(allMetaData)) {
+          if (value !== undefined && value !== null) {
+            relevantData[key] = value as string | number;
+          }
+        }
+
+        resolve(relevantData);
+      });
+    };
+
+    // WebP / PNG はコンテナの EXIF チャンク（RIFF EXIF / PNG eXIf）を取り出し、
+    // 合成 JPEG に包んで既存の exif-js 読み取り経路を再利用する
+    // （JPEG の APP1 と同じ TIFF 構造のため。exif-js は先頭が JPEG SOI でないと読めない）
+    const containerExtractor = file.type.includes("webp")
+      ? extractWebpExif
+      : file.type.includes("png")
+        ? extractPngExif
+        : null;
+
+    if (containerExtractor) {
+      file
+        .arrayBuffer()
+        .then((buffer) => {
+          const tiff = containerExtractor(new Uint8Array(buffer));
+          if (!tiff) {
+            resolve({});
+            return;
+          }
+          const syntheticJpeg = buildSyntheticJpegFromTiff(tiff);
+          const jpegFile = new File([syntheticJpeg], "exif-source.jpg", {
+            type: "image/jpeg",
+          });
+          collectTags(jpegFile);
+        })
+        .catch(() => resolve({}));
       return;
     }
 
-    // JPEG/その他の形式にはexif-jsを使用
-    EXIF.getData(file, function (this) {
-      const allMetaData = EXIF.getAllTags(this);
-      const relevantData: ExifData = {};
-
-      // すべてのEXIF情報を抽出（元のFileDetailModalより包括的）
-      for (const [key, value] of Object.entries(allMetaData)) {
-        if (value !== undefined && value !== null) {
-          relevantData[key] = value as string | number;
-        }
-      }
-
-      resolve(relevantData);
-    });
+    // JPEG などはそのまま exif-js に渡す
+    collectTags(file);
   });
 };
 
@@ -231,6 +372,7 @@ export const analyzeMetadata = async (
 export const removeMetadataFromImage = async (
   file: File,
   tagsToRemove: string[],
+  options?: RemoveMetadataOptions,
 ): Promise<File> => {
   return new Promise((resolve, reject) => {
     if (tagsToRemove.length === 0) {
@@ -240,7 +382,7 @@ export const removeMetadataFromImage = async (
 
     // JPEGファイルのみ対応
     if (!file.type.includes("jpeg") && !file.type.includes("jpg")) {
-      // JPEG以外はCanvas経由で全削除
+      // JPEG以外はCanvas経由で全削除（GPS 丸めは piexif 経路のみのため非対応）
       removeAllMetadataWithCanvas(file).then(resolve).catch(reject);
       return;
     }
@@ -255,13 +397,26 @@ export const removeMetadataFromImage = async (
         }
 
         // piexifjsでEXIFデータを読み込み
-        const exifObj = piexif.load(imageData);
+        const exifObj = piexif.load(imageData) as MutableExifObj;
 
-        // 指定されたタグを削除
-        removeTagsFromExifObj(
-          exifObj as Record<string, Record<number, string | number | number[]>>,
-          tagsToRemove,
-        );
+        if (options?.roundGpsInsteadOfRemove) {
+          // GPS 丸めモード: 緯度・経度（と Ref）は削除せず丸め、
+          // それ以外の選択されたタグ（GPSAltitude / GPSTimeStamp などの GPS サブタグを含む）は削除する
+          const roundedGpsSelected = tagsToRemove.some((tag) =>
+            GPS_ROUND_TAGS.has(tag),
+          );
+          const tagsToDelete = tagsToRemove.filter(
+            (tag) => !GPS_ROUND_TAGS.has(tag),
+          );
+          removeTagsFromExifObj(exifObj, tagsToDelete);
+          // 緯度・経度が削除対象に選ばれている場合のみ丸めを適用する
+          if (roundedGpsSelected) {
+            roundGpsInExifObj(exifObj);
+          }
+        } else {
+          // 指定されたタグを削除
+          removeTagsFromExifObj(exifObj, tagsToRemove);
+        }
 
         // 修正したEXIFデータを画像に挿入
         const exifBytes = piexif.dump(exifObj);
@@ -296,6 +451,7 @@ export const removeMetadataFromFiles = async (
   files: File[],
   tagsToRemove: string[],
   onProgress?: (current: number, total: number) => void,
+  options?: RemoveMetadataOptions,
 ): Promise<File[]> => {
   const cleanedFiles: File[] = [];
 
@@ -306,7 +462,11 @@ export const removeMetadataFromFiles = async (
     }
 
     try {
-      const cleanedFile = await removeMetadataFromImage(file, tagsToRemove);
+      const cleanedFile = await removeMetadataFromImage(
+        file,
+        tagsToRemove,
+        options,
+      );
       cleanedFiles.push(cleanedFile);
     } catch (error) {
       console.error(`Failed to clean metadata from ${file.name}:`, error);

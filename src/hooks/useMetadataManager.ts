@@ -5,17 +5,22 @@ import {
   removeMetadataFromFiles,
 } from "../utils/metadataManager";
 
+/** GPS の処理方法: 削除 / 市区町村レベルに丸める */
+export type GpsMode = "remove" | "round";
+
 export interface UseMetadataManagerResult {
   analysis: MetadataAnalysis | null;
   isAnalyzing: boolean;
   isProcessing: boolean;
   selectedTags: Set<string>;
+  gpsMode: GpsMode;
   progressCurrent: number;
   progressTotal: number;
   analyzeFiles: (files: File[]) => Promise<void>;
   toggleTag: (tag: string) => void;
   selectAllPrivacyTags: () => void;
   clearSelection: () => void;
+  setGpsMode: (mode: GpsMode) => void;
   removeSelectedMetadata: () => Promise<File[]>;
 }
 
@@ -24,6 +29,7 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const [gpsMode, setGpsMode] = useState<GpsMode>("remove");
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
 
@@ -90,6 +96,8 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
           setProgressCurrent(current);
           setProgressTotal(total);
         },
+        // GPS 丸めモードでは JPEG の GPS を削除せず精度を落とす
+        { roundGpsInsteadOfRemove: gpsMode === "round" },
       );
 
       return cleanedFiles;
@@ -101,7 +109,7 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
       setProgressCurrent(0);
       setProgressTotal(0);
     }
-  }, [analysis, selectedTags]);
+  }, [analysis, selectedTags, gpsMode]);
 
   // ファイルが変更されたら分析をリセット
   useEffect(() => {
@@ -116,12 +124,14 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
     isAnalyzing,
     isProcessing,
     selectedTags,
+    gpsMode,
     progressCurrent,
     progressTotal,
     analyzeFiles,
     toggleTag,
     selectAllPrivacyTags,
     clearSelection,
+    setGpsMode,
     removeSelectedMetadata,
   };
 };

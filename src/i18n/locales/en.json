@@ -64,8 +64,8 @@
     "targetFileSizeUnsupported": "Target file size is only supported for JPEG / WebP.",
     "metadataSettings": "Metadata Settings",
     "preserveExif": "Preserve EXIF Information",
-    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the converted image. Only available for JPEG format.",
-    "preserveExifJpegOnly": "EXIF preservation is only supported for JPEG format."
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the converted image. Available for JPEG / PNG / WebP.",
+    "preserveExifUnsupported": "EXIF preservation is not supported for AVIF."
   },
   "crop": {
     "title": "Image Cropping Tool",
@@ -87,7 +87,7 @@
     "reCrop": "Re-Crop",
     "croppingInProgress": "Cropping in progress...",
     "preserveExif": "Preserve EXIF Information",
-    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the cropped image. Only available for JPEG format.",
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the cropped image. Available for JPEG / PNG / WebP.",
     "filesSelected": "Selected Files",
     "cropSettings": "Crop Settings",
     "previewAndCrop": "Preview and Crop",
@@ -214,6 +214,12 @@
       "high": "HIGH",
       "medium": "MED",
       "low": "LOW"
+    },
+    "gpsMode": {
+      "title": "GPS Location Handling",
+      "remove": "Remove",
+      "round": "Round to city level",
+      "help": "Choosing \"Round\" keeps the location at roughly 1 km precision instead of removing it (JPEG only; other formats are fully stripped)."
     },
     "selectRiskTags": "Select Risk Tags",
     "clearSelection": "Clear Selection",
