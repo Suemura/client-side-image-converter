@@ -162,3 +162,10 @@
   font-weight: 500;
   color: #dc2626;
 }
+
+.targetWarningText {
+  font-size: 12px;
+  font-weight: 500;
+  color: #d97706;
+  margin-top: 4px;
+}

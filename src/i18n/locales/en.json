@@ -57,6 +57,11 @@
     "pngQualityExperimental": "Experimental PNG quality control is supported. Lower values result in smaller file sizes but may reduce image quality.",
     "pngQualityHelp": "PNG Quality: 95+=Standard PNG, 70-94=Medium compression, <70=High compression (quality loss)",
     "qualityDescription": "Quality: Lower values result in smaller file sizes but reduced image quality",
+    "qualityDisabledByTargetSize": "Quality is adjusted automatically because a target file size is set.",
+    "targetFileSize": "Target File Size (Optional)",
+    "targetFileSizeLabel": "Target Size (KB)",
+    "targetFileSizeHelp": "When set, quality is adjusted automatically to keep the output at or below the target size (JPEG / WebP only). Leave empty to use the quality setting above.",
+    "targetFileSizeUnsupported": "Target file size is only supported for JPEG / WebP.",
     "metadataSettings": "Metadata Settings",
     "preserveExif": "Preserve EXIF Information",
     "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the converted image. Only available for JPEG format.",
@@ -168,7 +173,8 @@
     "viewDetails": "View details for {{name}}",
     "viewComparison": "Show before/after comparison for {{name}}",
     "processingError": "Processing error",
-    "downloadError": "Failed to download files."
+    "downloadError": "Failed to download files.",
+    "targetSizeNotAchieved": "Could not compress down to the target size (output at minimum size)"
   },
   "comparison": {
     "original": "Original",

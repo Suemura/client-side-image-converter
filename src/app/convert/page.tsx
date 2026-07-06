@@ -79,6 +79,7 @@ export default function Home() {
           height: conversionSettings.height,
           maintainAspectRatio: conversionSettings.maintainAspectRatio,
           preserveExif: conversionSettings.preserveExif,
+          targetFileSizeKB: conversionSettings.targetFileSizeKB,
         },
         (current, total) => {
           setConversionProgress({ current, total });
