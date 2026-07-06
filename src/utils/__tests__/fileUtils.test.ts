@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addFileNameSuffix,
   addUniqueFiles,
+  addUniqueFilesWithLimit,
   buildAcceptAttribute,
   calculateAverageFileSize,
   calculateCompressionRatio,
@@ -71,6 +72,85 @@ describe("isDuplicateFile / addUniqueFiles", () => {
       createFile("b.png", 200, "image/png"),
     ]);
     expect(added.map((f) => f.name)).toEqual(["a.png", "b.png"]);
+  });
+});
+
+describe("addUniqueFilesWithLimit", () => {
+  it("上限以下なら全件追加し truncated=false", () => {
+    const existing = [createFile("a.png", 100, "image/png")];
+    const result = addUniqueFilesWithLimit(
+      existing,
+      [createFile("b.png", 200, "image/png")],
+      5,
+    );
+    expect(result.files.map((f) => f.name)).toEqual(["a.png", "b.png"]);
+    expect(result.truncated).toBe(false);
+  });
+
+  it("上限ちょうどなら truncated=false", () => {
+    const existing = [createFile("a.png", 100, "image/png")];
+    const result = addUniqueFilesWithLimit(
+      existing,
+      [createFile("b.png", 200, "image/png")],
+      2,
+    );
+    expect(result.files).toHaveLength(2);
+    expect(result.truncated).toBe(false);
+  });
+
+  it("上限超過なら先頭から limit 件に切り詰め truncated=true", () => {
+    const newFiles = [
+      createFile("b.png", 1, "image/png"),
+      createFile("c.png", 2, "image/png"),
+      createFile("d.png", 3, "image/png"),
+    ];
+    const existing = [createFile("a.png", 100, "image/png")];
+    const result = addUniqueFilesWithLimit(existing, newFiles, 2);
+    // 既存を先頭に残し、新規は上限までのみ取り込む
+    expect(result.files.map((f) => f.name)).toEqual(["a.png", "b.png"]);
+    expect(result.truncated).toBe(true);
+  });
+
+  it("重複除外は上限適用の前に行われる", () => {
+    const existing = [createFile("a.png", 100, "image/png")];
+    const result = addUniqueFilesWithLimit(
+      existing,
+      [
+        createFile("a.png", 100, "image/png"), // 重複
+        createFile("b.png", 200, "image/png"),
+      ],
+      2,
+    );
+    expect(result.files.map((f) => f.name)).toEqual(["a.png", "b.png"]);
+    expect(result.truncated).toBe(false);
+  });
+
+  it("既存が既に上限件数のとき新規は取り込まず truncated=true", () => {
+    const existing = [
+      createFile("a.png", 1, "image/png"),
+      createFile("b.png", 2, "image/png"),
+    ];
+    const result = addUniqueFilesWithLimit(
+      existing,
+      [createFile("c.png", 3, "image/png")],
+      2,
+    );
+    expect(result.files.map((f) => f.name)).toEqual(["a.png", "b.png"]);
+    expect(result.truncated).toBe(true);
+  });
+
+  it("新規が全て重複なら件数が増えず truncated=false", () => {
+    const existing = [
+      createFile("a.png", 1, "image/png"),
+      createFile("b.png", 2, "image/png"),
+    ];
+    const result = addUniqueFilesWithLimit(
+      existing,
+      [createFile("a.png", 1, "image/png")],
+      2,
+    );
+    expect(result.files.map((f) => f.name)).toEqual(["a.png", "b.png"]);
+    expect(result.truncated).toBe(false);
   });
 });
 

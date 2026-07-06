@@ -96,14 +96,26 @@ export const getEntriesFromDataTransferItems = (
 /**
  * エントリ配列を再帰的にたどり、配下の全 File を収集する。
  * ディレクトリはサブフォルダを含めて再帰走査する。
+ *
+ * `maxFiles` を指定すると、収集件数がそれに達した時点で走査を打ち切る。
+ * 巨大なディレクトリツリーを誤投入したときに File 参照が無制限に積み上がって
+ * メモリ圧迫するのを防ぐためのハード上限（呼び出し側の件数上限＋警告と対で使う）。
+ * 打ち切りは MIME フィルタ前の生ファイル数で行うため、画像が疎で深いツリーでは
+ * 非画像で先に上限に達し深部の画像を取りこぼし得るが、メモリ安全のための意図的挙動。
+ * 未指定時は従来どおり全件収集する。
  * @param entries - 走査対象のエントリ配列
+ * @param maxFiles - 収集件数の上限（未指定なら無制限）
  * @returns 収集した File 配列（MIME フィルタは呼び出し側で行う）
  */
 export const collectFilesFromEntries = async (
   entries: EntryLike[],
+  maxFiles: number = Number.POSITIVE_INFINITY,
 ): Promise<File[]> => {
   const files: File[] = [];
   for (const entry of entries) {
+    if (files.length >= maxFiles) {
+      break;
+    }
     try {
       if (isFileEntry(entry)) {
         files.push(await readFileFromEntry(entry));
@@ -111,7 +123,13 @@ export const collectFilesFromEntries = async (
         const childEntries = await readAllDirectoryEntries(
           entry.createReader(),
         );
-        files.push(...(await collectFilesFromEntries(childEntries)));
+        // サブフォルダには残余バジェットだけを渡し、全体で maxFiles を超えないようにする
+        files.push(
+          ...(await collectFilesFromEntries(
+            childEntries,
+            maxFiles - files.length,
+          )),
+        );
       }
     } catch {
       // 個別のファイル/ディレクトリの読み取りに失敗しても、ドロップ全体を

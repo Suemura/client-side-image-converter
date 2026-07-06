@@ -101,6 +101,20 @@
   gap: 8px;
 }
 
+.limitWarning {
+  padding: 8px 16px;
+  margin-bottom: 12px;
+  background-color: var(--primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.limitWarningText {
+  font-size: 14px;
+  color: var(--foreground);
+  margin: 0;
+}
+
 .dragOverlay {
   position: absolute;
   top: 0;

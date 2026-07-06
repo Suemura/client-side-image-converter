@@ -112,6 +112,35 @@ export const addUniqueFiles = (
   return [...existingFiles, ...uniqueNewFiles];
 };
 
+/** 上限付きマージの結果 */
+export interface AddUniqueFilesWithLimitResult {
+  /** 重複除外し上限件数までに切り詰めたファイル配列 */
+  files: File[];
+  /** 上限超過で一部を取り込めなかった場合は true */
+  truncated: boolean;
+}
+
+/**
+ * ファイル配列から重複を除外して追加し、合計件数を上限まで切り詰める
+ * 上限を超えた場合は先頭から limit 件を残し、truncated=true を返す
+ * （大量投入時のフリーズ/メモリ圧迫を防ぐためのハード上限。呼び出し側で警告表示に使う）
+ * @param existingFiles - 既存のファイル配列
+ * @param newFiles - 新しいファイル配列
+ * @param limit - 合計件数の上限
+ * @returns 切り詰めたファイル配列と、上限超過で切り捨てたかどうか
+ */
+export const addUniqueFilesWithLimit = (
+  existingFiles: File[],
+  newFiles: File[],
+  limit: number,
+): AddUniqueFilesWithLimitResult => {
+  const merged = addUniqueFiles(existingFiles, newFiles);
+  if (merged.length <= limit) {
+    return { files: merged, truncated: false };
+  }
+  return { files: merged.slice(0, limit), truncated: true };
+};
+
 /**
  * ファイルタイプが画像かどうかを確認する
  * @param file - チェックするファイル
