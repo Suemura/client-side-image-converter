@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  type MetadataAnalysis,
   analyzeMetadata,
+  type MetadataAnalysis,
   removeMetadataFromFiles,
 } from "../utils/metadataManager";
 
