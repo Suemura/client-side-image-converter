@@ -1,11 +1,36 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { magicNumber, pngFile } from "./helpers/fixtures";
 
 // PWA（Web App Manifest + Service Worker）の実ブラウザ検証。
 // 本番同等の静的エクスポート（serve out）に対して実行される。
+//
+// 注: Service Worker と sw.js は本番ビルドの postbuild でのみ生成されるため、
+// SW に依存するテストは dev サーバー再利用時（reuseExistingServer）には skip する
+// （waitForFunction(controller) の 15 秒タイムアウトで落とさないための配慮）。
 
 // オフライン検証で巡回する全ページ。ヘッダーのナビゲーションはレイアウト共通なので、
 // 各ルートで nav リンクが表示されれば HTML / CSS / JS がキャッシュから復元・hydrate された証拠になる。
 const ROUTES = ["/", "/convert/", "/crop/", "/metadata/"] as const;
+
+// Service Worker が active になりページを制御下に置く（clients.claim）まで待つ。
+// controller が設定される時点で install（プリキャッシュ）は完了している。
+async function waitForServiceWorker(page: import("@playwright/test").Page) {
+  await page.waitForFunction(
+    () => navigator.serviceWorker?.controller != null,
+    undefined,
+    { timeout: 15_000 },
+  );
+}
+
+// sw.js が配信されているか（＝本番ビルドに対して実行されているか）を確認する。
+// dev サーバー再利用時は生成されないため false になる。
+async function isServiceWorkerAvailable(
+  page: import("@playwright/test").Page,
+): Promise<boolean> {
+  const res = await page.request.get("/sw.js");
+  return res.ok();
+}
 
 test.describe("PWA", () => {
   test("manifest と theme-color が出力されている", async ({ page }) => {
@@ -45,14 +70,12 @@ test.describe("PWA", () => {
     context,
   }) => {
     await page.goto("/");
-
-    // Service Worker が active になり、ページを制御下に置く（clients.claim）まで待つ。
-    // controller が設定される時点で install（プリキャッシュの addAll）は完了している。
-    await page.waitForFunction(
-      () => navigator.serviceWorker?.controller != null,
-      undefined,
-      { timeout: 15_000 },
+    test.skip(
+      !(await isServiceWorkerAvailable(page)),
+      "sw.js は本番ビルドの postbuild でのみ生成される（dev サーバー再利用時は skip）",
     );
+
+    await waitForServiceWorker(page);
 
     // ネットワークを遮断
     await context.setOffline(true);
@@ -70,6 +93,52 @@ test.describe("PWA", () => {
           nav.getByRole("link", { name: "メタデータ" }),
         ).toBeVisible();
       }
+    } finally {
+      await context.setOffline(false);
+    }
+  });
+
+  test("オフラインで AVIF 変換（WASM）が動作する", async ({
+    page,
+    context,
+  }) => {
+    await page.goto("/");
+    test.skip(
+      !(await isServiceWorkerAvailable(page)),
+      "sw.js は本番ビルドの postbuild でのみ生成される（dev サーバー再利用時は skip）",
+    );
+
+    await waitForServiceWorker(page);
+
+    // ネットワークを遮断してから変換ページに遷移する。HTML/JS はキャッシュから復元され、
+    // 変換実行時に動的 import される @jsquash/avif の WASM チャンクも
+    // プリキャッシュから同一オリジンで解決されることを検証する
+    // （「オフラインで全機能が動作」の核心。precache に .wasm が含まれる前提の実証）。
+    await context.setOffline(true);
+
+    try {
+      await page.goto("/convert/");
+      await page.locator('input[type="file"]').setInputFiles(pngFile());
+
+      // ラジオの input は不可視のためラベルテキストをクリックする
+      await page.getByText("AVIF", { exact: true }).click();
+      await page.getByRole("button", { name: "変換", exact: true }).click();
+
+      // WASM の初回ロードがあるためタイムアウトを長めにとる
+      await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible(
+        { timeout: 30_000 },
+      );
+
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        page
+          .getByRole("button", { name: "Zipでダウンロード", exact: true })
+          .click(),
+      ]);
+
+      expect(download.suggestedFilename()).toBe("sample.avif");
+      const buf = readFileSync(await download.path());
+      expect(magicNumber.isAvif(buf)).toBe(true);
     } finally {
       await context.setOffline(false);
     }

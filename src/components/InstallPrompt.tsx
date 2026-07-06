@@ -74,9 +74,11 @@ export const InstallPrompt: React.FC = () => {
   if (!promptEvent) return null;
 
   return (
+    // 非モーダルの控えめなバナー。フォーカストラップを伴う role="dialog" ではなく、
+    // ランドマークとして識別できる role="region" + aria-label が意味論的に適切。
     <div
       className={styles.container}
-      role="dialog"
+      role="region"
       aria-label={t("install.title")}
     >
       <span className={styles.message}>{t("install.message")}</span>
