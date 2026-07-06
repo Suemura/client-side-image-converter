@@ -21,8 +21,9 @@ export const ConversionErrors: React.FC<ConversionErrorsProps> = ({
     <div className={styles.container} role="alert">
       <h4 className={styles.title}>{t("convert.conversionFailures")}</h4>
       <ul className={styles.fileList}>
-        {failures.map((failure) => (
-          <li key={failure.fileName} className={styles.fileItem}>
+        {failures.map((failure, index) => (
+          // 同名ファイルが混在し得るため index を併記して key の重複を防ぐ
+          <li key={`${failure.fileName}-${index}`} className={styles.fileItem}>
             {failure.fileName}
           </li>
         ))}

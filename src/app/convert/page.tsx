@@ -96,6 +96,7 @@ export default function Home() {
 
   const handleClearResults = useCallback(() => {
     setConversionResults([]);
+    setConversionFailures([]);
     // URLの解放
     for (const result of conversionResults) {
       URL.revokeObjectURL(result.url);
