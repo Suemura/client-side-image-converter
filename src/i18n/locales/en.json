@@ -98,7 +98,18 @@
     "previousImage": "Previous Image",
     "nextImage": "Next Image",
     "dragToMove": "Drag to move",
-    "dragToResize": "Drag to resize"
+    "dragToResize": "Drag to resize",
+    "aspectRatio": "Aspect Ratio",
+    "aspectFree": "Free",
+    "transform": "Rotate & Flip",
+    "rotateLeft": "Rotate 90° left",
+    "rotateRight": "Rotate 90° right",
+    "flipHorizontal": "Flip horizontal",
+    "flipVertical": "Flip vertical",
+    "applyMode": "Apply To",
+    "applyToAll": "All images",
+    "perImage": "Per image",
+    "applyModeHelp": "\"All images\" applies the current settings to every image. \"Per image\" lets you set the crop area and rotation individually while switching images with ←/→."
   },
   "fileUpload": {
     "dropFiles": "Drop files here",

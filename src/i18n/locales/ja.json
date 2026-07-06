@@ -98,7 +98,18 @@
     "previousImage": "前の画像",
     "nextImage": "次の画像",
     "dragToMove": "ドラッグして移動",
-    "dragToResize": "ドラッグしてリサイズ"
+    "dragToResize": "ドラッグしてリサイズ",
+    "aspectRatio": "アスペクト比",
+    "aspectFree": "自由",
+    "transform": "回転・反転",
+    "rotateLeft": "左に90°回転",
+    "rotateRight": "右に90°回転",
+    "flipHorizontal": "左右反転",
+    "flipVertical": "上下反転",
+    "applyMode": "適用範囲",
+    "applyToAll": "全画像一括",
+    "perImage": "画像ごと",
+    "applyModeHelp": "「全画像一括」は現在の設定を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に領域・回転を指定できます。"
   },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",
