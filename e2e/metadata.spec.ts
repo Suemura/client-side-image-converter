@@ -5,6 +5,7 @@ import {
   jpegFileWithExif,
   loadExifFromBuffer,
   magicNumber,
+  pngFileWithExif,
   webpFileWithExif,
 } from "./helpers/fixtures";
 
@@ -55,6 +56,24 @@ test.describe("EXIF メタデータ管理", () => {
     ).toBeVisible({ timeout: 15_000 });
 
     // WebP から読み取った EXIF タグが表示される（従来は空だった）
+    await expect(page.getByText("Make", { exact: true }).first()).toBeVisible();
+    await expect(
+      page.getByText("GPSLatitude", { exact: true }).first(),
+    ).toBeVisible();
+  });
+
+  test("PNG の EXIF（eXIf チャンク）を読み取ってタグを表示できる", async ({
+    page,
+  }) => {
+    await page.goto("/metadata/");
+    await page.locator('input[type="file"]').setInputFiles(pngFileWithExif());
+
+    // EXIF 解析完了を待つ
+    await expect(
+      page.getByRole("heading", { name: /すべてのEXIFタグ/ }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    // PNG の eXIf チャンクから読み取った EXIF タグが表示される
     await expect(page.getByText("Make", { exact: true }).first()).toBeVisible();
     await expect(
       page.getByText("GPSLatitude", { exact: true }).first(),

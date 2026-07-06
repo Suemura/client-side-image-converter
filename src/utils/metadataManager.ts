@@ -1,6 +1,10 @@
 import EXIF from "exif-js";
 import piexif from "piexifjs";
-import { buildSyntheticJpegFromTiff, extractWebpExif } from "./exifBinary";
+import {
+  buildSyntheticJpegFromTiff,
+  extractPngExif,
+  extractWebpExif,
+} from "./exifBinary";
 import { dataUrlToBlob } from "./imageUtils";
 
 export interface ExifData {
@@ -284,13 +288,20 @@ export const extractExifData = async (file: File): Promise<ExifData> => {
       });
     };
 
-    // WebP は RIFF コンテナの EXIF チャンクを取り出し、合成 JPEG に包んで
-    // 既存の exif-js 読み取り経路を再利用する（JPEG の APP1 と同じ TIFF 構造のため）
-    if (file.type.includes("webp")) {
+    // WebP / PNG はコンテナの EXIF チャンク（RIFF EXIF / PNG eXIf）を取り出し、
+    // 合成 JPEG に包んで既存の exif-js 読み取り経路を再利用する
+    // （JPEG の APP1 と同じ TIFF 構造のため。exif-js は先頭が JPEG SOI でないと読めない）
+    const containerExtractor = file.type.includes("webp")
+      ? extractWebpExif
+      : file.type.includes("png")
+        ? extractPngExif
+        : null;
+
+    if (containerExtractor) {
       file
         .arrayBuffer()
         .then((buffer) => {
-          const tiff = extractWebpExif(new Uint8Array(buffer));
+          const tiff = containerExtractor(new Uint8Array(buffer));
           if (!tiff) {
             resolve({});
             return;
@@ -305,7 +316,7 @@ export const extractExifData = async (file: File): Promise<ExifData> => {
       return;
     }
 
-    // JPEG/その他の形式にはexif-jsを使用
+    // JPEG などはそのまま exif-js に渡す
     collectTags(file);
   });
 };

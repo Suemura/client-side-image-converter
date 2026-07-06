@@ -3,6 +3,7 @@ import {
   buildSyntheticJpegFromTiff,
   extractPngExif,
   extractWebpExif,
+  insertPngExif,
   insertWebpExif,
   piexifDumpToTiff,
 } from "../../src/utils/exifBinary";
@@ -159,6 +160,21 @@ export const jpegFileWithExif = (name = "with-exif.jpg") => {
     name,
     mimeType: "image/jpeg",
     buffer: Buffer.from(dataUrl.split(",")[1], "base64"),
+  };
+};
+
+/**
+ * GPS・カメラ情報入りの EXIF を埋め込んだ PNG ファイル。
+ * ベース PNG に insertPngExif で eXIf チャンクを付与する（PNG 読み取りの E2E に使う）
+ */
+export const pngFileWithExif = (name = "with-exif.png") => {
+  const tiff = piexifDumpToTiff(piexif.dump(sampleExifObj));
+  const base = new Uint8Array(Buffer.from(PNG_1PX_BASE64, "base64"));
+  const png = insertPngExif(base, tiff);
+  return {
+    name,
+    mimeType: "image/png",
+    buffer: Buffer.from(png),
   };
 };
 
