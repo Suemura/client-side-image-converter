@@ -81,6 +81,18 @@ describe("collectFilesFromEntries", () => {
     ]);
   });
 
+  it("一部のファイル読み取りが失敗しても読めたファイルだけ返す", async () => {
+    const failingEntry: FileEntryLike = {
+      isFile: true,
+      isDirectory: false,
+      file: (_success, errorCallback) =>
+        errorCallback?.(new Error("read failed")),
+    };
+    const ok = createFile("ok.png");
+    const files = await collectFilesFromEntries([failingEntry, fileEntry(ok)]);
+    expect(files.map((f) => f.name)).toEqual(["ok.png"]);
+  });
+
   it("空のディレクトリはファイル 0 件を返す", async () => {
     const files = await collectFilesFromEntries([directoryEntry([])]);
     expect(files).toEqual([]);

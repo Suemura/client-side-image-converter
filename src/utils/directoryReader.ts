@@ -104,11 +104,18 @@ export const collectFilesFromEntries = async (
 ): Promise<File[]> => {
   const files: File[] = [];
   for (const entry of entries) {
-    if (isFileEntry(entry)) {
-      files.push(await readFileFromEntry(entry));
-    } else if (isDirectoryEntry(entry)) {
-      const childEntries = await readAllDirectoryEntries(entry.createReader());
-      files.push(...(await collectFilesFromEntries(childEntries)));
+    try {
+      if (isFileEntry(entry)) {
+        files.push(await readFileFromEntry(entry));
+      } else if (isDirectoryEntry(entry)) {
+        const childEntries = await readAllDirectoryEntries(
+          entry.createReader(),
+        );
+        files.push(...(await collectFilesFromEntries(childEntries)));
+      }
+    } catch {
+      // 個別のファイル/ディレクトリの読み取りに失敗しても、ドロップ全体を
+      // 失敗させず読めたファイルだけを取り込む（一部の破損・権限エラー対策）
     }
   }
   return files;
