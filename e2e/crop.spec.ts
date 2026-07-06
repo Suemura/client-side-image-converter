@@ -32,4 +32,13 @@ test.describe("画像トリミング", () => {
     const buf = readFileSync(await download.path());
     expect(magicNumber.isPng(buf)).toBe(true);
   });
+
+  test("対応形式の表示にブラウザで描画できない TIFF が含まれない", async ({
+    page,
+  }) => {
+    await page.goto("/crop/");
+    await expect(
+      page.getByText("対応形式: JPG, PNG, WebP, BMP", { exact: true }),
+    ).toBeVisible();
+  });
 });
