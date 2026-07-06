@@ -82,6 +82,7 @@ npm run preview
   - `tiffDecoder.ts` - TIFF デコード処理（`utif2` の純 JS デコーダー、動的 import）
   - `imageCropper.ts` - 画像トリミング処理
   - `metadataManager.ts` - EXIF データ管理
+  - `pageMetadata.ts` - ページ別 SEO メタデータ（title / description / OGP / Twitter / canonical）を組み立てる純粋関数 `buildPageMetadata` とサイト定数（`SITE_NAME` / `SITE_URL` / `SITE_LOCALE`）
   - `__tests__/` - 単体テスト
 - `src/i18n/` - 国際化設定
 - `src/types/` - 外部ライブラリの型定義（piexifjs / exif-js / heic-decode）
@@ -111,6 +112,7 @@ npm run preview
 - テーマ切り替え（ライト/ダーク）は CSS カスタムプロパティで処理
 - 言語設定は localStorage に保存
 - ファイルダウンロードはバッチ操作に `JSZip` を使用
+- ページ別の SEO メタデータ（title / description / OGP / Twitter card / canonical）は `pageMetadata.ts` の `buildPageMetadata` で組み立て、各ルートの `layout.tsx`（`"use client"` を持たないサーバーコンポーネント）から export する（ページ本体が client component で metadata を直接 export できないための構成）。root の `layout.tsx` が `metadataBase`・title テンプレート（`%s | Client-Side Image Converter`）・共通 description・OGP / Twitter 既定値を集約し、トップページ `/` はこの既定値を使う。メタデータは i18next 非経由の静的 HTML なので主言語は日本語（`lang="ja"` / i18n 既定 `lng: "ja"` に合わせる。ロケール JSON の変更は不要）。専用 OG 画像アセットが無いため Twitter card は `summary`（画像追加時に `summary_large_image` へ切り替える想定）
 
 ## テスト方針
 
@@ -187,6 +189,7 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
+- 各ページ（`/`, `/convert`, `/crop`, `/metadata`）に固有の SEO メタデータ（title / description / OGP / Twitter card / canonical）を付与（Issue #27）。`pageMetadata.ts` の純粋関数 `buildPageMetadata` で組み立て、各ルートの `layout.tsx`（サーバーコンポーネント層）から export する。root の `layout.tsx` に `metadataBase`・title テンプレート・共通 description・OGP / Twitter 既定値を集約。主言語は日本語で静的 HTML に出力されるため i18n（ロケール JSON）は非経由。単体テストは `pageMetadata.test.ts`、実 HTML 出力の検証は `e2e/seo-metadata.spec.ts` で実施
 - 変換ページに目標ファイルサイズ (KB) 指定を追加（Issue #30）。指定すると品質値を二分探索し目標サイズ以下で最大品質の結果を採用する（JPEG / WebP のみ。PNG は可逆・AVIF は WASM が低速なため対象外）。探索は Canvas 非依存の純粋関数 `searchQualityForTargetSize`（`imageConverter.ts`）に切り出して単体テスト、実サイズ検証は E2E で実施。達成不可時は最小サイズで出力し結果一覧に警告表示
 - `/start-issue` コマンドを git worktree 対応に変更。Issue ごとに `.claude/worktrees/issue-{番号}/`（gitignore 済み）へ worktree を作成して作業するため、複数 Issue の並列作業が可能に
 - 変換ページに TIFF 入力対応を追加（`utif2` による動的デコード、Issue #26）。crop / metadata の受理形式からブラウザで描画できない TIFF を除外し、変換失敗ファイルの一覧通知を追加
