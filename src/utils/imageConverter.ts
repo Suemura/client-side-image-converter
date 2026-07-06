@@ -26,10 +26,12 @@ export interface ConversionResult {
   file: File;
 }
 
-/** 変換に失敗したファイルの情報（ユーザーへの通知表示に使用する） */
+/**
+ * 変換に失敗したファイルの情報（ユーザーへの通知表示に使用する）
+ * エラー詳細は console.error に記録されるため、表示に必要なファイル名のみを保持する
+ */
 export interface ConversionFailure {
   fileName: string;
-  message: string;
 }
 
 /** 一括変換の結果（成功した変換結果と失敗したファイルの両方を返す） */
@@ -290,10 +292,7 @@ export const convertMultipleImages = async (
     } catch (error) {
       console.error(`ファイル ${files[i].name} の変換に失敗:`, error);
       // エラーが発生しても他のファイルの変換を続行し、失敗として記録する
-      failures.push({
-        fileName: files[i].name,
-        message: error instanceof Error ? error.message : String(error),
-      });
+      failures.push({ fileName: files[i].name });
     }
     onProgress?.(i + 1, files.length);
   }

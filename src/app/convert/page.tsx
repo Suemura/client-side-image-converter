@@ -49,6 +49,8 @@ export default function Home() {
 
   const handleClearFiles = () => {
     setSelectedFiles([]);
+    // ファイルを選び直す際は前回の失敗通知も不要になるためリセットする
+    setConversionFailures([]);
     console.log("Files cleared");
   };
 

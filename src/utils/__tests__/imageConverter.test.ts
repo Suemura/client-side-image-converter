@@ -90,7 +90,6 @@ describe("convertMultipleImages", () => {
     expect(results).toEqual([]);
     expect(failures).toHaveLength(2);
     expect(failures.map((f) => f.fileName)).toEqual(["note.txt", "data.csv"]);
-    expect(failures[0].message).toBe("選択されたファイルは画像ではありません");
     // 失敗したファイルも進捗にカウントされる
     expect(progressCalls).toEqual([
       [1, 2],

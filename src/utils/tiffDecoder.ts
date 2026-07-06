@@ -10,7 +10,11 @@ import { ERROR_MESSAGES } from "./constants";
 
 /**
  * TIFF ファイルをデコードして Canvas に展開する
- * マルチページ TIFF は先頭ページ（最初の IFD）のみを対象とする
+ *
+ * 既知の制限:
+ * - マルチページ TIFF は先頭ページ（最初の IFD）のみを対象とする
+ * - Orientation タグ（tag 274）は適用されない（utif2 が解釈しないため、
+ *   Orientation ≠ 1 の TIFF は回転・反転が反映されないまま変換される）
  */
 export const decodeTiffToCanvas = async (
   file: File,
