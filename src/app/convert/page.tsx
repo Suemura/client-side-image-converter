@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
