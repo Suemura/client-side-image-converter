@@ -300,6 +300,9 @@ export const convertImage = async (
           const mimeType = `image/${options.format}`;
 
           // 目標ファイルサイズが指定されていれば品質を二分探索する（JPEG/WebP のみ）
+          // 既知の制限: JPEG で preserveExif も有効な場合、探索は EXIF 挿入前のサイズに対して
+          // 行われるため（EXIF は handleBlob 内で後挿入する）、最終物は EXIF 分だけ目標を
+          // わずかに超えうる。preserveExif は既定 false かつ超過幅は小さいため許容する。
           const shouldSearchTargetSize =
             options.targetFileSizeKB !== undefined &&
             options.targetFileSizeKB > 0;
