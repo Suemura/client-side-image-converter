@@ -22,6 +22,19 @@ import { buildConversionResult } from "../utils/conversionResult";
 import { isHeicFile, isTiffFile } from "../utils/fileUtils";
 import type { DecodeKind, WorkerRequest, WorkerResponse } from "./messages";
 
+/**
+ * Worker 応答のウォッチドッグ（ミリ秒）。この時間内に応答（onmessage）も onerror も
+ * 返らない場合、デコーダ/エンコーダの無限ループ等で Worker がハングしたとみなし、当該ジョブを
+ * reject して Worker を dead 化する。これにより無応答ハングでレーン →
+ * `mapWithConcurrency` の `Promise.all` → バッチ全体が永久 pending となり UI が
+ * 「変換中」のまま復帰不能になるのを防ぐ（reject 後は当該ファイルがメインスレッドの
+ * `convertImage` にフォールバックし、以降そのレーンもフォールバックに切り替わる）。
+ *
+ * 値は E2E の 1x1 画像処理や実運用の高解像度変換に全く影響しないよう十分大きく取る
+ * （誤フォールバックを避けるための安全余裕。正常応答時はタイマーを必ずクリアする）。
+ */
+const WORKER_RESPONSE_TIMEOUT_MS = 60_000;
+
 /** OffscreenCanvas ベースの Worker パイプラインが利用可能かを判定する */
 export const isOffscreenPipelineSupported = (): boolean => {
   return (
@@ -85,7 +98,28 @@ const runOnWorker = (
   request: WorkerRequest,
 ): Promise<WorkerResponse> => {
   return new Promise((resolve, reject) => {
-    handle.pending.set(request.id, { resolve, reject });
+    // 無応答ウォッチドッグ。タイムアウト時は当該ジョブを reject し、Worker を dead 化して
+    // terminate する（暴走中のデコーダ/エンコーダを確実に停止する）。pending.delete が false の
+    // 場合は既に応答/クラッシュ処理済みなので何もしない（遅延応答との競合を防ぐ）。
+    const timer = setTimeout(() => {
+      if (handle.pending.delete(request.id)) {
+        handle.dead = true;
+        handle.worker.terminate();
+        reject(new Error("Worker response timeout"));
+      }
+    }, WORKER_RESPONSE_TIMEOUT_MS);
+
+    // resolve/reject 実行時に必ずタイマーをクリアし、正常応答後の誤タイムアウトを防ぐ
+    handle.pending.set(request.id, {
+      resolve: (response) => {
+        clearTimeout(timer);
+        resolve(response);
+      },
+      reject: (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    });
     handle.worker.postMessage(request, [request.buffer]);
   });
 };
@@ -158,7 +192,6 @@ export const convertFilesWithWorkerPool = async (
           const request: WorkerRequest = {
             id: index,
             buffer,
-            fileName: file.name,
             fileType: file.type,
             decodeKind: detectDecodeKind(file),
             options,

@@ -45,7 +45,14 @@ const decodeToBitmap = async (
     return createImageBitmap(new ImageData(data, width, height));
   }
   // 標準フォーマット（JPEG/PNG/WebP/BMP など）は Blob から直接デコードする。
-  // imageOrientation: "from-image" でメインスレッドの <img> と同じく EXIF Orientation を適用する
+  // imageOrientation: "from-image" でメインスレッドの <img> と同じく EXIF Orientation を適用する。
+  //
+  // 前提: このワーカー経路は呼び出し側が isOffscreenPipelineSupported()（OffscreenCanvas /
+  // OffscreenCanvas.prototype.convertToBlob / createImageBitmap 対応）を満たす環境でのみ使われる。
+  // これらを備えるエンジン（Chromium / Firefox / Safari の該当バージョン）は
+  // createImageBitmap の imageOrientation: "from-image" も一様にサポートするため、この
+  // オプションが黙殺されて Orientation がメイン版（<img> 経路）と乖離するケースは実運用では生じない。
+  // 万一未対応エンジンが現れても Worker が失敗すれば当該ファイルはメインスレッドへフォールバックする。
   const blob = new Blob([buffer], {
     type: fileType || "application/octet-stream",
   });
@@ -77,9 +84,12 @@ const encodePng = async (
   const tmp = new OffscreenCanvas(canvas.width, canvas.height);
   const tmpCtx = tmp.getContext("2d");
   if (!tmpCtx) {
+    bitmap.close();
     return canvas.convertToBlob({ type: "image/png" });
   }
   tmpCtx.drawImage(bitmap, 0, 0);
+  // 中間 bitmap を早期解放する（processRequest のデコード bitmap と同様に close する）
+  bitmap.close();
   return tmp.convertToBlob({ type: "image/png" });
 };
 

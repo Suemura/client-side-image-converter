@@ -18,7 +18,6 @@ export interface WorkerRequest {
   id: number;
   /** File の中身（Transferable。postMessage で転送する） */
   buffer: ArrayBuffer;
-  fileName: string;
   fileType: string;
   decodeKind: DecodeKind;
   options: ConversionOptions;
