@@ -6,6 +6,7 @@ import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
+import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import {
   type ConversionResult,
   convertMultipleImages,
@@ -102,6 +103,7 @@ export default function Home() {
           files={selectedFiles}
           onFilesSelected={handleFilesSelected}
           onClearFiles={handleClearFiles}
+          acceptedTypes={SUPPORTED_IMAGE_FORMATS.CONVERT_UPLOAD_FORMATS}
         />
         <ConversionSettings
           settings={conversionSettings}

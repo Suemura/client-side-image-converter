@@ -450,8 +450,8 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
         {isDragging && activeHandle && (
           <div className={styles.instructions}>
             {activeHandle === "move"
-              ? "ドラッグして移動"
-              : "ドラッグしてリサイズ"}
+              ? t("crop.dragToMove")
+              : t("crop.dragToResize")}
           </div>
         )}
       </div>

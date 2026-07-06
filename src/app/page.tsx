@@ -66,7 +66,7 @@ export default function Home() {
               <img
                 className={styles.featureIcon}
                 src={convertIcon}
-                alt="フォーマット変換アイコン"
+                alt={t("home.features.formatConversion.iconAlt")}
                 suppressHydrationWarning
               />
               <h3 className={styles.featureTitle}>
@@ -82,7 +82,7 @@ export default function Home() {
               <img
                 className={styles.featureIcon}
                 src={cropIcon}
-                alt="画像トリミングアイコン"
+                alt={t("home.features.imageCropping.iconAlt")}
                 suppressHydrationWarning
               />
               <h3 className={styles.featureTitle}>
@@ -98,7 +98,7 @@ export default function Home() {
               <img
                 className={styles.featureIcon}
                 src={batchIcon}
-                alt="バッチ処理アイコン"
+                alt={t("home.features.batchProcessing.iconAlt")}
                 suppressHydrationWarning
               />
               <h3 className={styles.featureTitle}>

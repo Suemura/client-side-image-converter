@@ -21,6 +21,21 @@ export const pngFile = (name = "sample.png") => ({
   buffer: Buffer.from(PNG_1PX_BASE64, "base64"),
 });
 
+// 1x1 ピクセルの最小 HEIC（macOS で `sips -s format heic tiny.png --out tiny.heic` により生成）
+const HEIC_1PX_BASE64 =
+  "AAAAGGZ0eXBoZWljAAAAAGhlaWNtaWYxAAACrG1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAHBpY3QAAAAAAAAAAAAAAAAAAAAAJGRpbmYAAAAcZHJlZgAAAAAAAAABAAAADHVybCAAAAABAAAADnBpdG0AAAAAAAEAAAA4aWluZgAAAAAAAgAAABVpbmZlAgAAAAABAABodmMxAAAAABVpbmZlAgAAAQACAABodmMxAAAAABppcmVmAAAAAAAAAA5hdXhsAAIAAQABAAABz2lwcnAAAAGkaXBjbwAAABNjb2xybmNseAACAAIABoAAAAAMY2xsaQDLAEAAAAAUaXNwZQAAAAAAAAACAAAAAgAAAChjbGFwAAAAAQAAAAEAAAABAAAAAf/AAAAAgAAA/8AAAACAAAAAAAAJaXJvdAAAAAAQcGl4aQAAAAADCAgIAAAADnBpeGkAAAAAAQgAAAA3YXV4QwAAAAB1cm46bXBlZzpoZXZjOjIwMTU6YXV4aWQ6MQAAAAAMAAAACE4BpQQAAf5AAAAAcmh2Y0MBA3AAAACwAAAAAAAe8AD8/fj4AAALA6AAAQAXQAEMAf//A3AAAAMAsAAAAwAAAwAecCShAAEAJEIBAQNwAAADALAAAAMAAAMAHqAUIEHAoQQYh7kWVTcCAgYAgKIAAQAJRAHAYXLIQFMkAAAAcWh2Y0MBBAgAAAC/yAAAAAAe8AD8/Pj4AAALA6AAAQAXQAEMAf//BAgAAAMAv8gAAAMAAB4XAkChAAEAI0IBAQQIAAADAL/IAAADAAAewFCBBwE/B/iBe5FlU3AgICAIogABAAlEAcBh0shAUyQAAAAjaXBtYQAAAAAAAAACAAEHgQIDBomEhQACBgMHiIqEhQAAACxpbG9jAAAAAEQAAAIAAQAAAAEAAALUAAAAWAACAAAAAQAAAywAAAAoAAAAAW1kYXQAAAAAAAAAkAAAAFQoAa+jxoAQ1IzpAign/oAc1pyp+Fkfh9paeP//r2oQCawhb9NlmdTLPkgjyxLX/8pqgBwbwplJwUJe9mqeSeq1cX2w8X33elooWaL8YDOjoDWXvGAAAAAkKAGvRcwnHh7FsjO1L5CbgJP3cRg1fD9WFr8lfuzSLFVT9sBw";
+
+/**
+ * setInputFiles に渡せる 1x1 HEIC ファイル
+ * mimeType に空文字を渡すと Playwright が拡張子から推測するため、
+ * MIME 不明ケースは "application/octet-stream" を明示的に指定する
+ */
+export const heicFile = (name = "sample.heic", mimeType = "image/heic") => ({
+  name,
+  mimeType,
+  buffer: Buffer.from(HEIC_1PX_BASE64, "base64"),
+});
+
 /** GPS・カメラ情報入りの EXIF を埋め込んだ JPEG ファイル */
 export const jpegFileWithExif = (name = "with-exif.jpg") => {
   const exifObj = {
@@ -74,4 +89,6 @@ export const magicNumber = {
   isWebp: (buf: Buffer) =>
     buf.subarray(0, 4).toString("ascii") === "RIFF" &&
     buf.subarray(8, 12).toString("ascii") === "WEBP",
+  // ISOBMFF コンテナの ftyp ボックス（オフセット 4-12 が "ftypavif"）
+  isAvif: (buf: Buffer) => buf.subarray(4, 12).toString("ascii") === "ftypavif",
 };

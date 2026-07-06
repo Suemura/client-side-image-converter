@@ -1,4 +1,11 @@
+import { SUPPORTED_IMAGE_FORMATS } from "@utils/constants";
 import { formatFileSize } from "@utils/fileName";
+import {
+  addUniqueFiles,
+  buildAcceptAttribute,
+  filterValidFiles,
+  getFileTypeBadgeLabel,
+} from "@utils/fileUtils";
 import { generateThumbnail } from "@utils/imageUtils";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -11,7 +18,7 @@ interface FileUploadAreaProps {
   files: File[];
   onFilesSelected: (files: File[]) => void;
   onClearFiles: () => void;
-  acceptedTypes?: string[];
+  acceptedTypes?: readonly string[];
   showFileList?: boolean;
 }
 
@@ -24,13 +31,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   files,
   onFilesSelected,
   onClearFiles,
-  acceptedTypes = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/bmp",
-    "image/tiff",
-  ],
+  acceptedTypes = SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
   showFileList = true,
 }) => {
   const { t } = useTranslation();
@@ -57,23 +58,15 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
       e.preventDefault();
       setIsDragOver(false);
 
-      const droppedFiles = Array.from(e.dataTransfer.files);
-      const validFiles = droppedFiles.filter((file) =>
-        acceptedTypes.includes(file.type),
+      const validFiles = filterValidFiles(
+        Array.from(e.dataTransfer.files),
+        acceptedTypes,
       );
 
-      // 重複ファイルを除外（ファイル名とサイズで判定）
-      const newFiles = validFiles.filter(
-        (newFile) =>
-          !files.some(
-            (existingFile) =>
-              existingFile.name === newFile.name &&
-              existingFile.size === newFile.size,
-          ),
-      );
-
-      if (newFiles.length > 0) {
-        onFilesSelected([...files, ...newFiles]);
+      // 重複ファイルを除外（ファイル名とサイズで判定）して追加
+      const mergedFiles = addUniqueFiles(files, validFiles);
+      if (mergedFiles.length > files.length) {
+        onFilesSelected(mergedFiles);
       }
     },
     [files, onFilesSelected, acceptedTypes],
@@ -93,23 +86,15 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFiles = Array.from(e.target.files || []);
-      const validFiles = selectedFiles.filter((file) =>
-        acceptedTypes.includes(file.type),
+      const validFiles = filterValidFiles(
+        Array.from(e.target.files || []),
+        acceptedTypes,
       );
 
-      // 重複ファイルを除外（ファイル名とサイズで判定）
-      const newFiles = validFiles.filter(
-        (newFile) =>
-          !files.some(
-            (existingFile) =>
-              existingFile.name === newFile.name &&
-              existingFile.size === newFile.size,
-          ),
-      );
-
-      if (newFiles.length > 0) {
-        onFilesSelected([...files, ...newFiles]);
+      // 重複ファイルを除外（ファイル名とサイズで判定）して追加
+      const mergedFiles = addUniqueFiles(files, validFiles);
+      if (mergedFiles.length > files.length) {
+        onFilesSelected(mergedFiles);
       }
 
       // ファイル入力をクリア（同じファイルを再選択できるように）
@@ -161,7 +146,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
           onDrop={handleDrop}
           onClick={handleClick}
           onKeyDown={handleKeyDown}
-          aria-label="ファイルをドラッグ&ドロップまたはクリックして選択"
+          aria-label={t("fileUpload.dropAreaLabel")}
         >
           <div className={styles.dropZoneContent}>
             <p className={styles.dropZoneTitle}>{t("fileUpload.dropFiles")}</p>
@@ -173,7 +158,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
             ref={fileInputRef}
             type="file"
             multiple
-            accept={acceptedTypes.join(",")}
+            accept={buildAcceptAttribute(acceptedTypes)}
             onChange={handleFileInput}
             className={styles.hiddenInput}
           />
@@ -221,7 +206,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
             ref={fileInputRef}
             type="file"
             multiple
-            accept={acceptedTypes.join(",")}
+            accept={buildAcceptAttribute(acceptedTypes)}
             onChange={handleFileInput}
             className={styles.hiddenInput}
           />
@@ -278,7 +263,9 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
             key={`${thumbnail.file.name}-${thumbnail.file.size}-${index}`}
             className={styles.fileItem}
             onClick={() => handleFileClick(thumbnail.file)}
-            aria-label={`${thumbnail.file.name}の詳細を表示`}
+            aria-label={t("fileUpload.viewDetails", {
+              name: thumbnail.file.name,
+            })}
           >
             <div className={styles.fileItemContent}>
               <div
@@ -299,7 +286,8 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
                   thumbnail.file.type.startsWith("image/") ? (
                   <div className={styles.thumbnailLoading}>...</div>
                 ) : (
-                  thumbnail.file.type.split("/")[1]?.toUpperCase() || "FILE"
+                  // MIME タイプが特定できないファイル（HEIC 等）は拡張子でフォールバック表示
+                  getFileTypeBadgeLabel(thumbnail.file)
                 )}
               </div>
               <div className={styles.fileInfo}>
@@ -320,7 +308,7 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
         ref={fileInputRef}
         type="file"
         multiple
-        accept={acceptedTypes.join(",")}
+        accept={buildAcceptAttribute(acceptedTypes)}
         onChange={handleFileInput}
         className={styles.hiddenInput}
       />

@@ -2,6 +2,8 @@
  * ファイル処理関連のユーティリティ関数群
  */
 
+import { HEIC_EXTENSIONS, SUPPORTED_IMAGE_FORMATS } from "./constants";
+
 /**
  * URL管理のためのヘルパー関数群
  */
@@ -116,16 +118,53 @@ export const isImageFile = (file: File): boolean => {
 };
 
 /**
+ * ファイルの MIME タイプが特定できないかどうかを確認する
+ * HEIC などはブラウザによって MIME が空文字や application/octet-stream として報告されるため、
+ * その場合は拡張子によるフォールバック判定・表示の対象とする
+ * @param file - チェックするファイル
+ * @returns MIME タイプが特定できない場合はtrue
+ */
+export const isUnknownMimeType = (file: File): boolean => {
+  return file.type === "" || file.type === "application/octet-stream";
+};
+
+/**
+ * ファイルがHEIC/HEIF形式かどうかを確認する
+ * HEIC は MIME タイプが空になるブラウザがあるため、
+ * MIME が特定できない場合のみ拡張子でフォールバック判定する
+ * @param file - チェックするファイル
+ * @returns HEIC/HEIF の場合はtrue
+ */
+export const isHeicFile = (file: File): boolean => {
+  const heicFormats: readonly string[] = SUPPORTED_IMAGE_FORMATS.HEIC_FORMATS;
+  if (heicFormats.includes(file.type)) {
+    return true;
+  }
+  if (isUnknownMimeType(file)) {
+    const extension = getFileExtension(file.name).toLowerCase();
+    return (HEIC_EXTENSIONS as readonly string[]).includes(extension);
+  }
+  return false;
+};
+
+/**
  * ファイルタイプが指定された形式に含まれているかを確認する
+ * HEIC/HEIF が許可されている場合は拡張子によるフォールバック判定も行う
  * @param file - チェックするファイル
  * @param acceptedTypes - 許可されたMIMEタイプの配列
  * @returns 許可されている場合はtrue
  */
 export const isAcceptedFileType = (
   file: File,
-  acceptedTypes: string[],
+  acceptedTypes: readonly string[],
 ): boolean => {
-  return acceptedTypes.includes(file.type);
+  if (acceptedTypes.includes(file.type)) {
+    return true;
+  }
+  const acceptsHeic = SUPPORTED_IMAGE_FORMATS.HEIC_FORMATS.some((type) =>
+    acceptedTypes.includes(type),
+  );
+  return acceptsHeic && isHeicFile(file);
 };
 
 /**
@@ -136,9 +175,67 @@ export const isAcceptedFileType = (
  */
 export const filterValidFiles = (
   files: File[],
-  acceptedTypes: string[],
+  acceptedTypes: readonly string[],
 ): File[] => {
   return files.filter((file) => isAcceptedFileType(file, acceptedTypes));
+};
+
+/**
+ * input[accept] 属性用の文字列を構築する
+ * HEIC/HEIF は MIME タイプだけではファイル選択できない環境があるため拡張子も併記する
+ * @param acceptedTypes - 許可されたMIMEタイプの配列
+ * @returns accept 属性に設定する文字列
+ */
+export const buildAcceptAttribute = (
+  acceptedTypes: readonly string[],
+): string => {
+  const acceptsHeic = SUPPORTED_IMAGE_FORMATS.HEIC_FORMATS.some((type) =>
+    acceptedTypes.includes(type),
+  );
+  return acceptsHeic
+    ? [...acceptedTypes, ...HEIC_EXTENSIONS].join(",")
+    : acceptedTypes.join(",");
+};
+
+/** 対応フォーマット表示用の MIME タイプ表示名 */
+const MIME_DISPLAY_NAMES: Record<string, string> = {
+  "image/jpeg": "JPG",
+  "image/png": "PNG",
+  "image/webp": "WebP",
+  "image/bmp": "BMP",
+  "image/tiff": "TIFF",
+  "image/heic": "HEIC",
+  "image/heif": "HEIF",
+};
+
+/**
+ * 許可された MIME タイプの配列から対応フォーマットの表示ラベルを生成する
+ * @param acceptedTypes - 許可されたMIMEタイプの配列
+ * @returns カンマ区切りの表示ラベル（例: "JPG, PNG, WebP"）
+ */
+export const formatAcceptedTypesLabel = (
+  acceptedTypes: readonly string[],
+): string => {
+  return acceptedTypes
+    .map(
+      (type) =>
+        MIME_DISPLAY_NAMES[type] ?? type.replace("image/", "").toUpperCase(),
+    )
+    .join(", ");
+};
+
+/**
+ * ファイルタイプバッジの表示ラベルを生成する
+ * MIME タイプが特定できない場合（HEIC 等）は isHeicFile と同じ基準で
+ * 拡張子によるフォールバック表示を行う
+ * @param file - 対象のファイル
+ * @returns バッジに表示するラベル（例: "HEIC" / "PNG" / "FILE"）
+ */
+export const getFileTypeBadgeLabel = (file: File): string => {
+  if (isUnknownMimeType(file)) {
+    return getFileExtension(file.name).replace(".", "").toUpperCase() || "FILE";
+  }
+  return file.type.split("/")[1]?.toUpperCase() || "FILE";
 };
 
 /**

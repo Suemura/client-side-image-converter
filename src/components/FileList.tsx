@@ -76,7 +76,9 @@ export const FileList: React.FC<FileListProps> = ({ files, onClearFiles }) => {
             key={`${thumbnail.file.name}-${thumbnail.file.size}-${index}`}
             className={styles.fileItem}
             onClick={() => handleFileClick(thumbnail.file)}
-            aria-label={`${t("fileUpload.viewDetails")} ${thumbnail.file.name}`}
+            aria-label={t("fileUpload.viewDetails", {
+              name: thumbnail.file.name,
+            })}
           >
             <div className={styles.fileContent}>
               <div
