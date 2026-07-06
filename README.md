@@ -4,7 +4,7 @@
 
 A completely privacy-focused image conversion web application built with Next.js App Router.
 All image processing is performed within the browser, ensuring your images are never sent to any server.
-Converts images between JPEG, PNG, and WebP. HEIC/HEIF photos (such as those taken on iPhone) are also accepted as input on the convert page and decoded entirely in the browser.
+Converts images to JPEG, PNG, WebP, and AVIF. HEIC/HEIF photos (such as those taken on iPhone) and TIFF images are also accepted as input on the convert page and decoded entirely in the browser.
 
 ## 🔗 Live Demo
 
