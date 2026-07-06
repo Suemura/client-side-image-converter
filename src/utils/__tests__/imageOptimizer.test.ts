@@ -85,6 +85,10 @@ describe("optimizeImageBuffer - ディスパッチ", () => {
     const result = await optimizeImageBuffer(bufOfSize(100), "image/jpeg");
 
     expect(jpegDecode).toHaveBeenCalledTimes(1);
+    // EXIF Orientation をピクセルへ焼き込むため preserveOrientation を有効にする
+    expect(vi.mocked(jpegDecode).mock.calls[0][1]).toMatchObject({
+      preserveOrientation: true,
+    });
     expect(jpegEncode).toHaveBeenCalledTimes(1);
     const options = vi.mocked(jpegEncode).mock.calls[0][1];
     expect(options).toMatchObject({

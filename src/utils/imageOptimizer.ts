@@ -81,7 +81,10 @@ export const optimizeImageBuffer = async (
   } else if (engine === "mozjpeg") {
     const { default: decode } = await import("@jsquash/jpeg/decode.js");
     const { default: encode } = await import("@jsquash/jpeg/encode.js");
-    const imageData = await decode(buffer);
+    // preserveOrientation: true で EXIF Orientation をピクセルへ焼き込む。
+    // 再エンコード後の JPEG は EXIF（Orientation タグ含む）を持たないため、焼き込まないと
+    // Orientation!=1 のスマホ写真が最適化後に 90° 回転して表示されてしまう（WYSIWYG 化）。
+    const imageData = await decode(buffer, { preserveOrientation: true });
     candidate = await encode(imageData, {
       quality: JPEG_OPTIMIZE_QUALITY,
       progressive: true,

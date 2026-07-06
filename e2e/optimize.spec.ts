@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import JSZip from "jszip";
-import { magicNumber, rectPngFile } from "./helpers/fixtures";
+import {
+  insertJpegOrientation,
+  magicNumber,
+  rectPngFile,
+} from "./helpers/fixtures";
 
 /**
  * 画像最適化（フォーマット維持の再圧縮・可逆最適化）の E2E（Issue #61）
@@ -20,30 +24,34 @@ import { magicNumber, rectPngFile } from "./helpers/fixtures";
 const makeFatImage = async (
   page: Page,
   mimeType: "image/jpeg" | "image/webp",
+  width = 256,
+  height = 256,
 ): Promise<{ name: string; mimeType: string; buffer: Buffer }> => {
-  const arr = await page.evaluate(async (mime) => {
-    const size = 256;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("no ctx");
-    }
-    const image = ctx.createImageData(size, size);
-    for (let i = 0; i < image.data.length; i += 4) {
-      const h = (i * 2654435761) >>> 0;
-      image.data[i] = h & 0xff;
-      image.data[i + 1] = (h >>> 8) & 0xff;
-      image.data[i + 2] = (h >>> 16) & 0xff;
-      image.data[i + 3] = 255;
-    }
-    ctx.putImageData(image, 0, 0);
-    const blob = await new Promise<Blob>((resolve) => {
-      canvas.toBlob((b) => resolve(b as Blob), mime, 1.0);
-    });
-    return Array.from(new Uint8Array(await blob.arrayBuffer()));
-  }, mimeType);
+  const arr = await page.evaluate(
+    async ({ mime, w, h }) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("no ctx");
+      }
+      const image = ctx.createImageData(w, h);
+      for (let i = 0; i < image.data.length; i += 4) {
+        const n = (i * 2654435761) >>> 0;
+        image.data[i] = n & 0xff;
+        image.data[i + 1] = (n >>> 8) & 0xff;
+        image.data[i + 2] = (n >>> 16) & 0xff;
+        image.data[i + 3] = 255;
+      }
+      ctx.putImageData(image, 0, 0);
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((b) => resolve(b as Blob), mime, 1.0);
+      });
+      return Array.from(new Uint8Array(await blob.arrayBuffer()));
+    },
+    { mime: mimeType, w: width, h: height },
+  );
 
   const ext = mimeType === "image/jpeg" ? "jpg" : "webp";
   return { name: `fat.${ext}`, mimeType, buffer: Buffer.from(arr) };
@@ -136,6 +144,39 @@ test.describe("画像最適化（フォーマット維持）", () => {
     const buf = readFileSync(await download.path());
     expect(magicNumber.isWebp(buf)).toBe(true);
     expect(buf.length).toBeLessThan(original.buffer.length);
+  });
+
+  test("JPEG の EXIF Orientation を焼き込んで正しい向きで最適化する", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    // 横長(256x128)の JPEG に Orientation=6（右 90° 回転で表示 → 縦長 128x256）を付与する。
+    // 最適化で向きを焼き込まないと、EXIF を持たない再エンコード結果は横長のまま表示され回転バグになる。
+    const landscape = await makeFatImage(page, "image/jpeg", 256, 128);
+    const rotated = insertJpegOrientation(landscape.buffer, 6);
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "rotated.jpg",
+      mimeType: "image/jpeg",
+      buffer: rotated,
+    });
+
+    const download = await runSingleOptimize(page);
+    expect(download.suggestedFilename()).toBe("rotated.jpg");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isJpeg(buf)).toBe(true);
+    // 再エンコードが採用される（元 + EXIF より小さい）
+    expect(buf.length).toBeLessThan(rotated.length);
+
+    // 出力の「格納ピクセル」寸法が縦長(128x256)になっている = Orientation がピクセルへ焼き込まれた証拠。
+    // imageOrientation:"none" で焼き込み済みの生ピクセルを測る（タグに依らず判定するため）。
+    const stored = await page.evaluate(async (arr) => {
+      const bitmap = await createImageBitmap(
+        new Blob([new Uint8Array(arr)], { type: "image/jpeg" }),
+        { imageOrientation: "none" },
+      );
+      return { width: bitmap.width, height: bitmap.height };
+    }, Array.from(buf));
+    expect(stored).toEqual({ width: 128, height: 256 });
   });
 
   test("PNG / JPEG / WebP の混在バッチを各形式のまま一括最適化できる（Worker プール）", async ({
