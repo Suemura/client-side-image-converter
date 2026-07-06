@@ -21,7 +21,7 @@
   "private": false,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "next build --webpack",
     "postbuild": "next-sitemap",
     "start": "next start",
     "lint": "npx @biomejs/biome check src/",
@@ -40,7 +40,7 @@
     "heic-decode": "^2.1.0",
     "i18next": "^26.3.4",
     "jszip": "^3.10.1",
-    "next": "^15.3.5",
+    "next": "^16.2.10",
     "pako": "^3.0.0",
     "piexifjs": "^1.0.6",
     "react": "^19.0.0",
