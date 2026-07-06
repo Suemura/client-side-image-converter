@@ -33,6 +33,10 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description: HOME_DESCRIPTION,
+  alternates: {
+    // サブページと同様にトップページにも canonical を付与して統一する
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
