@@ -7,6 +7,7 @@
 
 import piexif from "piexifjs";
 import {
+  buildSyntheticJpegFromTiff,
   extractPngExif,
   extractWebpExif,
   insertPngExif,
@@ -14,7 +15,11 @@ import {
   piexifDumpToTiff,
   tiffToPiexifDump,
 } from "./exifBinary";
-import { base64ToUint8Array, dataUrlToBlob } from "./imageUtils";
+import {
+  base64ToUint8Array,
+  dataUrlToBlob,
+  uint8ArrayToBase64,
+} from "./imageUtils";
 
 /** EXIF を書き込める出力形式 */
 export type ExifWritableFormat = "jpeg" | "png" | "webp";
@@ -65,6 +70,29 @@ export const readExifTiffFromDataUrl = (
     console.warn("Failed to read EXIF data:", error);
   }
   return null;
+};
+
+/**
+ * 純 TIFF 内の Orientation タグを 1（無回転）へ正規化した TIFF を返す。
+ *
+ * トリミング側は EXIF Orientation と回転/反転をピクセルへ焼き込むため、
+ * 元の Orientation を残すと閲覧側で二重回転してしまう。焼き込み後に本関数で 1 へ揃える。
+ * 失敗時は元の TIFF をそのまま返す（EXIF 保持を優先）。
+ */
+export const normalizeExifOrientation = (tiff: Uint8Array): Uint8Array => {
+  try {
+    const jpeg = buildSyntheticJpegFromTiff(tiff);
+    const dataUrl = `data:image/jpeg;base64,${uint8ArrayToBase64(jpeg)}`;
+    const exifObj = piexif.load(dataUrl);
+    if (exifObj["0th"]) {
+      // Orientation タグ（274）。無回転を表す 1 に設定する
+      exifObj["0th"][piexif.ImageIFD.Orientation] = 1;
+    }
+    return piexifDumpToTiff(piexif.dump(exifObj));
+  } catch (error) {
+    console.warn("Failed to normalize EXIF orientation:", error);
+    return tiff;
+  }
 };
 
 /** Blob を DataURL に変換する（EXIF 挿入時の piexif 用） */

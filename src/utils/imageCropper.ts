@@ -1,15 +1,18 @@
 import {
+  type CropArea,
+  type CropTransform,
+  IDENTITY_TRANSFORM,
+  orientedSize,
+} from "./cropGeometry";
+import {
   exifWritableFormat,
   insertExifIntoBlob,
+  normalizeExifOrientation,
   readExifTiffFromDataUrl,
 } from "./exifTransfer";
 
-export interface CropArea {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+// 既存の import 経路（`from "../utils/imageCropper"`）を維持するため型を再エクスポートする
+export type { CropArea, CropTransform } from "./cropGeometry";
 
 export interface CropResult {
   originalFile: File;
@@ -18,6 +21,12 @@ export interface CropResult {
   success: boolean;
   error?: string;
   croppedFile?: File;
+}
+
+/** 1 ファイル分のトリミング指示（領域は自然座標。null は画像全体） */
+export interface CropJob {
+  area: CropArea | null;
+  transform: CropTransform;
 }
 
 /**
@@ -61,21 +70,132 @@ const generateCroppedFileName = (originalName: string): string => {
 };
 
 /**
- * 画像をトリミングする
+ * EXIF Orientation を補正しつつ画像をデコードする。
+ * createImageBitmap（imageOrientation: "from-image"）で向きをピクセルに焼き込み、
+ * 非対応環境では <img>（ブラウザ既定で EXIF 向きを反映）にフォールバックする。
+ */
+const decodeOrientedSource = async (
+  file: File,
+): Promise<{ source: CanvasImageSource; width: number; height: number }> => {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file, {
+        imageOrientation: "from-image",
+      });
+      return { source: bitmap, width: bitmap.width, height: bitmap.height };
+    } catch {
+      // フォールバックへ
+    }
+  }
+  const img = await loadImage(file);
+  return { source: img, width: img.naturalWidth, height: img.naturalHeight };
+};
+
+/**
+ * EXIF Orientation 補正済みの画像に回転・反転を適用したキャンバスを返す。
+ * プレビュー生成（createOrientedPreviewUrl）と出力（cropImage）で共用し、WYSIWYG を担保する。
+ */
+export const renderOrientedImage = async (
+  file: File,
+  transform: CropTransform = IDENTITY_TRANSFORM,
+): Promise<HTMLCanvasElement> => {
+  const { source, width, height } = await decodeOrientedSource(file);
+  const { rotation, flipHorizontal, flipVertical } = transform;
+  const { width: outWidth, height: outHeight } = orientedSize(
+    width,
+    height,
+    rotation,
+  );
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outWidth;
+  canvas.height = outHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Canvas context is not supported");
+  }
+
+  // 出力中心を基準に回転→反転を適用し、元画像を中心合わせで描画する
+  ctx.translate(outWidth / 2, outHeight / 2);
+  ctx.rotate((rotation * Math.PI) / 180);
+  ctx.scale(flipHorizontal ? -1 : 1, flipVertical ? -1 : 1);
+  ctx.drawImage(source, -width / 2, -height / 2, width, height);
+
+  // ImageBitmap はメモリ解放のため明示的に close する
+  if (typeof ImageBitmap !== "undefined" && source instanceof ImageBitmap) {
+    source.close();
+  }
+
+  return canvas;
+};
+
+/**
+ * EXIF 補正 + 回転/反転を適用したプレビュー用 ObjectURL を生成する。
+ * 呼び出し側で revokeObjectURL によるクリーンアップを行うこと。
+ */
+export const createOrientedPreviewUrl = async (
+  file: File,
+  transform: CropTransform = IDENTITY_TRANSFORM,
+): Promise<string> => {
+  const canvas = await renderOrientedImage(file, transform);
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((b) => {
+      if (b) {
+        resolve(b);
+      } else {
+        reject(new Error("Failed to create preview blob"));
+      }
+    });
+  });
+  return URL.createObjectURL(blob);
+};
+
+/**
+ * トリミング領域を画像境界内へ収める（出力用。最小サイズ制約は課さない）。
+ * 無効な領域は画像全体へフォールバックする。
+ */
+const clampAreaToImage = (
+  area: CropArea,
+  imageWidth: number,
+  imageHeight: number,
+): CropArea => {
+  const x = Math.max(0, Math.min(Math.round(area.x), imageWidth));
+  const y = Math.max(0, Math.min(Math.round(area.y), imageHeight));
+  let width = Math.round(area.width);
+  let height = Math.round(area.height);
+
+  if (
+    !Number.isFinite(x) ||
+    !Number.isFinite(y) ||
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    return { x: 0, y: 0, width: imageWidth, height: imageHeight };
+  }
+
+  if (x + width > imageWidth) {
+    width = imageWidth - x;
+  }
+  if (y + height > imageHeight) {
+    height = imageHeight - y;
+  }
+  return { x, y, width, height };
+};
+
+/**
+ * 画像をトリミングする。
+ * EXIF Orientation 補正・回転/反転をピクセルへ焼き込んだ上で、指定領域（自然座標）を切り出す。
  */
 export const cropImage = async (
   file: File,
-  cropArea: CropArea,
+  cropArea: CropArea | null,
+  transform: CropTransform = IDENTITY_TRANSFORM,
   preserveExif = false,
+  quality = 0.95,
 ): Promise<CropResult> => {
   try {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-
-    if (!ctx) {
-      throw new Error("Canvas context is not supported");
-    }
-
     // Exif データを読み込む（JPEG / PNG / WebP のソースに対応）
     const exifFormat = exifWritableFormat(file.type);
     let exifTiff: Uint8Array | null = null;
@@ -84,110 +204,51 @@ export const cropImage = async (
       exifTiff = readExifTiffFromDataUrl(dataUrl, file.type);
     }
 
-    // 画像を読み込み
-    const img = await loadImage(file);
+    // EXIF Orientation 補正 + 回転/反転を焼き込んだキャンバス
+    const orientedCanvas = await renderOrientedImage(file, transform);
+    const imageWidth = orientedCanvas.width;
+    const imageHeight = orientedCanvas.height;
 
-    // ローカル変数を使用してパラメータの再代入を避ける
-    let adjustedCropArea = cropArea;
-
-    // トリミング領域の妥当性をチェック
-    if (cropArea.width <= 0 || cropArea.height <= 0) {
-      throw new Error("Invalid crop area dimensions");
+    if (imageWidth <= 0 || imageHeight <= 0) {
+      throw new Error("Invalid image dimensions");
     }
 
-    if (
-      cropArea.x < 0 ||
-      cropArea.y < 0 ||
-      cropArea.x + cropArea.width > img.width ||
-      cropArea.y + cropArea.height > img.height
-    ) {
-      // 境界内に調整
-      const newCropArea = {
-        x: Math.max(0, Math.min(cropArea.x, img.width - 1)),
-        y: Math.max(0, Math.min(cropArea.y, img.height - 1)),
-        width: Math.min(cropArea.width, img.width - Math.max(0, cropArea.x)),
-        height: Math.min(cropArea.height, img.height - Math.max(0, cropArea.y)),
-      };
+    // トリミング領域を境界内へ収める（未指定は画像全体）
+    const requested = cropArea ?? {
+      x: 0,
+      y: 0,
+      width: imageWidth,
+      height: imageHeight,
+    };
+    const area = clampAreaToImage(requested, imageWidth, imageHeight);
 
-      // 調整後も有効な領域であることを確認
-      if (newCropArea.width <= 0 || newCropArea.height <= 0) {
-        // 全体画像を使用
-        newCropArea.x = 0;
-        newCropArea.y = 0;
-        newCropArea.width = img.width;
-        newCropArea.height = img.height;
-      }
-      adjustedCropArea = newCropArea;
-    }
-
-    // 最終的な検証
-    // NaNや無限大の値をチェック
-    if (
-      !Number.isFinite(adjustedCropArea.x) ||
-      !Number.isFinite(adjustedCropArea.y) ||
-      !Number.isFinite(adjustedCropArea.width) ||
-      !Number.isFinite(adjustedCropArea.height)
-    ) {
+    if (area.width <= 0 || area.height <= 0) {
       throw new Error(
-        `Non-finite values in crop area: x=${adjustedCropArea.x}, y=${adjustedCropArea.y}, width=${adjustedCropArea.width}, height=${adjustedCropArea.height}`,
+        `Invalid crop area: ${JSON.stringify(area)}, imageSize=${imageWidth}x${imageHeight}`,
       );
-    }
-
-    if (
-      adjustedCropArea.width <= 0 ||
-      adjustedCropArea.height <= 0 ||
-      adjustedCropArea.x < 0 ||
-      adjustedCropArea.y < 0 ||
-      adjustedCropArea.x >= img.width ||
-      adjustedCropArea.y >= img.height
-    ) {
-      throw new Error(
-        `Invalid final crop area: x=${adjustedCropArea.x}, y=${adjustedCropArea.y}, width=${adjustedCropArea.width}, height=${adjustedCropArea.height}, imageSize=${img.width}x${img.height}`,
-      );
-    }
-
-    // トリミング領域が画像を超えていないかチェック
-    if (
-      adjustedCropArea.x + adjustedCropArea.width > img.width ||
-      adjustedCropArea.y + adjustedCropArea.height > img.height
-    ) {
-      console.warn("Crop area extends beyond image, adjusting...");
-      adjustedCropArea = {
-        x: adjustedCropArea.x,
-        y: adjustedCropArea.y,
-        width: Math.min(adjustedCropArea.width, img.width - adjustedCropArea.x),
-        height: Math.min(
-          adjustedCropArea.height,
-          img.height - adjustedCropArea.y,
-        ),
-      };
-      console.log("Adjusted crop area:", adjustedCropArea);
     }
 
     // トリミング領域のサイズでcanvasを設定
-    canvas.width = adjustedCropArea.width;
-    canvas.height = adjustedCropArea.height;
-
-    // 画像をトリミングしてcanvasに描画
-    // 描画前にcanvasをクリア
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    try {
-      ctx.drawImage(
-        img,
-        adjustedCropArea.x,
-        adjustedCropArea.y,
-        adjustedCropArea.width,
-        adjustedCropArea.height,
-        0,
-        0,
-        adjustedCropArea.width,
-        adjustedCropArea.height,
-      );
-    } catch (drawError) {
-      console.error("Error drawing image:", drawError);
-      throw new Error(`Failed to draw image: ${drawError}`);
+    const canvas = document.createElement("canvas");
+    canvas.width = area.width;
+    canvas.height = area.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Canvas context is not supported");
     }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(
+      orientedCanvas,
+      area.x,
+      area.y,
+      area.width,
+      area.height,
+      0,
+      0,
+      area.width,
+      area.height,
+    );
 
     // canvasからBlobを生成
     let croppedBlob = await new Promise<Blob>((resolve, reject) => {
@@ -200,16 +261,18 @@ export const cropImage = async (
           }
         },
         file.type || "image/png",
-        0.95,
+        quality,
       );
     });
 
-    // Exif データを出力（入力と同じ形式：JPEG / PNG / WebP）に挿入する
+    // Exif データを出力（入力と同じ形式：JPEG / PNG / WebP）に挿入する。
+    // 向きは既にピクセルへ焼き込んでいるため Orientation タグを 1 に正規化して二重回転を防ぐ。
     if (exifTiff && exifFormat) {
       try {
+        const normalized = normalizeExifOrientation(exifTiff);
         croppedBlob = await insertExifIntoBlob(
           croppedBlob,
-          exifTiff,
+          normalized,
           exifFormat,
           canvas.width,
           canvas.height,
@@ -245,18 +308,27 @@ export const cropImage = async (
 };
 
 /**
- * 複数の画像を一括でトリミングする
+ * 複数の画像を一括でトリミングする。
+ * jobs は files と同じインデックスで領域・変換を指定する（未指定インデックスは画像全体・無変換）。
  */
 export const cropImages = async (
   files: File[],
-  cropArea: CropArea,
+  jobs: CropJob[],
   onProgress?: (completed: number, total: number) => void,
   preserveExif = false,
+  quality = 0.95,
 ): Promise<CropResult[]> => {
   const results: CropResult[] = [];
 
   for (let i = 0; i < files.length; i++) {
-    const result = await cropImage(files[i], cropArea, preserveExif);
+    const job = jobs[i] ?? { area: null, transform: IDENTITY_TRANSFORM };
+    const result = await cropImage(
+      files[i],
+      job.area,
+      job.transform,
+      preserveExif,
+      quality,
+    );
     results.push(result);
 
     if (onProgress) {

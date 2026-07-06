@@ -1,5 +1,17 @@
+import piexif from "piexifjs";
 import { describe, expect, it } from "vitest";
-import { exifWritableFormat } from "../exifTransfer";
+import { buildSyntheticJpegFromTiff, piexifDumpToTiff } from "../exifBinary";
+import { exifWritableFormat, normalizeExifOrientation } from "../exifTransfer";
+import { uint8ArrayToBase64 } from "../imageUtils";
+
+/** 純 TIFF の 0th IFD を読み出すヘルパー（合成 JPEG に包んで piexif で解釈する） */
+const load0thIfd = (tiff: Uint8Array): Record<number, unknown> => {
+  const jpeg = buildSyntheticJpegFromTiff(tiff);
+  const exif = piexif.load(
+    `data:image/jpeg;base64,${uint8ArrayToBase64(jpeg)}`,
+  );
+  return (exif["0th"] ?? {}) as Record<number, unknown>;
+};
 
 describe("exifWritableFormat", () => {
   it("JPEG（image/jpeg・image/jpg）は 'jpeg' を返す", () => {
@@ -26,5 +38,44 @@ describe("exifWritableFormat", () => {
     expect(exifWritableFormat("image/bmp")).toBeNull();
     expect(exifWritableFormat("image/gif")).toBeNull();
     expect(exifWritableFormat("")).toBeNull();
+  });
+});
+
+describe("normalizeExifOrientation", () => {
+  it("Orientation タグを 1 に正規化し、他のタグは保持する", () => {
+    const tiff = piexifDumpToTiff(
+      piexif.dump({
+        "0th": {
+          [piexif.ImageIFD.Orientation]: 6,
+          [piexif.ImageIFD.Make]: "TestMake",
+        },
+        Exif: {},
+        GPS: {},
+      }),
+    );
+    // 前提: 元の TIFF は Orientation=6 を持つ
+    expect(load0thIfd(tiff)[piexif.ImageIFD.Orientation]).toBe(6);
+
+    const normalized = normalizeExifOrientation(tiff);
+    const ifd = load0thIfd(normalized);
+    // Orientation は 1（無回転）へ揃えられる
+    expect(ifd[piexif.ImageIFD.Orientation]).toBe(1);
+    // 回転以外のタグ（Make）は保持される
+    expect(ifd[piexif.ImageIFD.Make]).toBe("TestMake");
+  });
+
+  it("Orientation タグが無くても例外を投げずに TIFF を返す", () => {
+    const tiff = piexifDumpToTiff(
+      piexif.dump({
+        "0th": { [piexif.ImageIFD.Make]: "NoOrientation" },
+        Exif: {},
+        GPS: {},
+      }),
+    );
+    const normalized = normalizeExifOrientation(tiff);
+    const ifd = load0thIfd(normalized);
+    // Make は保持され、Orientation は 1 が付与される
+    expect(ifd[piexif.ImageIFD.Make]).toBe("NoOrientation");
+    expect(ifd[piexif.ImageIFD.Orientation]).toBe(1);
   });
 });
