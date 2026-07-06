@@ -78,10 +78,15 @@ npm run preview
   - `manifest.ts` - PWA の Web App Manifest。Next が `/manifest.webmanifest` として静的出力し `<link rel="manifest">` を自動注入する（`dynamic = "force-static"`）
 - `src/components/` - 再利用可能な React コンポーネント（PWA 関連: `ServiceWorkerRegister.tsx`（本番ビルドでのみ `/sw.js` を登録・UI なし）/ `InstallPrompt.tsx`（`beforeinstallprompt` を受けた控えめな A2HS 導線））
 - `src/utils/` - コアユーティリティクラス
-  - `imageConverter.ts` - 画像フォーマット変換処理
-  - `avifEncoder.ts` - AVIF エンコード処理（`@jsquash/avif` の WASM を動的 import）
-  - `heicDecoder.ts` - HEIC/HEIF デコード処理（libheif WASM、動的 import）
-  - `tiffDecoder.ts` - TIFF デコード処理（`utif2` の純 JS デコーダー、動的 import）
+  - `imageConverter.ts` - 画像フォーマット変換処理（単体変換 `convertImage` と一括変換 `convertMultipleImages`。一括は対応環境で Worker プールへ委譲し、非対応環境ではメインスレッド逐次処理）
+  - `conversionCore.ts` - 変換のコア型（`ConversionFormat` / `ConversionOptions` / `ConversionResult` 等）と Canvas 非依存の純粋ロジック（`searchQualityForTargetSize` / `calculateTargetSize`）。メインスレッドと Worker で共有（`imageConverter.ts` から再エクスポートし既存 import 経路を維持）
+  - `conversionResult.ts` - `ConversionResult` 組み立ての共通化（`buildConversionResult`）。convertImage とワーカープールで共用
+  - `concurrency.ts` - 純粋な並行スケジューラ（`mapWithConcurrency` / `resolveConcurrency`）。同時実行数制限・入力順保持・continue-on-error・逐次進捗
+  - `pngQuality.ts` - PNG 品質ティア判定（`pngQualityStrategy`。閾値 95/70）。メインスレッドと Worker で共有
+  - `decodedImage.ts` - HEIC/TIFF デコード結果（RGBA 生ピクセル）の共有型 `DecodedImage`
+  - `avifEncoder.ts` - AVIF エンコード処理（`@jsquash/avif` の WASM を動的 import。`HTMLCanvasElement | OffscreenCanvas` 両対応）
+  - `heicDecoder.ts` - HEIC/HEIF デコード処理（libheif WASM、動的 import。Canvas 非依存の `decodeHeicToImageData` を含む）
+  - `tiffDecoder.ts` - TIFF デコード処理（`utif2` の純 JS デコーダー、動的 import。Canvas 非依存の `decodeTiffToImageData` を含む）
   - `imageCropper.ts` - 画像トリミング処理
   - `metadataManager.ts` - EXIF データ管理（JPEG / PNG / WebP からの読み取り、GPS の十進変換・丸めの純粋関数を含む）
   - `exifBinary.ts` - Canvas / WASM / ブラウザ API 非依存の純粋なバイナリ操作群（PNG eXIf チャンク・WebP RIFF/VP8X チャンクの抽出/挿入、CRC32、`Exif\0\0` 識別子の付け外し、piexif dump ↔ 純 TIFF 変換、合成 JPEG 生成）
@@ -92,6 +97,10 @@ npm run preview
   - `__tests__/` - 単体テスト
 - `src/hooks/` - カスタム React フック
   - `usePasteImages.ts` - ページ全体の paste イベントを購読し、クリップボードの画像ファイルをコールバックに渡すフック
+- `src/workers/` - Web Worker（変換ページのバッチ処理を並列化）
+  - `imageProcessing.worker.ts` - 画像処理 Worker。デコード（createImageBitmap / HEIC / TIFF）→ OffscreenCanvas 描画・リサイズ → エンコード（convertToBlob / `@jsquash/avif`）→ EXIF 挿入 を Worker 内で完結。`new Worker(new URL(..., import.meta.url), { type: "module" })` で生成し、`next build --webpack` + `output: "export"` でワーカーチャンクが `out/_next/static/` に出力される
+  - `imageProcessingPool.ts` - メインスレッド側プール。`isOffscreenPipelineSupported()` で対応判定し `navigator.hardwareConcurrency` を上限に Worker を起動。Worker 失敗・クラッシュ時は当該ファイルのみメインスレッドの `convertImage` にフォールバック。バッチ完了時に terminate
+  - `messages.ts` - Worker とメインスレッド間のメッセージ型
 - `src/i18n/` - 国際化設定
 - `src/types/` - 外部ライブラリの型定義（piexifjs / exif-js / heic-decode）
 - `scripts/` - ビルド補助スクリプト（`tsconfig.json` の `exclude` に含め tsc 対象外）
@@ -114,12 +123,13 @@ npm run preview
 1. **画像フォーマット変換** - JPEG、PNG、WebP、AVIF 形式への変換（品質制御付き。AVIF は出力のみ対応）。目標ファイルサイズ (KB) を指定すると品質を二分探索して目標以下で最大品質の結果を出力する（JPEG / WebP のみ。達成不可時は最小サイズで出力し一覧に警告表示）。HEIC/HEIF（iPhone 写真）と TIFF は変換ページのみ入力として受理（crop / metadata はブラウザがプレビュー描画できないため対象外）。変換に失敗したファイルは一覧で画面に通知される
 2. **画像トリミング** - プレビュー付きのビジュアルトリミングインターフェース
 3. **EXIF メタデータ管理** - EXIF データの表示（JPEG / PNG / WebP に対応）、編集、選択的削除。GPS 位置は「削除」に加えて「市区町村レベルに丸める」（約 1km 精度で残す）を選択可能（GPS タグがある場合のみ UI 表示。丸めは JPEG のみ有効で、その他の形式は Canvas 再描画により全メタデータを削除）。変換・トリミングの「EXIF を保持」は JPEG / PNG / WebP 出力で有効（AVIF は非対応）
-4. **バッチ処理** - 複数画像の一括処理（ドラッグ&ドロップ / ファイル選択 / クリップボード貼り付け / フォルダドロップで投入）。一度に取り込める件数はハード上限 `MAX_INPUT_FILES`（200 件）までで、フォルダの再帰取込や複数選択で上限を超えた分は取り込まず非ブロッキングの警告を表示する（大量投入時のフリーズ/メモリ圧迫を防ぐため）
+4. **バッチ処理** - 複数画像の一括処理（ドラッグ&ドロップ / ファイル選択 / クリップボード貼り付け / フォルダドロップで投入）。一度に取り込める件数はハード上限 `MAX_INPUT_FILES`（200 件）までで、フォルダの再帰取込や複数選択で上限を超えた分は取り込まず非ブロッキングの警告を表示する（大量投入時のフリーズ/メモリ圧迫を防ぐため）。変換ページは対応環境で Web Worker + OffscreenCanvas のプール（`navigator.hardwareConcurrency` を上限に並列）で処理し UI をブロックしない（非対応環境はメインスレッド逐次処理にフォールバック）
 5. **プライバシーファースト** - Canvas API / WASM を使用したクライアントサイドでの全処理
 6. **PWA（オフライン対応・インストール可能）** - Web App Manifest とビルド時生成の Service Worker により、一度アクセスすれば JS/CSS/フォント/WASM/HTML/アイコンがプリキャッシュされ、オフラインでも全機能が動作する。対応ブラウザ（主に Chromium 系）ではホーム画面/デスクトップへインストール可能（`beforeinstallprompt` を受けた控えめな導線を表示）
 
 ### 重要なパターン
 - 画像処理はクライアントサイド操作のために Canvas API を使用
+- 変換ページのバッチ処理は Web Worker + OffscreenCanvas のワーカープール（`src/workers/`）で並列実行する。`navigator.hardwareConcurrency` を上限に Worker を起動し、デコード〜エンコード〜EXIF 挿入まで Worker 内で完結させメインスレッド（UI）をブロックしない。AVIF の WASM エンコード（従来メインスレッドで同期実行し UI をフリーズさせていた）も Worker 内で実行する。OffscreenCanvas / Worker / createImageBitmap 非対応環境（`isOffscreenPipelineSupported()` で判定）ではメインスレッド逐次処理にフォールバックし、Worker が個別に失敗・クラッシュした場合も当該ファイルのみ `convertImage` で再試行する。メインスレッドと Worker が共有する型・純粋ロジックは Canvas 非依存の `conversionCore.ts` / `concurrency.ts` / `pngQuality.ts` に集約し、Worker バンドルへの Canvas コード混入を防ぐ
 - AVIF エンコードのみ Canvas の `toBlob("image/avif")` が全ブラウザ未実装のため、`@jsquash/avif`（WASM）を動的 import で使用（AVIF 変換実行時のみロードされ、初期バンドルに影響しない。処理はブラウザ内で完結）
 - HEIC/HEIF のデコードは libheif の WASM ビルド（`heic-decode` + `libheif-js`）を使用し、動的 import により HEIC 変換時のみロードする（初期バンドルに影響なし）
 - TIFF のデコードは `utif2`（純 JS の TIFF デコーダー）を使用し、動的 import により TIFF 変換時のみロードする（初期バンドルに影響なし。マルチページ TIFF は先頭ページのみ対応）
@@ -213,6 +223,7 @@ npm run preview
 
 ## 最近の更新
 - フォルダドロップ・複数投入時の件数上限を追加（Issue #55）。フォルダの再帰取込や multiple 選択で大量ファイルを誤投入すると、サムネイル一斉生成（各画像を `readAsDataURL` でメモリ展開し `Promise.all` で一斉デコード）でタブがフリーズ/メモリ圧迫する問題への対策。ブロッキングの確認ダイアログではなく、ハード上限＋非ブロッキング警告を採用。`constants.ts` に `MAX_INPUT_FILES = 200`、`fileUtils.ts` に純粋関数 `addUniqueFilesWithLimit`（重複除外後に上限で切り詰め `{ files, truncated }` を返す）、`directoryReader.ts` の `collectFilesFromEntries` に収集件数の早期打ち切り（`maxFiles` 引数、残余バジェットを再帰にも伝播）を追加。`FileUploadArea` の共通投入処理 `addFiles` を上限付き（`addUniqueFilesWithLimit(..., MAX_INPUT_FILES)`）に差し替え、フォルダドロップ経路は `collectFilesFromEntries(entries, MAX_INPUT_FILES + 1)` で有界化。超過時は `role="alert"` の警告ボックス（i18n `fileUpload.limitExceeded`、`{{max}}` 補間）を表示しリストクリアでリセット。単体テストは `fileUtils.test.ts` / `directoryReader.test.ts` に追加
+- 変換ページのバッチ処理を Web Worker + OffscreenCanvas のワーカープールへ移し、`navigator.hardwareConcurrency` を上限に並列実行するようにした（Issue #32・#47）。AVIF の WASM エンコード（従来メインスレッドで同期実行し UI をフリーズさせていた）も Worker 内で実行する。Worker（`src/workers/`: `imageProcessing.worker.ts` / `imageProcessingPool.ts` / `messages.ts`）とメインスレッドで共有する型・純粋ロジックを Canvas 非依存の `conversionCore.ts`（コア型 + `searchQualityForTargetSize` / `calculateTargetSize`）・`concurrency.ts`（`mapWithConcurrency` / `resolveConcurrency`）・`pngQuality.ts`（`pngQualityStrategy`）・`conversionResult.ts`（`buildConversionResult`）・`decodedImage.ts` に切り出し。OffscreenCanvas 非対応環境や Worker 個別失敗時はメインスレッドの `convertImage` にフォールバック。出力・対応形式・オプション（EXIF 保持・目標ファイルサイズ・品質・リサイズ）の仕様は不変で crop / metadata は変更なし。単体テストは `concurrency.test.ts` / `pngQuality.test.ts`、実ブラウザ検証は `e2e/convert.spec.ts`（一括変換の ZIP 全件検証 / AVIF バッチ / Worker 生成確認）
 - PWA 化（オフライン対応・インストール可能化）に対応（Issue #33）。静的エクスポート + Cloudflare Pages 構成に合わせ、ビルドツール非依存の「手書き SW テンプレート（`scripts/sw-template.js`）+ postbuild ジェネレーター（`scripts/generate-sw.ts`）」方式で Service Worker（`out/sw.js`）を生成。`src/app/manifest.ts`（Web App Manifest → `/manifest.webmanifest`）・`public/icons/`（192 / 512 / maskable）・`public/_headers`（sw.js は no-cache 等）・`ServiceWorkerRegister`（本番のみ登録）・`InstallPrompt`（A2HS 導線、i18n `install.*`）を追加。プリキャッシュ判定・URL 変換・キャッシュバージョン（FNV-1a）算出は純粋関数 `precache.ts` に切り出して単体テスト（`precache.test.ts`）。プリキャッシュ URL のハッシュをキャッシュ名に含め、`_next/static/**` が変わったときだけ更新。`skipWaiting` は付けず更新は次回起動時に反映。`postbuild` を `next-sitemap && node scripts/generate-sw.ts` に、`tsconfig.json` の `exclude` に `scripts` を追加。実ブラウザ検証は `e2e/pwa.spec.ts`（manifest / theme-color / 全ルートのオフライン描画）。合否は Lighthouse の PWA カテゴリ廃止（Lighthouse 12）のため DevTools Application パネルと pwa.spec.ts で担保
 - 全ページ（convert / crop / metadata）の画像投入方法にクリップボード貼り付け（Ctrl/Cmd+V）とフォルダドロップ（サブフォルダを含む再帰取込）を追加（Issue #35）。共通フック `usePasteImages`（`src/hooks/`）と純粋ロジック `directoryReader.ts` を追加し、`FileUploadArea` の投入処理を共通関数 `addFiles`（`filterValidFiles` → `addUniqueFiles`）に集約。クリップボード取り込みは `fileUtils.ts` の `getFilesFromClipboardData`。非画像や各ページの受理形式外は既存の MIME フィルタで除外。単体テストは `directoryReader.test.ts` / `fileUtils.test.ts`、実ブラウザ検証は `e2e/paste-and-folder-drop.spec.ts`
 - EXIF 対応を拡張（Issue #34）。(1) メタデータページで WebP（RIFF の EXIF チャンク）と PNG（eXIf チャンク）の EXIF 読み取りに対応（取り出した TIFF を合成 JPEG に包んで exif-js に渡す）、(2) 変換・トリミングの「EXIF を保持」を JPEG 以外の出力（PNG の eXIf チャンク / WebP の VP8X + EXIF チャンク）でも有効化（AVIF は非対応。convert の preserveExif 有効条件を「JPEG のみ」→「AVIF 以外」に変更）、(3) メタデータページに GPS 位置の処理モード選択（削除 / 市区町村レベルに約 1km 精度で丸める。JPEG のみ有効）を追加。バイナリ操作を純粋関数 `exifBinary.ts`（単体テスト `exifBinary.test.ts`）に、ブラウザ側の読み取り〜書き込みの橋渡しを `exifTransfer.ts` に切り出し。GPS 十進変換・丸めは `metadataManager.ts` に純粋関数として追加。実ブラウザ検証は `e2e/metadata.spec.ts`（WebP / PNG 読み取り・GPS 丸め）・`e2e/convert.spec.ts`（JPEG→PNG / →WebP の EXIF 保持）

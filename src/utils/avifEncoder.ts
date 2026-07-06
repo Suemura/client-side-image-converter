@@ -24,12 +24,18 @@ export const normalizeAvifQuality = (quality: number): number => {
 
 /**
  * Canvas の内容を AVIF 形式の Blob にエンコードする
+ *
+ * `HTMLCanvasElement`（メインスレッド）と `OffscreenCanvas`（Web Worker）の両方を受け取れる。
+ * WASM エンコード（同期実行で重い）を Worker から呼べるようにするため型を一般化している（Issue #47）。
  */
 export const encodeCanvasToAvifBlob = async (
-  canvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement | OffscreenCanvas,
   quality: number,
 ): Promise<Blob> => {
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d") as
+    | CanvasRenderingContext2D
+    | OffscreenCanvasRenderingContext2D
+    | null;
   if (!ctx) {
     throw new Error("Canvas context を取得できませんでした");
   }
