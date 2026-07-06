@@ -1,9 +1,13 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import piexif from "piexifjs";
 import {
   bmpFile,
   brokenImageFile,
   heicFile,
+  jpegFileWithExif,
+  loadExifFromPngBuffer,
+  loadExifFromWebpBuffer,
   magicNumber,
   noisyBmpFile,
   pngFile,
@@ -347,5 +351,65 @@ test.describe("画像フォーマット変換", () => {
     const buf = readFileSync(await download.path());
     expect(magicNumber.isJpeg(buf)).toBe(true);
     expect(buf.length).toBeGreaterThan(1 * 1024);
+  });
+
+  test("JPEG(EXIF入り)→PNG 変換で EXIF を保持できる", async ({ page }) => {
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(jpegFileWithExif());
+
+    // 出力形式を PNG にし、EXIF 保持を有効化する
+    await page.getByText("PNG", { exact: true }).click();
+    await page.getByText("EXIF情報を保持", { exact: true }).click();
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("with-exif.png");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isPng(buf)).toBe(true);
+
+    // PNG の eXIf チャンクから EXIF が復元できる
+    const exif = loadExifFromPngBuffer(buf);
+    expect(exif["0th"]?.[piexif.ImageIFD.Make]).toBe("TestMake");
+    expect(exif.GPS?.[piexif.GPSIFD.GPSLatitudeRef]).toBe("N");
+  });
+
+  test("JPEG(EXIF入り)→WebP 変換で EXIF を保持できる", async ({ page }) => {
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(jpegFileWithExif());
+
+    // 出力形式を WebP にし、EXIF 保持を有効化する
+    await page.getByText("WebP", { exact: true }).click();
+    await page.getByText("EXIF情報を保持", { exact: true }).click();
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("with-exif.webp");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isWebp(buf)).toBe(true);
+
+    // WebP の EXIF チャンクから EXIF が復元できる
+    const exif = loadExifFromWebpBuffer(buf);
+    expect(exif["0th"]?.[piexif.ImageIFD.Make]).toBe("TestMake");
+    expect(exif.GPS?.[piexif.GPSIFD.GPSLatitudeRef]).toBe("N");
   });
 });

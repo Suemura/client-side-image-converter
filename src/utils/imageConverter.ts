@@ -1,8 +1,7 @@
-import piexif from "piexifjs";
 import { encodeCanvasToAvifBlob } from "./avifEncoder";
+import { insertExifIntoBlob, readExifTiffFromDataUrl } from "./exifTransfer";
 import { isHeicFile, isTiffFile } from "./fileUtils";
 import { decodeHeicToCanvas } from "./heicDecoder";
-import { dataUrlToBlob } from "./imageUtils";
 import { decodeTiffToCanvas } from "./tiffDecoder";
 
 export type ConversionFormat = "jpeg" | "png" | "webp" | "avif";
@@ -194,7 +193,7 @@ export const convertImage = async (
       source: CanvasImageSource,
       srcWidth: number,
       srcHeight: number,
-      exifData: string | null,
+      exifTiff: Uint8Array | null,
     ) => {
       try {
         const canvas = document.createElement("canvas");
@@ -261,26 +260,14 @@ export const convertImage = async (
             });
           };
 
-          // ExifデータをBlobに挿入（JPEGのみ）
-          if (exifData && options.format === "jpeg") {
-            const reader2 = new FileReader();
-            reader2.onload = (e2) => {
-              try {
-                const dataUrl = e2.target?.result as string;
-                if (!dataUrl || !exifData) {
-                  console.warn("Failed to read data URL for EXIF insertion");
-                  processBlob(blob);
-                  return;
-                }
-                const newDataUrl = piexif.insert(exifData, dataUrl);
-                const newBlob = dataUrlToBlob(newDataUrl, blob.type);
-                processBlob(newBlob);
-              } catch (error) {
+          // Exif データを出力形式（JPEG / PNG / WebP）に応じて Blob に挿入する
+          if (exifTiff && options.format !== "avif") {
+            insertExifIntoBlob(blob, exifTiff, options.format, width, height)
+              .then(processBlob)
+              .catch((error) => {
                 console.warn("Failed to insert EXIF data:", error);
                 processBlob(blob);
-              }
-            };
-            reader2.readAsDataURL(blob);
+              });
           } else {
             processBlob(blob);
           }
@@ -300,8 +287,8 @@ export const convertImage = async (
           const mimeType = `image/${options.format}`;
 
           // 目標ファイルサイズが指定されていれば品質を二分探索する（JPEG/WebP のみ）
-          // 既知の制限: JPEG で preserveExif も有効な場合、探索は EXIF 挿入前のサイズに対して
-          // 行われるため（EXIF は handleBlob 内で後挿入する）、最終物は EXIF 分だけ目標を
+          // 既知の制限: JPEG / WebP で preserveExif も有効な場合、探索は EXIF 挿入前のサイズに
+          // 対して行われるため（EXIF は handleBlob 内で後挿入する）、最終物は EXIF 分だけ目標を
           // わずかに超えうる。preserveExif は既定 false かつ超過幅は小さいため許容する。
           // if 条件に直接展開することで TS が targetFileSizeKB を number に絞り込む
           // （別変数に切り出すと絞り込みが効かず型アサーションが必要になる）
@@ -363,27 +350,24 @@ export const convertImage = async (
       return;
     }
 
-    // Exifデータを読み込む（JPEGの場合のみ）
+    // EXIF 保持は AVIF 以外の出力（JPEG / PNG / WebP）で有効。
+    // ソース側は JPEG / WebP / PNG から EXIF を読み取れる（readSourceExifTiff）
     const shouldPreserveExif =
-      options.preserveExif &&
-      (file.type.includes("jpeg") || file.type.includes("jpg")) &&
-      options.format === "jpeg";
+      options.preserveExif === true && options.format !== "avif";
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      let exifData: string | null = null;
+      let exifTiff: Uint8Array | null = null;
       if (shouldPreserveExif) {
-        try {
-          const imageData = e.target?.result as string;
-          exifData = piexif.dump(piexif.load(imageData));
-        } catch (error) {
-          console.warn("Failed to read EXIF data:", error);
-        }
+        exifTiff = readExifTiffFromDataUrl(
+          e.target?.result as string,
+          file.type,
+        );
       }
 
       const img = new Image();
       img.onload = () => {
-        processSource(img, img.width, img.height, exifData);
+        processSource(img, img.width, img.height, exifTiff);
       };
 
       img.onerror = () => {

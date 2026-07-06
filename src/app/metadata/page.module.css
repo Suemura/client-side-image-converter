@@ -189,6 +189,27 @@
   font-weight: 500;
 }
 
+.gpsModeSection {
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: var(--muted);
+  border-radius: 8px;
+}
+
+.gpsModeTitle {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--foreground);
+}
+
+.gpsModeHelp {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
 .actionButtons {
   display: flex;
   gap: 12px;

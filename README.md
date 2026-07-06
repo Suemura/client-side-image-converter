@@ -11,6 +11,14 @@ Images can be added by drag & drop, file selection, clipboard paste (Ctrl/⌘+V)
 
 https://image-converter.suemura.app/
 
+## ✨ Features
+
+- **Format Conversion**: Convert images to JPEG, PNG, WebP, and AVIF with quality control and an optional target file size (JPEG / WebP). HEIC/HEIF and TIFF are accepted as input.
+- **Image Cropping**: Visual cropping tool with live preview.
+- **EXIF Metadata Management**: View EXIF data (JPEG / PNG / WebP), edit tags, and selectively remove sensitive metadata. GPS location can be removed or rounded to roughly city level (about 1 km precision, JPEG only).
+- **EXIF Preservation**: Optionally carry over the original EXIF metadata when converting or cropping (JPEG / PNG / WebP output; AVIF is not supported).
+- **Batch Processing**: Process multiple images at once.
+
 ## 🛡️ Privacy Features
 
 ### **Complete Local Processing**

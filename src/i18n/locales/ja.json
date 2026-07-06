@@ -64,8 +64,8 @@
     "targetFileSizeUnsupported": "目標ファイルサイズの指定は JPEG / WebP でのみ対応しています。",
     "metadataSettings": "メタデータ設定",
     "preserveExif": "EXIF情報を保持",
-    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が変換後の画像に保持されます。JPEG形式でのみ有効です。",
-    "preserveExifJpegOnly": "EXIF情報の保持はJPEG形式でのみ対応しています。"
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が変換後の画像に保持されます。JPEG / PNG / WebP で有効です。",
+    "preserveExifUnsupported": "EXIF情報の保持は AVIF では対応していません。"
   },
   "crop": {
     "title": "トリミングツール",
@@ -87,7 +87,7 @@
     "reCrop": "再トリミング",
     "croppingInProgress": "トリミング中...",
     "preserveExif": "EXIF情報を保持",
-    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）がトリミング後の画像に保持されます。JPEG形式でのみ有効です。",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）がトリミング後の画像に保持されます。JPEG / PNG / WebP で有効です。",
     "filesSelected": "選択中のファイル",
     "cropSettings": "トリミング設定",
     "previewAndCrop": "プレビューとトリミング",
@@ -214,6 +214,12 @@
       "high": "高",
       "medium": "中",
       "low": "低"
+    },
+    "gpsMode": {
+      "title": "GPS位置情報の処理",
+      "remove": "削除",
+      "round": "市区町村レベルに丸める",
+      "help": "「丸める」を選ぶと、位置情報を約1km四方の精度に落として残します（JPEG形式のみ。その他の形式は全削除）。"
     },
     "selectRiskTags": "リスクタグを選択",
     "clearSelection": "選択クリア",

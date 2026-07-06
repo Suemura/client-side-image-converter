@@ -7,7 +7,11 @@ import { FileDetailModal } from "../../components/FileDetailModal";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
-import { useMetadataManager } from "../../hooks/useMetadataManager";
+import { RadioButtonGroup } from "../../components/RadioButtonGroup";
+import {
+  type GpsMode,
+  useMetadataManager,
+} from "../../hooks/useMetadataManager";
 import {
   downloadFile,
   downloadMultipleFiles,
@@ -30,14 +34,29 @@ export default function MetadataPage() {
     isAnalyzing,
     isProcessing,
     selectedTags,
+    gpsMode,
     progressCurrent,
     progressTotal,
     analyzeFiles,
     toggleTag,
     selectAllPrivacyTags,
     clearSelection,
+    setGpsMode,
     removeSelectedMetadata,
   } = useMetadataManager();
+
+  // GPS 処理モードの選択肢（削除 / 市区町村レベルに丸める）
+  const gpsModeOptions = [
+    { label: t("metadata.gpsMode.remove"), value: "remove" },
+    { label: t("metadata.gpsMode.round"), value: "round" },
+  ];
+
+  // 解析結果に GPS 関連タグが含まれるか（GPS モード UI の表示判定に使う）
+  const hasGpsTags = analysis
+    ? Array.from(analysis.allTags).some((tag) =>
+        tag.toLowerCase().includes("gps"),
+      )
+    : false;
 
   // ファイル選択時の処理
   const handleFilesSelected = useCallback(
@@ -318,6 +337,24 @@ export default function MetadataPage() {
                         {t("metadata.processingNote")}
                       </p>
                     </div>
+
+                    {/* GPS 処理モード（GPS タグがある場合のみ表示） */}
+                    {hasGpsTags && (
+                      <div className={styles.gpsModeSection}>
+                        <h3 className={styles.gpsModeTitle}>
+                          {t("metadata.gpsMode.title")}
+                        </h3>
+                        <RadioButtonGroup
+                          name="gpsMode"
+                          options={gpsModeOptions}
+                          selectedValue={gpsMode}
+                          onChange={(value) => setGpsMode(value as GpsMode)}
+                        />
+                        <p className={styles.gpsModeHelp}>
+                          {t("metadata.gpsMode.help")}
+                        </p>
+                      </div>
+                    )}
 
                     {/* アクションボタン */}
                     <div className={styles.actionButtons}>

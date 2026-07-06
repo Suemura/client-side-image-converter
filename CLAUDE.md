@@ -81,7 +81,9 @@ npm run preview
   - `heicDecoder.ts` - HEIC/HEIF デコード処理（libheif WASM、動的 import）
   - `tiffDecoder.ts` - TIFF デコード処理（`utif2` の純 JS デコーダー、動的 import）
   - `imageCropper.ts` - 画像トリミング処理
-  - `metadataManager.ts` - EXIF データ管理
+  - `metadataManager.ts` - EXIF データ管理（JPEG / PNG / WebP からの読み取り、GPS の十進変換・丸めの純粋関数を含む）
+  - `exifBinary.ts` - Canvas / WASM / ブラウザ API 非依存の純粋なバイナリ操作群（PNG eXIf チャンク・WebP RIFF/VP8X チャンクの抽出/挿入、CRC32、`Exif\0\0` 識別子の付け外し、piexif dump ↔ 純 TIFF 変換、合成 JPEG 生成）
+  - `exifTransfer.ts` - ソース EXIF の読み取りから出力 Blob への書き込みまでを橋渡しするブラウザ側ロジック（`exifWritableFormat` / `readExifTiffFromDataUrl` / `insertExifIntoBlob`）。変換・トリミングの両経路で共用
   - `pageMetadata.ts` - ページ別 SEO メタデータ（title / description / OGP / Twitter / canonical）を組み立てる純粋関数 `buildPageMetadata` とサイト定数（`SITE_NAME` / `SITE_URL` / `SITE_LOCALE`）
   - `directoryReader.ts` - フォルダドロップ時に FileSystem Entry API を再帰走査して配下の File を収集する純粋ロジック（`getEntriesFromDataTransferItems` / `collectFilesFromEntries`）
   - `__tests__/` - 単体テスト
@@ -101,7 +103,7 @@ npm run preview
 ### コア機能
 1. **画像フォーマット変換** - JPEG、PNG、WebP、AVIF 形式への変換（品質制御付き。AVIF は出力のみ対応）。目標ファイルサイズ (KB) を指定すると品質を二分探索して目標以下で最大品質の結果を出力する（JPEG / WebP のみ。達成不可時は最小サイズで出力し一覧に警告表示）。HEIC/HEIF（iPhone 写真）と TIFF は変換ページのみ入力として受理（crop / metadata はブラウザがプレビュー描画できないため対象外）。変換に失敗したファイルは一覧で画面に通知される
 2. **画像トリミング** - プレビュー付きのビジュアルトリミングインターフェース
-3. **EXIF メタデータ管理** - EXIF データの表示、編集、選択的削除
+3. **EXIF メタデータ管理** - EXIF データの表示（JPEG / PNG / WebP に対応）、編集、選択的削除。GPS 位置は「削除」に加えて「市区町村レベルに丸める」（約 1km 精度で残す）を選択可能（GPS タグがある場合のみ UI 表示。丸めは JPEG のみ有効で、その他の形式は Canvas 再描画により全メタデータを削除）。変換・トリミングの「EXIF を保持」は JPEG / PNG / WebP 出力で有効（AVIF は非対応）
 4. **バッチ処理** - 複数画像の一括処理（ドラッグ&ドロップ / ファイル選択 / クリップボード貼り付け / フォルダドロップで投入）
 5. **プライバシーファースト** - Canvas API / WASM を使用したクライアントサイドでの全処理
 
@@ -112,7 +114,8 @@ npm run preview
 - TIFF のデコードは `utif2`（純 JS の TIFF デコーダー）を使用し、動的 import により TIFF 変換時のみロードする（初期バンドルに影響なし。マルチページ TIFF は先頭ページのみ対応）
 - HEIC / TIFF は MIME タイプが特定されない環境があるため、拡張子（.heic/.heif/.tif/.tiff）によるフォールバック判定を行う（`fileUtils.ts` の `FORMAT_EXTENSION_FALLBACKS`。`isHeicFile` / `isTiffFile` の判定と input の accept 属性の両方で使用）
 - 画像の投入は全ページ共通の `FileUploadArea` に集約し、ドラッグ&ドロップ / ファイル選択 / クリップボード貼り付け（Ctrl/Cmd+V、`usePasteImages` フック）/ フォルダドロップ（`directoryReader.ts` による再帰走査）のいずれも共通関数 `addFiles`（`filterValidFiles` による MIME フィルタ → `addUniqueFiles` による重複除外）に合流させる。フォルダドロップは drop イベント中に `webkitGetAsEntry()` を同期取得してから再帰走査する（非対応環境は `dataTransfer.files` にフォールバック）。クリップボード取り込みは `fileUtils.ts` の `getFilesFromClipboardData`（`.files` 優先、無ければ `.items` の `kind === "file"`）
-- EXIF データ処理は保存に `piexifjs`、読み取りに `exif-js` を使用
+- EXIF データ処理は保存に `piexifjs`、読み取りに `exif-js` を使用。WebP（RIFF の EXIF チャンク）と PNG（eXIf チャンク）は、取り出した TIFF を合成 JPEG（APP1）に包んで exif-js に読ませる（exif-js は先頭が JPEG SOI でないと読めないため）
+- EXIF の書き込みは JPEG（piexifjs）に加え、PNG は eXIf チャンク、WebP は VP8X + EXIF チャンクへ挿入する。バイナリ操作は Canvas / ブラウザ API 非依存の純粋関数 `exifBinary.ts`（単体テスト対象）に切り出し、ブラウザ側の読み取り〜書き込みの橋渡しを `exifTransfer.ts` が担う。AVIF はメタデータ書き込み非対応
 - テーマ切り替え（ライト/ダーク）は CSS カスタムプロパティで処理
 - 言語設定は localStorage に保存
 - ファイルダウンロードはバッチ操作に `JSZip` を使用
@@ -194,6 +197,7 @@ npm run preview
 
 ## 最近の更新
 - 全ページ（convert / crop / metadata）の画像投入方法にクリップボード貼り付け（Ctrl/Cmd+V）とフォルダドロップ（サブフォルダを含む再帰取込）を追加（Issue #35）。共通フック `usePasteImages`（`src/hooks/`）と純粋ロジック `directoryReader.ts` を追加し、`FileUploadArea` の投入処理を共通関数 `addFiles`（`filterValidFiles` → `addUniqueFiles`）に集約。クリップボード取り込みは `fileUtils.ts` の `getFilesFromClipboardData`。非画像や各ページの受理形式外は既存の MIME フィルタで除外。単体テストは `directoryReader.test.ts` / `fileUtils.test.ts`、実ブラウザ検証は `e2e/paste-and-folder-drop.spec.ts`
+- EXIF 対応を拡張（Issue #34）。(1) メタデータページで WebP（RIFF の EXIF チャンク）と PNG（eXIf チャンク）の EXIF 読み取りに対応（取り出した TIFF を合成 JPEG に包んで exif-js に渡す）、(2) 変換・トリミングの「EXIF を保持」を JPEG 以外の出力（PNG の eXIf チャンク / WebP の VP8X + EXIF チャンク）でも有効化（AVIF は非対応。convert の preserveExif 有効条件を「JPEG のみ」→「AVIF 以外」に変更）、(3) メタデータページに GPS 位置の処理モード選択（削除 / 市区町村レベルに約 1km 精度で丸める。JPEG のみ有効）を追加。バイナリ操作を純粋関数 `exifBinary.ts`（単体テスト `exifBinary.test.ts`）に、ブラウザ側の読み取り〜書き込みの橋渡しを `exifTransfer.ts` に切り出し。GPS 十進変換・丸めは `metadataManager.ts` に純粋関数として追加。実ブラウザ検証は `e2e/metadata.spec.ts`（WebP / PNG 読み取り・GPS 丸め）・`e2e/convert.spec.ts`（JPEG→PNG / →WebP の EXIF 保持）
 - 各ページ（`/`, `/convert`, `/crop`, `/metadata`）に固有の SEO メタデータ（title / description / OGP / Twitter card / canonical）を付与（Issue #27）。`pageMetadata.ts` の純粋関数 `buildPageMetadata` で組み立て、各ルートの `layout.tsx`（サーバーコンポーネント層）から export する。root の `layout.tsx` に `metadataBase`・title テンプレート・共通 description・OGP / Twitter 既定値を集約。主言語は日本語で静的 HTML に出力されるため i18n（ロケール JSON）は非経由。単体テストは `pageMetadata.test.ts`、実 HTML 出力の検証は `e2e/seo-metadata.spec.ts` で実施
 - 変換ページに目標ファイルサイズ (KB) 指定を追加（Issue #30）。指定すると品質値を二分探索し目標サイズ以下で最大品質の結果を採用する（JPEG / WebP のみ。PNG は可逆・AVIF は WASM が低速なため対象外）。探索は Canvas 非依存の純粋関数 `searchQualityForTargetSize`（`imageConverter.ts`）に切り出して単体テスト、実サイズ検証は E2E で実施。達成不可時は最小サイズで出力し結果一覧に警告表示
 - `/start-issue` コマンドを git worktree 対応に変更。Issue ごとに `.claude/worktrees/issue-{番号}/`（gitignore 済み）へ worktree を作成して作業するため、複数 Issue の並列作業が可能に
