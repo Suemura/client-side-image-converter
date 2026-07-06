@@ -113,7 +113,8 @@
     "viewDetails": "{{name}}の詳細を表示",
     "dropAreaLabel": "ファイルをドラッグ&ドロップまたはクリックして選択",
     "filesSelectedCount": "{{count}}個のファイル選択済み",
-    "supportedFormats": "対応形式: {{formats}}"
+    "supportedFormats": "対応形式: {{formats}}",
+    "pasteAndFolderHint": "クリップボードから貼り付け（Ctrl/⌘+V）やフォルダのドロップにも対応"
   },
   "fileDetails": {
     "title": "ファイル詳細",

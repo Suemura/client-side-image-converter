@@ -13,6 +13,7 @@ import {
   formatAcceptedTypesLabel,
   getFileExtension,
   getFileNameWithoutExtension,
+  getFilesFromClipboardData,
   getFileTypeBadgeLabel,
   isAcceptedFileType,
   isDuplicateFile,
@@ -97,6 +98,44 @@ describe("isImageFile / isAcceptedFileType / filterValidFiles", () => {
     ];
     const valid = filterValidFiles(files, ["image/jpeg", "image/png"]);
     expect(valid.map((f) => f.name)).toEqual(["a.png", "c.jpg"]);
+  });
+});
+
+describe("getFilesFromClipboardData", () => {
+  const clipboardItem = (kind: string, file: File | null) => ({
+    kind,
+    getAsFile: () => file,
+  });
+
+  it("clipboardData が null の場合は空配列を返す", () => {
+    expect(getFilesFromClipboardData(null)).toEqual([]);
+  });
+
+  it(".files があればそれを優先して返す", () => {
+    const a = createFile("a.png", 10, "image/png");
+    const result = getFilesFromClipboardData({ files: [a] });
+    expect(result).toEqual([a]);
+  });
+
+  it(".files が空なら .items の kind==='file' から取り出す", () => {
+    const a = createFile("pasted.png", 10, "image/png");
+    const result = getFilesFromClipboardData({
+      files: [],
+      items: [clipboardItem("file", a)],
+    });
+    expect(result).toEqual([a]);
+  });
+
+  it(".items の文字列アイテム（kind==='string'）は無視する", () => {
+    const a = createFile("pasted.png", 10, "image/png");
+    const result = getFilesFromClipboardData({
+      items: [clipboardItem("string", null), clipboardItem("file", a)],
+    });
+    expect(result).toEqual([a]);
+  });
+
+  it(".files も .items も無い場合は空配列を返す", () => {
+    expect(getFilesFromClipboardData({})).toEqual([]);
   });
 });
 
