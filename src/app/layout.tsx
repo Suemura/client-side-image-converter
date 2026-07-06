@@ -23,12 +23,15 @@ const notoSans = Noto_Sans({
 // 各ルートの layout.tsx が固有の title / description で上書きする。
 const HOME_DESCRIPTION =
   "JPEG・PNG・WebP・AVIF などの画像フォーマット変換、トリミング、EXIF メタデータ削除をすべてブラウザ内で実行。画像をサーバーに送信しないプライバシー重視の無料ツールです。";
+// トップページのタイトル。title.default / openGraph.title / twitter.title で共通利用し、
+// og:title には title.template（"%s | サイト名"）が効かないため直値をそろえて drift を防ぐ。
+const HOME_TITLE = `${SITE_NAME} | ブラウザ内で完結する画像変換・トリミングツール`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     // トップページに適用される既定タイトル
-    default: `${SITE_NAME} | ブラウザ内で完結する画像変換・トリミングツール`,
+    default: HOME_TITLE,
     // 各ルートの title を "<ページ名> | サイト名" 形式に装飾する
     template: `%s | ${SITE_NAME}`,
   },
@@ -42,13 +45,13 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     locale: SITE_LOCALE,
     url: "/",
-    title: `${SITE_NAME} | ブラウザ内で完結する画像変換・トリミングツール`,
+    title: HOME_TITLE,
     description: HOME_DESCRIPTION,
   },
   twitter: {
     // 専用の OG 画像アセットが無いため summary カードを使う（buildPageMetadata と同方針）
     card: "summary",
-    title: `${SITE_NAME} | ブラウザ内で完結する画像変換・トリミングツール`,
+    title: HOME_TITLE,
     description: HOME_DESCRIPTION,
   },
 };

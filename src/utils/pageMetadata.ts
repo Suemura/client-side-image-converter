@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+// 本番 URL の単一の source of truth。JSON なので CJS の next-sitemap.config.js も
+// require で同じ値を参照でき、canonical（本ファイル由来）と sitemap.xml の URL が食い違わない。
+import siteConfig from "../../site.config.json";
 
 // サイト全体で共有する定数（root layout と各ルートの layout.tsx で使用）
 export const SITE_NAME = "Client-Side Image Converter";
-export const SITE_URL = "https://image-converter.suemura.app";
+export const SITE_URL = siteConfig.siteUrl;
 
 // メタデータの主言語は日本語とする（html lang="ja" / i18n の既定言語も ja のため）。
 // 静的エクスポートのため言語別 URL は存在しない。
