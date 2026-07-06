@@ -22,7 +22,7 @@ fi
 # cwd が取れない場合は CLAUDE_PROJECT_DIR → . の順にフォールバックする（従来挙動）。
 work_dir=""
 if command -v jq > /dev/null 2>&1; then
-  work_dir=$(echo "$input" | jq -r '.cwd // empty')
+  work_dir=$(echo "$input" | jq -r '.cwd // empty' 2>/dev/null)
 fi
 cd "${work_dir:-${CLAUDE_PROJECT_DIR:-.}}" || exit 0
 
