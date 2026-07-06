@@ -90,9 +90,10 @@ This project is published under the [MIT License](LICENSE).
 
 ### Dependency Licenses
 
-This project uses open-source libraries with the following licenses:
+This project uses direct open-source dependencies with the following licenses:
 
-- **MIT License**: Major libraries including Next.js, React, TypeScript, piexifjs, exif-js, and i18next
+- **MIT License**: Major libraries including Next.js, React, piexifjs, exif-js, and i18next
+- **Apache-2.0**: TypeScript
 - **MIT OR GPL-3.0-or-later**: JSZip
 - **MIT AND Zlib**: pako
 

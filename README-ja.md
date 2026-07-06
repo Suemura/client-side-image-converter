@@ -88,9 +88,10 @@ npx biome format src/ --write
 
 ### 依存関係のライセンス
 
-このプロジェクトは以下のライセンスを持つオープンソースライブラリを使用しています：
+このプロジェクトは以下のライセンスを持つ直接依存のオープンソースライブラリを使用しています：
 
-- **MIT License**: Next.js, React, TypeScript, piexifjs, exif-js, i18next等の主要ライブラリ
+- **MIT License**: Next.js, React, piexifjs, exif-js, i18next等の主要ライブラリ
+- **Apache-2.0**: TypeScript
 - **MIT OR GPL-3.0-or-later**: JSZip
 - **MIT AND Zlib**: pako
 
