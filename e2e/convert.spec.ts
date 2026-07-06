@@ -5,6 +5,7 @@ import {
   brokenImageFile,
   heicFile,
   magicNumber,
+  noisyBmpFile,
   pngFile,
   tiffFile,
 } from "./helpers/fixtures";
@@ -253,5 +254,98 @@ test.describe("画像フォーマット変換", () => {
     expect(download.suggestedFilename()).toBe("sample.webp");
     const buf = readFileSync(await download.path());
     expect(magicNumber.isWebp(buf)).toBe(true);
+  });
+
+  test("目標ファイルサイズを指定して JPEG を圧縮できる", async ({ page }) => {
+    await page.goto("/convert/");
+    // 圧縮しにくい高周波 BMP を使い、目標サイズ以下への圧縮を検証する
+    await page.locator('input[type="file"]').setInputFiles(noisyBmpFile());
+
+    const targetKB = 40;
+    await page
+      .getByLabel("目標サイズ (KB)", { exact: true })
+      .fill(String(targetKB));
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("noisy.jpeg");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isJpeg(buf)).toBe(true);
+    // 出力が目標サイズ（40KB）以下に収まっている
+    expect(buf.length).toBeLessThanOrEqual(targetKB * 1024);
+  });
+
+  test("目標ファイルサイズを指定して WebP を圧縮できる", async ({ page }) => {
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(noisyBmpFile());
+
+    // ラジオの input は不可視のためラベルテキストをクリックする
+    await page.getByText("WebP", { exact: true }).click();
+
+    const targetKB = 40;
+    await page
+      .getByLabel("目標サイズ (KB)", { exact: true })
+      .fill(String(targetKB));
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("noisy.webp");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isWebp(buf)).toBe(true);
+    expect(buf.length).toBeLessThanOrEqual(targetKB * 1024);
+  });
+
+  test("目標ファイルサイズが達成できない場合は警告を表示しフォールバック出力する", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(noisyBmpFile());
+
+    // 1KB は最低品質でも達成不可能なため、フォールバック（最小サイズ）で出力される
+    await page.getByLabel("目標サイズ (KB)", { exact: true }).fill("1");
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    // 達成不可の警告が表示される（Next.js のルートアナウンサーも role="alert" のため文言でフィルタ）
+    const warning = page
+      .getByRole("alert")
+      .filter({ hasText: "目標サイズまで圧縮できませんでした" });
+    await expect(warning).toBeVisible();
+
+    // フォールバックでも有効な JPEG がダウンロードできる（目標は超過している）
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("noisy.jpeg");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isJpeg(buf)).toBe(true);
+    expect(buf.length).toBeGreaterThan(1 * 1024);
   });
 });

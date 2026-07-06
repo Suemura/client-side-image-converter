@@ -357,6 +357,12 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                             {Math.abs(compressionRatio)}%
                           </span>
                         </div>
+                        {/* 目標ファイルサイズに到達できなかった場合の警告（最小サイズで出力） */}
+                        {result.targetSizeAchieved === false && (
+                          <p className={styles.targetWarningText} role="alert">
+                            ⚠️ {t("results.targetSizeNotAchieved")}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

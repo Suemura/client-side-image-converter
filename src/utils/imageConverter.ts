@@ -14,6 +14,12 @@ export interface ConversionOptions {
   height?: number;
   maintainAspectRatio: boolean;
   preserveExif?: boolean;
+  /**
+   * 目標ファイルサイズ（KB）。指定すると品質値を二分探索し、目標サイズ以下で最大品質の結果を採用する。
+   * JPEG / WebP でのみ有効（PNG は可逆・AVIF は WASM エンコードが低速なため対象外）。
+   * 未指定または 0 以下の場合は quality をそのまま使う。
+   */
+  targetFileSizeKB?: number;
 }
 
 export interface ConversionResult {
@@ -24,7 +30,88 @@ export interface ConversionResult {
   filename: string;
   originalFilename: string;
   file: File;
+  /**
+   * 目標ファイルサイズ探索を行った場合の達成可否。
+   * 探索を行わなかった場合は undefined、達成できなかった場合（最小サイズで出力）は false。
+   */
+  targetSizeAchieved?: boolean;
 }
+
+export interface QualitySearchOptions {
+  minQuality?: number; // 既定 1
+  maxQuality?: number; // 既定 100
+  maxIterations?: number; // 既定 8（1-100 の整数範囲は ceil(log2(100))=7 で十分絞れる）
+}
+
+export interface QualitySearchResult {
+  blob: Blob;
+  quality: number;
+  achieved: boolean; // 目標サイズ以下を達成できたか
+}
+
+/**
+ * エンコード関数を注入し、目標ファイルサイズ以下で最大品質となる品質値を二分探索する純粋ロジック。
+ *
+ * Canvas / Image / WASM に非依存（`encode` を差し替えれば happy-dom でも単体テスト可能）。
+ * 「品質↑でサイズ↑」という近似単調性を前提とするが、破れても以下の性質により常に妥当な結果を返す:
+ * - 探索した品質のいずれかで目標以下になれば、その中で最大品質の Blob（目標以下）を必ず返す
+ * - どの品質でも目標を超える場合は、探索中に見つけた最小 Blob を `achieved: false` で返す（フォールバック）
+ *
+ * @param encode - 品質値（1-100）を受け取り Blob を返すエンコード関数
+ * @param targetSizeBytes - 目標ファイルサイズ（バイト）
+ * @param options - 探索範囲・反復回数の上書き
+ */
+export const searchQualityForTargetSize = async (
+  encode: (quality: number) => Promise<Blob>,
+  targetSizeBytes: number,
+  options?: QualitySearchOptions,
+): Promise<QualitySearchResult> => {
+  const minQuality = options?.minQuality ?? 1;
+  const maxQuality = options?.maxQuality ?? 100;
+  const maxIterations = options?.maxIterations ?? 8;
+
+  let lo = minQuality;
+  let hi = maxQuality;
+  // 目標以下で見つかった最大品質の候補
+  let best: QualitySearchResult | null = null;
+  // 全探索点のうち最小サイズの Blob（達成不可時のフォールバック）
+  let smallest: QualitySearchResult | null = null;
+
+  let iterations = 0;
+  while (lo <= hi && iterations < maxIterations) {
+    const mid = Math.floor((lo + hi) / 2);
+    const blob = await encode(mid);
+    iterations++;
+
+    if (smallest === null || blob.size < smallest.blob.size) {
+      smallest = { blob, quality: mid, achieved: false };
+    }
+
+    if (blob.size <= targetSizeBytes) {
+      // 目標達成: より高品質を狙って範囲を上へ
+      best = { blob, quality: mid, achieved: true };
+      lo = mid + 1;
+    } else {
+      // 目標超過: 品質を下げる
+      hi = mid - 1;
+    }
+  }
+
+  if (best) {
+    return best;
+  }
+  if (smallest) {
+    // どの品質でも目標を超えた: 最小サイズの結果を返す
+    return smallest;
+  }
+  // maxIterations <= 0 等で一度もエンコードしなかった場合のガード
+  const fallbackBlob = await encode(minQuality);
+  return {
+    blob: fallbackBlob,
+    quality: minQuality,
+    achieved: fallbackBlob.size <= targetSizeBytes,
+  };
+};
 
 /**
  * 変換に失敗したファイルの情報（ユーザーへの通知表示に使用する）
@@ -132,7 +219,11 @@ export const convertImage = async (
         ctx.drawImage(source, 0, 0, width, height);
 
         // 変換後の処理を共通化
-        const handleBlob = (blob: Blob | null) => {
+        // targetSizeAchieved は目標サイズ探索を行った場合のみ渡す（未指定時は undefined）
+        const handleBlob = (
+          blob: Blob | null,
+          targetSizeAchieved?: boolean,
+        ) => {
           if (!blob) {
             reject(
               new Error(
@@ -166,6 +257,7 @@ export const convertImage = async (
               filename,
               originalFilename: file.name,
               file: resultFile,
+              targetSizeAchieved,
             });
           };
 
@@ -205,10 +297,46 @@ export const convertImage = async (
             .catch(reject);
         } else {
           // JPEG/WebP用の標準品質制御
-          const quality = options.quality / 100;
           const mimeType = `image/${options.format}`;
 
-          canvas.toBlob(handleBlob, mimeType, quality);
+          // 目標ファイルサイズが指定されていれば品質を二分探索する（JPEG/WebP のみ）
+          // 既知の制限: JPEG で preserveExif も有効な場合、探索は EXIF 挿入前のサイズに対して
+          // 行われるため（EXIF は handleBlob 内で後挿入する）、最終物は EXIF 分だけ目標を
+          // わずかに超えうる。preserveExif は既定 false かつ超過幅は小さいため許容する。
+          // if 条件に直接展開することで TS が targetFileSizeKB を number に絞り込む
+          // （別変数に切り出すと絞り込みが効かず型アサーションが必要になる）
+          if (
+            options.targetFileSizeKB !== undefined &&
+            options.targetFileSizeKB > 0
+          ) {
+            const targetSizeBytes = options.targetFileSizeKB * 1024;
+            // Canvas.toBlob を品質可変の Promise 化エンコード関数として探索に注入する
+            const encode = (quality: number): Promise<Blob> =>
+              new Promise((resolveEncode, rejectEncode) => {
+                canvas.toBlob(
+                  (blob) => {
+                    if (blob) {
+                      resolveEncode(blob);
+                    } else {
+                      rejectEncode(
+                        new Error(
+                          `${options.format.toUpperCase()}画像の変換に失敗しました`,
+                        ),
+                      );
+                    }
+                  },
+                  mimeType,
+                  quality / 100,
+                );
+              });
+
+            searchQualityForTargetSize(encode, targetSizeBytes)
+              .then((result) => handleBlob(result.blob, result.achieved))
+              .catch(reject);
+          } else {
+            const quality = options.quality / 100;
+            canvas.toBlob(handleBlob, mimeType, quality);
+          }
         }
       } catch (error) {
         reject(error);

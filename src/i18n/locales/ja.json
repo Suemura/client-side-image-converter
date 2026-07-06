@@ -57,6 +57,11 @@
     "pngQualityExperimental": "PNG形式での品質制御を実験的にサポートしています。低い値ではファイルサイズが小さくなりますが、画質が劣化する場合があります。",
     "pngQualityHelp": "PNG品質: 95以上=標準PNG、70-94=中圧縮、70未満=高圧縮（画質劣化あり）",
     "qualityDescription": "品質: 低い値ほどファイルサイズが小さくなりますが、画質が劣化します",
+    "qualityDisabledByTargetSize": "目標ファイルサイズが指定されているため、品質は自動調整されます。",
+    "targetFileSize": "目標ファイルサイズ（オプション）",
+    "targetFileSizeLabel": "目標サイズ (KB)",
+    "targetFileSizeHelp": "指定すると、目標サイズ以下になるよう品質を自動調整します（JPEG / WebP のみ）。空欄の場合は上記の品質設定が使われます。",
+    "targetFileSizeUnsupported": "目標ファイルサイズの指定は JPEG / WebP でのみ対応しています。",
     "metadataSettings": "メタデータ設定",
     "preserveExif": "EXIF情報を保持",
     "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が変換後の画像に保持されます。JPEG形式でのみ有効です。",
@@ -167,7 +172,8 @@
     "viewDetails": "{{name}}の詳細を表示",
     "viewComparison": "{{name}}の変換前後比較を表示",
     "processingError": "処理エラー",
-    "downloadError": "ファイルのダウンロードに失敗しました。"
+    "downloadError": "ファイルのダウンロードに失敗しました。",
+    "targetSizeNotAchieved": "目標サイズまで圧縮できませんでした（最小サイズで出力）"
   },
   "comparison": {
     "original": "変換前",

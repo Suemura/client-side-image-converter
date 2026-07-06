@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { calculateTargetSize, convertMultipleImages } from "../imageConverter";
+import {
+  calculateTargetSize,
+  convertMultipleImages,
+  searchQualityForTargetSize,
+} from "../imageConverter";
 
 // convertImage 本体は Canvas / Image / WASM 依存のため単体テスト対象外（E2E で検証する）
 
@@ -96,5 +100,107 @@ describe("convertMultipleImages", () => {
       [2, 2],
     ]);
     vi.restoreAllMocks();
+  });
+});
+
+describe("searchQualityForTargetSize", () => {
+  // 指定バイト数の Blob を生成する（ascii 文字列は 1 文字 1 バイトなので size が length と一致する）
+  const blobOfSize = (bytes: number): Blob => new Blob(["x".repeat(bytes)]);
+
+  // 品質に比例したサイズ（size = quality * 100）を返す単調増加エンコーダー
+  const linearEncoder = () => {
+    const qualities: number[] = [];
+    const encode = (quality: number): Promise<Blob> => {
+      qualities.push(quality);
+      return Promise.resolve(blobOfSize(quality * 100));
+    };
+    return { encode, qualities };
+  };
+
+  it("目標以下で最大品質となる Blob を返す", async () => {
+    const { encode } = linearEncoder();
+    // target 5000 バイト → 品質 50（5000 バイト）が目標以下の最大品質
+    const result = await searchQualityForTargetSize(encode, 5000);
+    expect(result.achieved).toBe(true);
+    expect(result.quality).toBe(50);
+    expect(result.blob.size).toBe(5000);
+    expect(result.blob.size).toBeLessThanOrEqual(5000);
+  });
+
+  it("目標が最大品質のサイズ以上なら最大品質を返す", async () => {
+    const { encode } = linearEncoder();
+    // 品質 100 でも 10000 バイトで、target 20000 は余裕で達成可能 → 最大品質 100
+    const result = await searchQualityForTargetSize(encode, 20000);
+    expect(result.achieved).toBe(true);
+    expect(result.quality).toBe(100);
+    expect(result.blob.size).toBe(10000);
+  });
+
+  it("最低品質でも目標を超える場合は最小サイズの結果をフォールバックとして返す", async () => {
+    const { encode } = linearEncoder();
+    // 品質 1 でも 100 バイトあり、target 50 は達成不可 → 最小サイズ（品質 1）を返す
+    const result = await searchQualityForTargetSize(encode, 50);
+    expect(result.achieved).toBe(false);
+    expect(result.quality).toBe(1);
+    expect(result.blob.size).toBe(100);
+  });
+
+  it("反復回数の上限を超えてエンコードしない", async () => {
+    const { encode, qualities } = linearEncoder();
+    const result = await searchQualityForTargetSize(encode, 5000, {
+      maxIterations: 2,
+    });
+    // 2 回だけエンコードして、その時点で見つかった目標以下の候補を返す
+    expect(qualities).toHaveLength(2);
+    expect(result.achieved).toBe(true);
+    expect(result.blob.size).toBeLessThanOrEqual(5000);
+  });
+
+  it("maxIterations が 0 の場合は末尾ガードで minQuality を 1 回だけエンコードして返す", async () => {
+    // 探索ループが一度も回らず best/smallest がともに null になる防御的分岐を検証する
+    const { encode, qualities } = linearEncoder();
+    // 目標 5000 バイトなら minQuality(=1, 100 バイト) は達成可能
+    const achievedResult = await searchQualityForTargetSize(encode, 5000, {
+      maxIterations: 0,
+    });
+    // 末尾ガードで minQuality のみを 1 回エンコードする
+    expect(qualities).toEqual([1]);
+    expect(achievedResult.quality).toBe(1);
+    expect(achievedResult.blob.size).toBe(100);
+    expect(achievedResult.achieved).toBe(true);
+
+    // 目標 50 バイトなら minQuality(100 バイト) でも超過するため achieved は false
+    const { encode: encode2 } = linearEncoder();
+    const unachievedResult = await searchQualityForTargetSize(encode2, 50, {
+      maxIterations: 0,
+    });
+    expect(unachievedResult.quality).toBe(1);
+    expect(unachievedResult.achieved).toBe(false);
+  });
+
+  it("カスタムの品質範囲内でのみ探索する", async () => {
+    const { encode, qualities } = linearEncoder();
+    const result = await searchQualityForTargetSize(encode, 5000, {
+      minQuality: 10,
+      maxQuality: 20,
+    });
+    // 範囲内（10-20）は全て 5000 バイト以下なので最大の品質 20 を返す
+    expect(result.achieved).toBe(true);
+    expect(result.quality).toBe(20);
+    // 探索した品質はすべて指定範囲内
+    for (const q of qualities) {
+      expect(q).toBeGreaterThanOrEqual(10);
+      expect(q).toBeLessThanOrEqual(20);
+    }
+  });
+
+  it("単調性が崩れても達成時は必ず目標以下の Blob を返す", async () => {
+    // 品質とサイズが単調増加しないエンコーダー（低品質で大・高品質で小）
+    const encode = (quality: number): Promise<Blob> =>
+      Promise.resolve(blobOfSize(quality <= 30 ? 8000 : 1000));
+    const result = await searchQualityForTargetSize(encode, 2000);
+    // 達成した場合、返す Blob は必ず目標以下（誤って目標超過を採用しない）
+    expect(result.achieved).toBe(true);
+    expect(result.blob.size).toBeLessThanOrEqual(2000);
   });
 });

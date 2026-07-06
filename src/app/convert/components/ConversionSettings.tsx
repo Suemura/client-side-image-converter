@@ -14,6 +14,7 @@ export interface ConversionSettings {
   height?: number;
   maintainAspectRatio: boolean;
   preserveExif: boolean;
+  targetFileSizeKB?: number;
 }
 
 interface ConversionSettingsProps {
@@ -41,6 +42,9 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
   const [localHeight, setLocalHeight] = useState(
     settings.height?.toString() || "",
   );
+  const [localTargetFileSize, setLocalTargetFileSize] = useState(
+    settings.targetFileSizeKB?.toString() || "",
+  );
 
   // 外部のsettingsが変更された時にローカル状態を同期
   useEffect(() => {
@@ -54,6 +58,19 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
   useEffect(() => {
     setLocalHeight(settings.height?.toString() || "");
   }, [settings.height]);
+
+  useEffect(() => {
+    setLocalTargetFileSize(settings.targetFileSizeKB?.toString() || "");
+  }, [settings.targetFileSizeKB]);
+
+  // 目標ファイルサイズ指定は JPEG / WebP のみ対応（PNG は可逆・AVIF は WASM が低速なため）
+  const supportsTargetSize =
+    settings.targetFormat === "jpeg" || settings.targetFormat === "webp";
+  // 有効な目標サイズが入力されている場合は品質を自動調整するため、品質入力を無効化する
+  const targetSizeActive =
+    supportsTargetSize &&
+    settings.targetFileSizeKB !== undefined &&
+    settings.targetFileSizeKB > 0;
 
   // value に型注釈を付け、選択肢と ConversionFormat の整合を型で担保する
   const formatOptions: { label: string; value: ConversionFormat }[] = [
@@ -115,6 +132,20 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
     [settings, onSettingsChange],
   );
 
+  const handleTargetFileSizeChange = useCallback(
+    (value: string) => {
+      setLocalTargetFileSize(value);
+      const numeric = Number.parseInt(value, 10);
+      // 正の整数のみ有効な目標サイズとして扱い、それ以外（空・0・NaN）は未指定にする
+      onSettingsChange({
+        ...settings,
+        targetFileSizeKB:
+          !Number.isNaN(numeric) && numeric > 0 ? numeric : undefined,
+      });
+    },
+    [settings, onSettingsChange],
+  );
+
   const handleAspectRatioToggle = () => {
     onSettingsChange({
       ...settings,
@@ -152,13 +183,35 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
           onChange={handleQualityChange}
           placeholder="90"
           type="number"
+          disabled={targetSizeActive}
         />
       </div>
 
       <div className={styles.helpText}>
-        {settings.targetFormat === "png"
-          ? t("convert.pngQualityHelp")
-          : t("convert.qualityDescription")}
+        {targetSizeActive
+          ? t("convert.qualityDisabledByTargetSize")
+          : settings.targetFormat === "png"
+            ? t("convert.pngQualityHelp")
+            : t("convert.qualityDescription")}
+      </div>
+
+      <h3 className={styles.sectionTitle}>{t("convert.targetFileSize")}</h3>
+
+      <div className={styles.inputGroup}>
+        <Input
+          label={t("convert.targetFileSizeLabel")}
+          value={localTargetFileSize}
+          onChange={handleTargetFileSizeChange}
+          placeholder={t("convert.auto")}
+          type="number"
+          disabled={!supportsTargetSize}
+        />
+      </div>
+
+      <div className={styles.helpText}>
+        {supportsTargetSize
+          ? t("convert.targetFileSizeHelp")
+          : t("convert.targetFileSizeUnsupported")}
       </div>
 
       <h3 className={styles.sectionTitle}>{t("convert.imageSize")}</h3>

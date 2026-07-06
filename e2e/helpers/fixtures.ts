@@ -61,6 +61,48 @@ export const bmpFile = (name = "sample.bmp") => ({
   buffer: Buffer.from(BMP_1PX_BASE64, "base64"),
 });
 
+/**
+ * 目標ファイルサイズ探索の検証用に、圧縮しにくい高周波パターンの 24bit BMP を実行時生成する。
+ * 乱数を使わず決定論的なハッシュでピクセルを塗るため、生成結果とエンコード後サイズが安定する
+ * （品質を下げると顕著にサイズが縮むので二分探索が意味を持つ大きさになる）。
+ */
+export const noisyBmpFile = (name = "noisy.bmp", width = 400, height = 400) => {
+  // 24bit BMP の各行は 4 バイト境界にパディングされる
+  const rowSize = Math.floor((24 * width + 31) / 32) * 4;
+  const pixelDataSize = rowSize * height;
+  const fileSize = 54 + pixelDataSize;
+  const buf = Buffer.alloc(fileSize);
+
+  // BMP ファイルヘッダー（14 バイト）
+  buf.write("BM", 0, "ascii");
+  buf.writeUInt32LE(fileSize, 2);
+  buf.writeUInt32LE(54, 10); // ピクセルデータ開始オフセット
+
+  // DIB ヘッダー（BITMAPINFOHEADER、40 バイト）
+  buf.writeUInt32LE(40, 14);
+  buf.writeInt32LE(width, 18);
+  buf.writeInt32LE(height, 22);
+  buf.writeUInt16LE(1, 26); // プレーン数
+  buf.writeUInt16LE(24, 28); // ビット深度（24bit）
+  buf.writeUInt32LE(0, 30); // BI_RGB（無圧縮）
+  buf.writeUInt32LE(pixelDataSize, 34);
+
+  // 決定論的ハッシュで各ピクセルを塗る（ノイズ状で JPEG/WebP が圧縮しにくい）
+  for (let y = 0; y < height; y++) {
+    const rowStart = 54 + y * rowSize;
+    for (let x = 0; x < width; x++) {
+      const h = (x * 374761393 + y * 668265263) >>> 0;
+      const n = (h ^ (h >>> 13)) >>> 0;
+      const p = rowStart + x * 3;
+      buf[p] = n & 0xff; // B
+      buf[p + 1] = (n >>> 8) & 0xff; // G
+      buf[p + 2] = (n >>> 16) & 0xff; // R
+    }
+  }
+
+  return { name, mimeType: "image/bmp", buffer: buf };
+};
+
 /** PNG を装った破損ファイル（デコード失敗時の通知表示の検証に使用） */
 export const brokenImageFile = (name = "broken.png") => ({
   name,
