@@ -416,7 +416,7 @@ export const insertWebpExif = (
 
   const first = chunks[0].fourCC;
   if (first === "VP8X") {
-    // 既に拡張形式: フラグに EXIF ビットを立て、既存 EXIF を置換して末尾に付与する
+    // 既に拡張形式: フラグに EXIF ビットを立て、既存 EXIF を置換して挿入する
     const vp8x = chunks[0];
     if (vp8x.payload.length >= 1) {
       // subarray はビューのため元 webp を書き換えないよう複製してから更新する
@@ -425,11 +425,18 @@ export const insertWebpExif = (
       chunks[0] = { fourCC: "VP8X", payload: newPayload };
     }
     const withoutExif = chunks.filter((c) => c.fourCC !== "EXIF");
-    withoutExif.push(exifChunk);
+    // WebP 仕様では EXIF は XMP チャンクより前が推奨。XMP があればその直前に、
+    // 無ければ末尾に挿入して順序の逆転を防ぐ（fourCC は末尾スペース込みの "XMP "）
+    const xmpIndex = withoutExif.findIndex((c) => c.fourCC === "XMP ");
+    const insertAt = xmpIndex === -1 ? withoutExif.length : xmpIndex;
+    withoutExif.splice(insertAt, 0, exifChunk);
     return assembleWebp(withoutExif);
   }
 
-  // 単純形式（VP8 / VP8L）: VP8X を先頭に追加して拡張形式へ変換する
+  // 単純形式（VP8 / VP8L）: VP8X を先頭に追加して拡張形式へ変換する。
+  // アルファ(0x10)フラグはビットストリームを解析しないと判定できないため立てない
+  // （設計上ビットストリームは解釈しない。透過の有無は libwebp / ブラウザが
+  // ビットストリーム側から復元するため、EXIF 付与のみが目的の本処理では実害はない）
   const vp8xChunk: RiffChunk = {
     fourCC: "VP8X",
     payload: buildVp8xPayload(width, height, VP8X_EXIF_FLAG),

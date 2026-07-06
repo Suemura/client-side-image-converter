@@ -37,6 +37,17 @@ const createJpegFileWithExif = (): File => {
         [45, 1],
         [0, 1],
       ],
+      // 緯度・経度以外の GPS サブタグ（標高・撮影時刻・撮影方向）。
+      // 丸めモードでこれらが削除されることの検証に使う
+      [piexif.GPSIFD.GPSAltitudeRef]: 0,
+      [piexif.GPSIFD.GPSAltitude]: [100, 1] as unknown as number[],
+      [piexif.GPSIFD.GPSTimeStamp]: [
+        [12, 1],
+        [30, 1],
+        [0, 1],
+      ],
+      [piexif.GPSIFD.GPSDateStamp]: "2024:01:01",
+      [piexif.GPSIFD.GPSImgDirection]: [90, 1] as unknown as number[],
     },
   };
   const exifBytes = piexif.dump(exifObj);
@@ -129,6 +140,11 @@ describe("removeMetadataFromImage", () => {
       "GPSLatitudeRef",
       "GPSLongitude",
       "GPSLongitudeRef",
+      "GPSAltitudeRef",
+      "GPSAltitude",
+      "GPSTimeStamp",
+      "GPSDateStamp",
+      "GPSImgDirection",
     ]);
     const exif = await loadExifFromFile(result);
 
@@ -151,22 +167,43 @@ describe("removeMetadataFromImage", () => {
     expect(result.type).toBe("image/jpeg");
   });
 
-  it("GPS 丸めモードでは GPS が削除されず精度が落とされ、非 GPS タグは削除される", async () => {
+  it("GPS 丸めモードでは緯度・経度は丸めて残し、副次 GPS タグと非 GPS タグは削除される", async () => {
     const file = createJpegFileWithExif();
-    const result = await removeMetadataFromImage(file, ["GPS", "Make"], {
-      roundGpsInsteadOfRemove: true,
-    });
+    const result = await removeMetadataFromImage(
+      file,
+      [
+        "GPSLatitude",
+        "GPSLatitudeRef",
+        "GPSLongitude",
+        "GPSLongitudeRef",
+        "GPSAltitude",
+        "GPSTimeStamp",
+        "GPSDateStamp",
+        "GPSImgDirection",
+        "Make",
+      ],
+      {
+        roundGpsInsteadOfRemove: true,
+      },
+    );
     const exif = await loadExifFromFile(result);
 
-    // GPS は残っている（完全削除されていない）
+    // 緯度・経度（と Ref）は残っている（完全削除されていない）
     expect(exif.GPS?.[piexif.GPSIFD.GPSLatitude]).toBeDefined();
     expect(exif.GPS?.[piexif.GPSIFD.GPSLatitudeRef]).toBe("N");
+    expect(exif.GPS?.[piexif.GPSIFD.GPSLongitude]).toBeDefined();
     // 緯度は元の 35.6667 が 2 桁（35.67）に丸められている
     const lat = gpsRationalsToDecimal(
       exif.GPS?.[piexif.GPSIFD.GPSLatitude] as unknown as number[][],
       exif.GPS?.[piexif.GPSIFD.GPSLatitudeRef] as string,
     );
     expect(lat).toBeCloseTo(35.67, 2);
+    // 緯度・経度以外の GPS サブタグ（標高・撮影時刻・日付・撮影方向）は
+    // 丸めモードでも削除され、位置以外の情報が残存しない
+    expect(exif.GPS?.[piexif.GPSIFD.GPSAltitude]).toBeUndefined();
+    expect(exif.GPS?.[piexif.GPSIFD.GPSTimeStamp]).toBeUndefined();
+    expect(exif.GPS?.[piexif.GPSIFD.GPSDateStamp]).toBeUndefined();
+    expect(exif.GPS?.[piexif.GPSIFD.GPSImgDirection]).toBeUndefined();
     // 非 GPS タグ（Make）は削除されている
     expect(exif["0th"]?.[piexif.ImageIFD.Make]).toBeUndefined();
     // 選択されていない Model は残る

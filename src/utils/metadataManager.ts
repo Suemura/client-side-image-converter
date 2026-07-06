@@ -26,14 +26,24 @@ export const GPS_ROUNDING_DECIMALS = 2;
 /** メタデータ削除処理のオプション */
 export interface RemoveMetadataOptions {
   /**
-   * true の場合、選択された GPS タグは削除せず緯度・経度を市区町村レベルに丸める。
+   * true の場合、選択された GPS 緯度・経度は削除せず市区町村レベルに丸め、
+   * 標高・撮影時刻などその他の選択された GPS サブタグは通常どおり削除する。
    * piexifjs を使う JPEG のみ有効（その他の形式は Canvas 全削除のため無効）
    */
   roundGpsInsteadOfRemove?: boolean;
 }
 
-/** タグ名が GPS 関連か判定する（"GPS" / "GPS Info IFD Pointer" / "GPSLatitude" など） */
-const isGpsTag = (tagName: string): boolean => tagName.startsWith("GPS");
+/**
+ * GPS 丸めモードで「削除せず丸める」対象とする GPS タグ（緯度・経度とその Ref）。
+ * これ以外の GPS サブタグ（GPSAltitude / GPSTimeStamp / GPSDateStamp など）は
+ * 丸めモードでも通常どおり削除し、位置以外の情報が残存しないようにする。
+ */
+const GPS_ROUND_TAGS = new Set([
+  "GPSLatitude",
+  "GPSLatitudeRef",
+  "GPSLongitude",
+  "GPSLongitudeRef",
+]);
 
 export interface FileMetadata {
   file: File;
@@ -390,12 +400,17 @@ export const removeMetadataFromImage = async (
         const exifObj = piexif.load(imageData) as MutableExifObj;
 
         if (options?.roundGpsInsteadOfRemove) {
-          // GPS 丸めモード: GPS タグは削除せず緯度・経度を丸め、その他の選択タグは削除する
-          const gpsSelected = tagsToRemove.some(isGpsTag);
-          const nonGpsTags = tagsToRemove.filter((tag) => !isGpsTag(tag));
-          removeTagsFromExifObj(exifObj, nonGpsTags);
-          // GPS が選択されている場合のみ丸めを適用する（削除モードとの一貫性のため）
-          if (gpsSelected) {
+          // GPS 丸めモード: 緯度・経度（と Ref）は削除せず丸め、
+          // それ以外の選択されたタグ（GPSAltitude / GPSTimeStamp などの GPS サブタグを含む）は削除する
+          const roundedGpsSelected = tagsToRemove.some((tag) =>
+            GPS_ROUND_TAGS.has(tag),
+          );
+          const tagsToDelete = tagsToRemove.filter(
+            (tag) => !GPS_ROUND_TAGS.has(tag),
+          );
+          removeTagsFromExifObj(exifObj, tagsToDelete);
+          // 緯度・経度が削除対象に選ばれている場合のみ丸めを適用する
+          if (roundedGpsSelected) {
             roundGpsInExifObj(exifObj);
           }
         } else {
