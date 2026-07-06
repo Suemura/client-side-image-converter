@@ -95,7 +95,7 @@ npm run preview
 ※ vitest 用のエイリアスは `vitest.config.ts` にも定義されている。エイリアスを追加する場合は両方を更新すること。
 
 ### コア機能
-1. **画像フォーマット変換** - JPEG、PNG、WebP、AVIF 形式への変換（品質制御付き。AVIF は出力のみ対応）。HEIC/HEIF（iPhone 写真）と TIFF は変換ページのみ入力として受理（crop / metadata はブラウザがプレビュー描画できないため対象外）。変換に失敗したファイルは一覧で画面に通知される
+1. **画像フォーマット変換** - JPEG、PNG、WebP、AVIF 形式への変換（品質制御付き。AVIF は出力のみ対応）。目標ファイルサイズ (KB) を指定すると品質を二分探索して目標以下で最大品質の結果を出力する（JPEG / WebP のみ。達成不可時は最小サイズで出力し一覧に警告表示）。HEIC/HEIF（iPhone 写真）と TIFF は変換ページのみ入力として受理（crop / metadata はブラウザがプレビュー描画できないため対象外）。変換に失敗したファイルは一覧で画面に通知される
 2. **画像トリミング** - プレビュー付きのビジュアルトリミングインターフェース
 3. **EXIF メタデータ管理** - EXIF データの表示、編集、選択的削除
 4. **バッチ処理** - 複数画像の一括処理
@@ -187,6 +187,7 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
+- 変換ページに目標ファイルサイズ (KB) 指定を追加（Issue #30）。指定すると品質値を二分探索し目標サイズ以下で最大品質の結果を採用する（JPEG / WebP のみ。PNG は可逆・AVIF は WASM が低速なため対象外）。探索は Canvas 非依存の純粋関数 `searchQualityForTargetSize`（`imageConverter.ts`）に切り出して単体テスト、実サイズ検証は E2E で実施。達成不可時は最小サイズで出力し結果一覧に警告表示
 - `/start-issue` コマンドを git worktree 対応に変更。Issue ごとに `.claude/worktrees/issue-{番号}/`（gitignore 済み）へ worktree を作成して作業するため、複数 Issue の並列作業が可能に
 - 変換ページに TIFF 入力対応を追加（`utif2` による動的デコード、Issue #26）。crop / metadata の受理形式からブラウザで描画できない TIFF を除外し、変換失敗ファイルの一覧通知を追加
 - Next.js を 16 に更新（PR #45）。Turbopack 本番ビルドが無限ハングする上流バグの回避のため `build` スクリプトを `next build --webpack` に暫定変更（dev は Turbopack のまま。上流修正後に戻す）
