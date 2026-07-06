@@ -73,7 +73,7 @@ npm run preview
 ### 主要ディレクトリ構造
 - `src/app/` - Next.js App Router ページ
   - `convert/` - 画像フォーマット変換ページ
-  - `crop/` - 画像トリミングツールページ  
+  - `crop/` - 画像トリミングツールページ（`components/CropSelector.tsx`（8方向ハンドル操作・比率固定リサイズ）と `components/CropToolbar.tsx`（アスペクト比・回転/反転・適用範囲）で構成）
   - `metadata/` - EXIF メタデータエディターページ
   - `manifest.ts` - PWA の Web App Manifest。Next が `/manifest.webmanifest` として静的出力し `<link rel="manifest">` を自動注入する（`dynamic = "force-static"`）
 - `src/components/` - 再利用可能な React コンポーネント（PWA 関連: `ServiceWorkerRegister.tsx`（本番ビルドでのみ `/sw.js` を登録・UI なし）/ `InstallPrompt.tsx`（`beforeinstallprompt` を受けた控えめな A2HS 導線））
@@ -87,10 +87,11 @@ npm run preview
   - `avifEncoder.ts` - AVIF エンコード処理（`@jsquash/avif` の WASM を動的 import。`HTMLCanvasElement | OffscreenCanvas` 両対応）
   - `heicDecoder.ts` - HEIC/HEIF デコード処理（libheif WASM、動的 import。Canvas 非依存の `decodeHeicToImageData` を含む）
   - `tiffDecoder.ts` - TIFF デコード処理（`utif2` の純 JS デコーダー、動的 import。Canvas 非依存の `decodeTiffToImageData` を含む）
-  - `imageCropper.ts` - 画像トリミング処理
+  - `imageCropper.ts` - 画像トリミング処理（EXIF Orientation 補正 + 回転/反転をキャンバスに焼き込む `renderOrientedImage` / `createOrientedPreviewUrl`、`cropImage`（`transform` / `quality` 引数対応）、画像ごとの領域・変換を受け取る `cropImages`（`CropJob[]`）。`CropArea` / `CropTransform` は `cropGeometry.ts` から再エクスポート）
+  - `cropGeometry.ts` - トリミングの座標計算に関する Canvas 非依存の純粋ロジック（型 `CropArea` / `CropTransform` / `CropState`、`ASPECT_RATIO_PRESETS`、`clampCropArea` / `scaleCropArea` / `toDisplayArea` / `fitAspectRatio` / `enforceAspectRatio` / `orientedSize` / `rotateRight` / `rotateLeft` / `resolveCropForIndex`）。CropSelector（表示座標）・crop ページ（自然座標保持）・imageCropper（出力）で共有し単体テスト対象
   - `metadataManager.ts` - EXIF データ管理（JPEG / PNG / WebP からの読み取り、GPS の十進変換・丸めの純粋関数を含む）
   - `exifBinary.ts` - Canvas / WASM / ブラウザ API 非依存の純粋なバイナリ操作群（PNG eXIf チャンク・WebP RIFF/VP8X チャンクの抽出/挿入、CRC32、`Exif\0\0` 識別子の付け外し、piexif dump ↔ 純 TIFF 変換、合成 JPEG 生成）
-  - `exifTransfer.ts` - ソース EXIF の読み取りから出力 Blob への書き込みまでを橋渡しするブラウザ側ロジック（`exifWritableFormat` / `readExifTiffFromDataUrl` / `insertExifIntoBlob`）。変換・トリミングの両経路で共用
+  - `exifTransfer.ts` - ソース EXIF の読み取りから出力 Blob への書き込みまでを橋渡しするブラウザ側ロジック（`exifWritableFormat` / `readExifTiffFromDataUrl` / `insertExifIntoBlob`、および純 TIFF の Orientation タグを 1 に正規化する `normalizeExifOrientation`）。変換・トリミングの両経路で共用
   - `pageMetadata.ts` - ページ別 SEO メタデータ（title / description / OGP / Twitter / canonical）を組み立てる純粋関数 `buildPageMetadata` とサイト定数（`SITE_NAME` / `SITE_URL` / `SITE_LOCALE`）
   - `directoryReader.ts` - フォルダドロップ時に FileSystem Entry API を再帰走査して配下の File を収集する純粋ロジック（`getEntriesFromDataTransferItems` / `collectFilesFromEntries`）
   - `precache.ts` - Service Worker のプリキャッシュ判定・URL 変換（trailingSlash に合わせ index.html をディレクトリ URL 化）・キャッシュバージョン算出（FNV-1a）・キャッシュ名生成の純粋関数（`shouldPrecache` / `toCacheUrl` / `buildPrecacheUrls` / `computeCacheVersion` / `getCacheName`）。Canvas / DOM / Node API 非依存で単体テスト対象。ビルド時の SW ジェネレーター（`scripts/generate-sw.ts`）と共用
@@ -121,7 +122,7 @@ npm run preview
 
 ### コア機能
 1. **画像フォーマット変換** - JPEG、PNG、WebP、AVIF 形式への変換（品質制御付き。AVIF は出力のみ対応）。目標ファイルサイズ (KB) を指定すると品質を二分探索して目標以下で最大品質の結果を出力する（JPEG / WebP のみ。達成不可時は最小サイズで出力し一覧に警告表示）。HEIC/HEIF（iPhone 写真）と TIFF は変換ページのみ入力として受理（crop / metadata はブラウザがプレビュー描画できないため対象外）。変換に失敗したファイルは一覧で画面に通知される
-2. **画像トリミング** - プレビュー付きのビジュアルトリミングインターフェース
+2. **画像トリミング** - プレビュー付きのビジュアルトリミングインターフェース。アスペクト比プリセット（自由 / 1:1 / 16:9 / 4:3 / 3:2。自由以外は選択中のドラッグ・8方向リサイズ・移動が比率固定）、右/左 90° 回転・左右/上下反転、適用範囲の切り替え（「全画像一括」／「画像ごと」。画像ごとは ←/→ ナビゲーションと連動して画像単位に領域・回転/反転を保持・適用）に対応。プレビュー時に EXIF Orientation を `createImageBitmap(imageOrientation: "from-image")` で自動補正し回転/反転をキャンバスへ焼き込む（EXIF 保持時は出力の Orientation タグを 1 に正規化して二重回転を防ぐ）
 3. **EXIF メタデータ管理** - EXIF データの表示（JPEG / PNG / WebP に対応）、編集、選択的削除。GPS 位置は「削除」に加えて「市区町村レベルに丸める」（約 1km 精度で残す）を選択可能（GPS タグがある場合のみ UI 表示。丸めは JPEG のみ有効で、その他の形式は Canvas 再描画により全メタデータを削除）。変換・トリミングの「EXIF を保持」は JPEG / PNG / WebP 出力で有効（AVIF は非対応）
 4. **バッチ処理** - 複数画像の一括処理（ドラッグ&ドロップ / ファイル選択 / クリップボード貼り付け / フォルダドロップで投入）。変換ページは対応環境で Web Worker + OffscreenCanvas のプール（`navigator.hardwareConcurrency` を上限に並列）で処理し UI をブロックしない（非対応環境はメインスレッド逐次処理にフォールバック）
 5. **プライバシーファースト** - Canvas API / WASM を使用したクライアントサイドでの全処理
@@ -135,6 +136,7 @@ npm run preview
 - TIFF のデコードは `utif2`（純 JS の TIFF デコーダー）を使用し、動的 import により TIFF 変換時のみロードする（初期バンドルに影響なし。マルチページ TIFF は先頭ページのみ対応）
 - HEIC / TIFF は MIME タイプが特定されない環境があるため、拡張子（.heic/.heif/.tif/.tiff）によるフォールバック判定を行う（`fileUtils.ts` の `FORMAT_EXTENSION_FALLBACKS`。`isHeicFile` / `isTiffFile` の判定と input の accept 属性の両方で使用）
 - 画像の投入は全ページ共通の `FileUploadArea` に集約し、ドラッグ&ドロップ / ファイル選択 / クリップボード貼り付け（Ctrl/Cmd+V、`usePasteImages` フック）/ フォルダドロップ（`directoryReader.ts` による再帰走査）のいずれも共通関数 `addFiles`（`filterValidFiles` による MIME フィルタ → `addUniqueFiles` による重複除外）に合流させる。フォルダドロップは drop イベント中に `webkitGetAsEntry()` を同期取得してから再帰走査する（非対応環境は `dataTransfer.files` にフォールバック）。クリップボード取り込みは `fileUtils.ts` の `getFilesFromClipboardData`（`.files` 優先、無ければ `.items` の `kind === "file"`）
+- トリミングの座標計算（境界クランプ・表示⇔自然座標変換・アスペクト比の当てはめ/強制・回転後寸法・画像ごとの領域/変換の解決）は Canvas / DOM 非依存の純粋関数 `cropGeometry.ts` に集約し、CropSelector（表示座標での操作。`aspectRatio` prop で比率固定リサイズ）・crop ページ（自然座標での state 保持と適用範囲トグル）・`imageCropper.ts`（出力）で共有して単体テストする。回転/反転と EXIF Orientation は `renderOrientedImage` でプレビューと出力の双方に同一ロジックで焼き込み（WYSIWYG）、EXIF 保持時のみ `normalizeExifOrientation` で出力 TIFF の Orientation を 1 に揃える。トリミングツールバー UI は `src/app/crop/components/CropToolbar.tsx`（文言は i18n `crop.*`）
 - EXIF データ処理は保存に `piexifjs`、読み取りに `exif-js` を使用。WebP（RIFF の EXIF チャンク）と PNG（eXIf チャンク）は、取り出した TIFF を合成 JPEG（APP1）に包んで exif-js に読ませる（exif-js は先頭が JPEG SOI でないと読めないため）
 - EXIF の書き込みは JPEG（piexifjs）に加え、PNG は eXIf チャンク、WebP は VP8X + EXIF チャンクへ挿入する。バイナリ操作は Canvas / ブラウザ API 非依存の純粋関数 `exifBinary.ts`（単体テスト対象）に切り出し、ブラウザ側の読み取り〜書き込みの橋渡しを `exifTransfer.ts` が担う。AVIF はメタデータ書き込み非対応
 - テーマ切り替え（ライト/ダーク）は CSS カスタムプロパティで処理
@@ -222,6 +224,7 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
+- トリミングページを強化（Issue #31）。(1) アスペクト比プリセット（自由 / 1:1 / 16:9 / 4:3 / 3:2。自由以外はドラッグ・8方向リサイズ・移動が比率固定）、(2) 右/左 90° 回転・左右/上下反転 + EXIF Orientation 自動補正（プレビュー時に `createImageBitmap(imageOrientation: "from-image")` で向きを焼き込み、EXIF 保持時は出力 Orientation を 1 に正規化して二重回転を防止）、(3) 適用範囲の切り替え（「全画像一括」／「画像ごと」。画像ごとは ←/→ と連動して画像単位に領域・回転/反転を保持）を追加。座標計算を Canvas 非依存の純粋ロジック `cropGeometry.ts`（型 `CropArea` / `CropTransform` / `CropState`、`ASPECT_RATIO_PRESETS`、`clampCropArea` / `scaleCropArea` / `toDisplayArea` / `fitAspectRatio` / `enforceAspectRatio` / `orientedSize` / `rotateRight` / `rotateLeft` / `resolveCropForIndex`）に切り出し、`imageCropper.ts` に `renderOrientedImage` / `createOrientedPreviewUrl` を新設、`cropImage` に `transform` / `quality` 引数・`cropImages` に `CropJob[]` を追加、`exifTransfer.ts` に `normalizeExifOrientation` を追加。UI ツールバーは `src/app/crop/components/CropToolbar.tsx`（i18n `crop.*`）。単体テストは `cropGeometry.test.ts` / `exifTransfer.test.ts`、実ブラウザ検証は `e2e/crop.spec.ts`（正方形出力 / 90° 回転 / 画像ごと変換）。crop / metadata の受理形式・convert の仕様は不変（TIFF/HEIC は引き続き crop の入力対象外、AVIF は EXIF 保持・Orientation 正規化の対象外）
 - 変換ページのバッチ処理を Web Worker + OffscreenCanvas のワーカープールへ移し、`navigator.hardwareConcurrency` を上限に並列実行するようにした（Issue #32・#47）。AVIF の WASM エンコード（従来メインスレッドで同期実行し UI をフリーズさせていた）も Worker 内で実行する。Worker（`src/workers/`: `imageProcessing.worker.ts` / `imageProcessingPool.ts` / `messages.ts`）とメインスレッドで共有する型・純粋ロジックを Canvas 非依存の `conversionCore.ts`（コア型 + `searchQualityForTargetSize` / `calculateTargetSize`）・`concurrency.ts`（`mapWithConcurrency` / `resolveConcurrency`）・`pngQuality.ts`（`pngQualityStrategy`）・`conversionResult.ts`（`buildConversionResult`）・`decodedImage.ts` に切り出し。OffscreenCanvas 非対応環境や Worker 個別失敗時はメインスレッドの `convertImage` にフォールバック。出力・対応形式・オプション（EXIF 保持・目標ファイルサイズ・品質・リサイズ）の仕様は不変で crop / metadata は変更なし。単体テストは `concurrency.test.ts` / `pngQuality.test.ts`、実ブラウザ検証は `e2e/convert.spec.ts`（一括変換の ZIP 全件検証 / AVIF バッチ / Worker 生成確認）
 - PWA 化（オフライン対応・インストール可能化）に対応（Issue #33）。静的エクスポート + Cloudflare Pages 構成に合わせ、ビルドツール非依存の「手書き SW テンプレート（`scripts/sw-template.js`）+ postbuild ジェネレーター（`scripts/generate-sw.ts`）」方式で Service Worker（`out/sw.js`）を生成。`src/app/manifest.ts`（Web App Manifest → `/manifest.webmanifest`）・`public/icons/`（192 / 512 / maskable）・`public/_headers`（sw.js は no-cache 等）・`ServiceWorkerRegister`（本番のみ登録）・`InstallPrompt`（A2HS 導線、i18n `install.*`）を追加。プリキャッシュ判定・URL 変換・キャッシュバージョン（FNV-1a）算出は純粋関数 `precache.ts` に切り出して単体テスト（`precache.test.ts`）。プリキャッシュ URL のハッシュをキャッシュ名に含め、`_next/static/**` が変わったときだけ更新。`skipWaiting` は付けず更新は次回起動時に反映。`postbuild` を `next-sitemap && node scripts/generate-sw.ts` に、`tsconfig.json` の `exclude` に `scripts` を追加。実ブラウザ検証は `e2e/pwa.spec.ts`（manifest / theme-color / 全ルートのオフライン描画）。合否は Lighthouse の PWA カテゴリ廃止（Lighthouse 12）のため DevTools Application パネルと pwa.spec.ts で担保
 - 全ページ（convert / crop / metadata）の画像投入方法にクリップボード貼り付け（Ctrl/Cmd+V）とフォルダドロップ（サブフォルダを含む再帰取込）を追加（Issue #35）。共通フック `usePasteImages`（`src/hooks/`）と純粋ロジック `directoryReader.ts` を追加し、`FileUploadArea` の投入処理を共通関数 `addFiles`（`filterValidFiles` → `addUniqueFiles`）に集約。クリップボード取り込みは `fileUtils.ts` の `getFilesFromClipboardData`。非画像や各ページの受理形式外は既存の MIME フィルタで除外。単体テストは `directoryReader.test.ts` / `fileUtils.test.ts`、実ブラウザ検証は `e2e/paste-and-folder-drop.spec.ts`
