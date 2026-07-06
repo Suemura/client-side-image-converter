@@ -40,6 +40,12 @@
   },
   "convert": {
     "title": "Conversion Settings",
+    "mode": "Processing Mode",
+    "modeConvert": "Format Conversion",
+    "modeOptimize": "Optimize (keep format)",
+    "optimizeDescription": "Re-compresses the image in its original format to reduce file size. PNG is lossless (pixels unchanged); JPEG / WebP are re-encoded at high quality (essentially minimal loss). If it can't be made smaller, the original file is kept. Supported formats: PNG / JPEG / WebP.",
+    "optimize": "Optimize",
+    "optimizing": "Optimizing...",
     "targetFormat": "Target Format",
     "qualitySettings": "Quality Settings",
     "quality": "Quality (%)",

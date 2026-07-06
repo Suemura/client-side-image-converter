@@ -36,6 +36,9 @@
   },
   "dependencies": {
     "@jsquash/avif": "^2.1.1",
+    "@jsquash/jpeg": "^1.6.0",
+    "@jsquash/oxipng": "^2.3.0",
+    "@jsquash/webp": "^1.5.0",
     "exif-js": "^2.3.0",
     "heic-decode": "^2.1.0",
     "i18next": "^26.3.4",

@@ -8,8 +8,20 @@
 
 export type ConversionFormat = "jpeg" | "png" | "webp" | "avif";
 
+/**
+ * 処理モード。
+ * - "convert": 指定フォーマットへ変換する（既定）
+ * - "optimize": フォーマットを維持したまま再圧縮してファイルサイズを削減する（Issue #61）
+ */
+export type ConversionMode = "convert" | "optimize";
+
 export interface ConversionOptions {
   format: ConversionFormat;
+  /**
+   * 処理モード（未指定時は "convert"）。"optimize" のときは `format` は無視され、
+   * 入力と同じフォーマットのまま最適化（PNG は可逆・JPEG/WebP は再エンコード）する。
+   */
+  mode?: ConversionMode;
   quality: number; // 0-100
   width?: number;
   height?: number;

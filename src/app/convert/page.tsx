@@ -25,6 +25,7 @@ export default function Home() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [conversionSettings, setConversionSettings] =
     useState<ConversionSettingsType>({
+      mode: "convert",
       targetFormat: "jpeg",
       quality: 90,
       maintainAspectRatio: true,
@@ -73,6 +74,7 @@ export default function Home() {
       const { results, failures } = await convertMultipleImages(
         selectedFiles,
         {
+          mode: conversionSettings.mode,
           format: conversionSettings.targetFormat,
           quality: conversionSettings.quality,
           width: conversionSettings.width,
