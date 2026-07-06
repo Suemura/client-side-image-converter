@@ -15,6 +15,7 @@ import { buildConversionResult } from "./conversionResult";
 import { insertExifIntoBlob, readExifTiffFromDataUrl } from "./exifTransfer";
 import { isHeicFile, isTiffFile } from "./fileUtils";
 import { decodeHeicToCanvas } from "./heicDecoder";
+import { PNG_COMPRESSED_QUALITY_HINT, pngQualityStrategy } from "./pngQuality";
 import { decodeTiffToCanvas } from "./tiffDecoder";
 
 // 型・純粋ロジックは Canvas 非依存の conversionCore に集約している。
@@ -311,13 +312,14 @@ export const convertToPngWithQuality = (
   callback: (blob: Blob | null) => void,
 ): void => {
   // PNG品質制御: Canvas APIの標準的なPNG出力を使用
-  // 品質値に基づいて出力戦略を変更
-  if (quality >= 95) {
+  // 品質ティア判定は Worker（OffscreenCanvas 版）と共有する純粋関数に集約している
+  const strategy = pngQualityStrategy(quality);
+  if (strategy === "lossless") {
     // 高品質: 標準PNG出力
     canvas.toBlob(callback, "image/png");
-  } else if (quality >= 70) {
+  } else if (strategy === "compressed") {
     // 中品質: 少し圧縮
-    canvas.toBlob(callback, "image/png", 0.92);
+    canvas.toBlob(callback, "image/png", PNG_COMPRESSED_QUALITY_HINT);
   } else {
     // 低品質: より積極的な圧縮のため、一度JPEGに変換してからPNGに
     const tempCanvas = document.createElement("canvas");

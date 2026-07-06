@@ -42,6 +42,8 @@ interface WorkerHandle {
       reject: (error: unknown) => void;
     }
   >;
+  /** onerror でクラッシュ検知済みかどうか。true の Worker は再利用せずメインスレッドへ回す */
+  dead: boolean;
 }
 
 /** Worker を生成し、id ルーティング付きのハンドルを返す */
@@ -50,7 +52,7 @@ const createWorkerHandle = (): WorkerHandle => {
     new URL("./imageProcessing.worker.ts", import.meta.url),
     { type: "module" },
   );
-  const handle: WorkerHandle = { worker, pending: new Map() };
+  const handle: WorkerHandle = { worker, pending: new Map(), dead: false };
 
   worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
     const response = event.data;
@@ -62,8 +64,11 @@ const createWorkerHandle = (): WorkerHandle => {
   };
 
   // Worker がロード時や実行時にクラッシュした場合、in-flight のジョブを reject して
-  // メインスレッドへフォールバックさせる
+  // メインスレッドへフォールバックさせる。以後この Worker は再利用しない（dead 化）ことで、
+  // 死んだ Worker に postMessage して応答が返らずレーンがハングするのを防ぐ
+  // （再生成はしない: Worker のロード自体が失敗するケースで無限再生成に陥らないため）
   worker.onerror = (event) => {
+    handle.dead = true;
     const error = new Error(event.message || "Worker error");
     for (const callbacks of handle.pending.values()) {
       callbacks.reject(error);
@@ -142,6 +147,13 @@ export const convertFilesWithWorkerPool = async (
           return fallbackConvert(file, options);
         }
         try {
+          // クラッシュ検知済み（dead）の Worker は再利用せずメインスレッドで処理する。
+          // handle は finally でスタックに戻るため、以降このレーンは常にフォールバックする
+          // （死んだ Worker に postMessage して応答が返らずハングするのを防ぐ）
+          if (handle.dead) {
+            return await fallbackConvert(file, options);
+          }
+
           const buffer = await file.arrayBuffer();
           const request: WorkerRequest = {
             id: index,
