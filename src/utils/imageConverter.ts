@@ -303,12 +303,13 @@ export const convertImage = async (
           // 既知の制限: JPEG で preserveExif も有効な場合、探索は EXIF 挿入前のサイズに対して
           // 行われるため（EXIF は handleBlob 内で後挿入する）、最終物は EXIF 分だけ目標を
           // わずかに超えうる。preserveExif は既定 false かつ超過幅は小さいため許容する。
-          const shouldSearchTargetSize =
+          // if 条件に直接展開することで TS が targetFileSizeKB を number に絞り込む
+          // （別変数に切り出すと絞り込みが効かず型アサーションが必要になる）
+          if (
             options.targetFileSizeKB !== undefined &&
-            options.targetFileSizeKB > 0;
-
-          if (shouldSearchTargetSize) {
-            const targetSizeBytes = (options.targetFileSizeKB as number) * 1024;
+            options.targetFileSizeKB > 0
+          ) {
+            const targetSizeBytes = options.targetFileSizeKB * 1024;
             // Canvas.toBlob を品質可変の Promise 化エンコード関数として探索に注入する
             const encode = (quality: number): Promise<Blob> =>
               new Promise((resolveEncode, rejectEncode) => {

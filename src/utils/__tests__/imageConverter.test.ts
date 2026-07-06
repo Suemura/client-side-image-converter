@@ -156,6 +156,28 @@ describe("searchQualityForTargetSize", () => {
     expect(result.blob.size).toBeLessThanOrEqual(5000);
   });
 
+  it("maxIterations が 0 の場合は末尾ガードで minQuality を 1 回だけエンコードして返す", async () => {
+    // 探索ループが一度も回らず best/smallest がともに null になる防御的分岐を検証する
+    const { encode, qualities } = linearEncoder();
+    // 目標 5000 バイトなら minQuality(=1, 100 バイト) は達成可能
+    const achievedResult = await searchQualityForTargetSize(encode, 5000, {
+      maxIterations: 0,
+    });
+    // 末尾ガードで minQuality のみを 1 回エンコードする
+    expect(qualities).toEqual([1]);
+    expect(achievedResult.quality).toBe(1);
+    expect(achievedResult.blob.size).toBe(100);
+    expect(achievedResult.achieved).toBe(true);
+
+    // 目標 50 バイトなら minQuality(100 バイト) でも超過するため achieved は false
+    const { encode: encode2 } = linearEncoder();
+    const unachievedResult = await searchQualityForTargetSize(encode2, 50, {
+      maxIterations: 0,
+    });
+    expect(unachievedResult.quality).toBe(1);
+    expect(unachievedResult.achieved).toBe(false);
+  });
+
   it("カスタムの品質範囲内でのみ探索する", async () => {
     const { encode, qualities } = linearEncoder();
     const result = await searchQualityForTargetSize(encode, 5000, {
