@@ -15,6 +15,7 @@
 
 import type { ConversionResult } from "./conversionCore";
 import { buildOptimizeResult } from "./conversionResult";
+import { extractWebpExif } from "./exifBinary";
 import {
   detectWebpEncoding,
   pickSmallerSize,
@@ -94,7 +95,15 @@ export const optimizeImageBuffer = async (
     });
     mime = "image/jpeg";
   } else {
-    // webp: 入力がロスレス(VP8L)ならロスレスで、そうでなければ高品質ロッシーで再エンコードする
+    // webp: @jsquash/webp/decode には JPEG の preserveOrientation 相当が無く、EXIF Orientation を
+    // 補正できない。かつ再エンコードで EXIF は失われる。そのため EXIF を持つ WebP は最適化せず
+    // 元を採用し、Orientation!=1 の WebP が回転して表示される・メタデータが黙って失われるのを防ぐ
+    // （EXIF を持たない WebP のみ再圧縮する。JPEG は codec 側で焼き込めるため最適化する点と非対称だが、
+    // それぞれ codec の能力に応じた安全側の選択）。
+    if (extractWebpExif(new Uint8Array(buffer)) !== null) {
+      return { buffer, mime: mimeType, optimized: false };
+    }
+    // 入力がロスレス(VP8L)ならロスレスで、そうでなければ高品質ロッシーで再エンコードする
     const { default: decode } = await import("@jsquash/webp/decode.js");
     const { default: encode } = await import("@jsquash/webp/encode.js");
     const encoding = detectWebpEncoding(new Uint8Array(buffer));

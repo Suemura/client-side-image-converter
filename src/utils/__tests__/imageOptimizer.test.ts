@@ -14,6 +14,7 @@ import jpegEncode from "@jsquash/jpeg/encode.js";
 import oxipngOptimise from "@jsquash/oxipng/optimise.js";
 import webpDecode from "@jsquash/webp/decode.js";
 import webpEncode from "@jsquash/webp/encode.js";
+import { insertWebpExif } from "../exifBinary";
 import { optimizeImage, optimizeImageBuffer } from "../imageOptimizer";
 
 /** 指定バイト数の ArrayBuffer（内容 1 埋め） */
@@ -120,6 +121,26 @@ describe("optimizeImageBuffer - WebP のロスレス/ロッシー切替", () => 
     const options = vi.mocked(webpEncode).mock.calls[0][1];
     expect(options?.lossless).toBeUndefined();
     expect(options?.quality).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("optimizeImageBuffer - EXIF を持つ WebP はスキップ", () => {
+  it("EXIF チャンクを持つ WebP は最適化せず元を採用する（Orientation 崩れ・EXIF 喪失回避）", async () => {
+    // VP8 の最小 WebP に EXIF を付与する（@jsquash/webp は decode 時に向きを補正できないため）
+    const base = new Uint8Array(webpBytes("VP8 ", 16));
+    const tiff = new Uint8Array([0x49, 0x49, 0x2a, 0x00, 8, 0, 0, 0]); // 最小 TIFF (II*)
+    const withExif = insertWebpExif(base, tiff, 1, 1);
+    const input = new ArrayBuffer(withExif.length);
+    new Uint8Array(input).set(withExif);
+
+    const result = await optimizeImageBuffer(input, "image/webp");
+
+    expect(result.optimized).toBe(false);
+    expect(result.buffer).toBe(input); // 元をそのまま採用
+    expect(result.mime).toBe("image/webp");
+    // decode/encode を呼ばずに早期リターンしている
+    expect(webpDecode).not.toHaveBeenCalled();
+    expect(webpEncode).not.toHaveBeenCalled();
   });
 });
 
