@@ -7,6 +7,7 @@
 
 import piexif from "piexifjs";
 import {
+  buildSyntheticJpegFromTiff,
   extractPngExif,
   extractWebpExif,
   insertPngExif,
@@ -14,7 +15,11 @@ import {
   piexifDumpToTiff,
   tiffToPiexifDump,
 } from "./exifBinary";
-import { base64ToUint8Array, dataUrlToBlob } from "./imageUtils";
+import {
+  base64ToUint8Array,
+  dataUrlToBlob,
+  uint8ArrayToBase64,
+} from "./imageUtils";
 
 /** EXIF を書き込める出力形式 */
 export type ExifWritableFormat = "jpeg" | "png" | "webp";
@@ -65,6 +70,47 @@ export const readExifTiffFromDataUrl = (
     console.warn("Failed to read EXIF data:", error);
   }
   return null;
+};
+
+/**
+ * 純 TIFF を、向き・寸法をピクセルへ焼き込んだ出力画像に整合させた TIFF を返す。
+ *
+ * トリミング側は EXIF Orientation と回転/反転をピクセルへ焼き込むため、
+ * (1) 元の Orientation を残すと閲覧側で二重回転してしまうので 1（無回転）へ揃え、
+ * (2) ExifIFD の実ピクセル寸法（PixelXDimension 40962 / PixelYDimension 40963）を
+ *     トリミング/回転後の実寸 width / height へ更新して、メタデータと実ピクセルの
+ *     不整合（回転で幅・高さが入れ替わる場合など）を防ぐ。
+ * 寸法タグは元画像に存在する場合のみ上書きし、無い画像へは新規追加しない。
+ * 失敗時は元の TIFF をそのまま返す（EXIF 保持を優先）。
+ */
+export const normalizeExifForBakedImage = (
+  tiff: Uint8Array,
+  width: number,
+  height: number,
+): Uint8Array => {
+  try {
+    const jpeg = buildSyntheticJpegFromTiff(tiff);
+    const dataUrl = `data:image/jpeg;base64,${uint8ArrayToBase64(jpeg)}`;
+    const exifObj = piexif.load(dataUrl);
+    if (exifObj["0th"]) {
+      // Orientation タグ（274）。無回転を表す 1 に設定する
+      exifObj["0th"][piexif.ImageIFD.Orientation] = 1;
+    }
+    const exifIfd = exifObj.Exif;
+    if (exifIfd) {
+      // 実寸タグが存在するときだけ、焼き込み後の実ピクセル寸法へ更新する
+      if (piexif.ExifIFD.PixelXDimension in exifIfd) {
+        exifIfd[piexif.ExifIFD.PixelXDimension] = width;
+      }
+      if (piexif.ExifIFD.PixelYDimension in exifIfd) {
+        exifIfd[piexif.ExifIFD.PixelYDimension] = height;
+      }
+    }
+    return piexifDumpToTiff(piexif.dump(exifObj));
+  } catch (error) {
+    console.warn("Failed to normalize EXIF for baked image:", error);
+    return tiff;
+  }
 };
 
 /** Blob を DataURL に変換する（EXIF 挿入時の piexif 用） */

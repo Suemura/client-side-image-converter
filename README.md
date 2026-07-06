@@ -15,7 +15,7 @@ https://image-converter.suemura.app/
 ## ✨ Features
 
 - **Format Conversion**: Convert images to JPEG, PNG, WebP, and AVIF with quality control and an optional target file size (JPEG / WebP). HEIC/HEIF and TIFF are accepted as input.
-- **Image Cropping**: Visual cropping tool with live preview.
+- **Image Cropping**: Visual cropping tool with live preview, aspect-ratio presets (Free / 1:1 / 16:9 / 4:3 / 3:2), 90° rotation and horizontal/vertical flip with automatic EXIF Orientation correction, and a choice between applying one setting to all images or cropping each image individually.
 - **EXIF Metadata Management**: View EXIF data (JPEG / PNG / WebP), edit tags, and selectively remove sensitive metadata. GPS location can be removed or rounded to roughly city level (about 1 km precision, JPEG only).
 - **EXIF Preservation**: Optionally carry over the original EXIF metadata when converting or cropping (JPEG / PNG / WebP output; AVIF is not supported).
 - **Batch Processing**: Process multiple images at once (up to 200 files at a time; files beyond the limit are not added and a warning is shown). On the convert page, batches run in parallel using Web Workers (up to your CPU's core count), keeping the UI responsive even with large or numerous images.

@@ -194,6 +194,10 @@
   justify-content: center;
 }
 
+.progressWrapper {
+  margin-bottom: 1rem;
+}
+
 /* レスポンシブデザイン */
 @media (max-width: 1200px) {
   .cropPageContainer {

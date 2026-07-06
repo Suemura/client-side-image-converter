@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
-import { magicNumber, pngFile } from "./helpers/fixtures";
+import JSZip from "jszip";
+import { magicNumber, pngFile, pngSize, rectPngFile } from "./helpers/fixtures";
 
 test.describe("画像トリミング", () => {
   test("画像をトリミングしてダウンロードできる", async ({ page }) => {
@@ -40,5 +41,133 @@ test.describe("画像トリミング", () => {
     await expect(
       page.getByText("対応形式: JPG, PNG, WebP, BMP", { exact: true }),
     ).toBeVisible();
+  });
+
+  test("アスペクト比 1:1 を選ぶと正方形に切り出される", async ({ page }) => {
+    await page.goto("/crop/");
+    // 40x20 の横長 PNG を投入する
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("rect.png", 40, 20));
+
+    const cropButton = page.getByRole("button", {
+      name: "トリミング",
+      exact: true,
+    });
+    await expect(cropButton).toBeEnabled({ timeout: 15_000 });
+
+    // 1:1 プリセットを選択すると現在の領域が正方形に収まる
+    await page.getByRole("button", { name: "1:1", exact: true }).click();
+    await cropButton.click();
+
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("rect_cropped.png");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isPng(buf)).toBe(true);
+    // 出力が正方形（幅 = 高さ）に切り出されている
+    const size = pngSize(buf);
+    expect(size.width).toBe(size.height);
+    // 元の横長（40x20）から正方形へ変化している
+    expect(size.width).toBeLessThan(40);
+  });
+
+  test("90°回転すると出力の縦横が入れ替わる", async ({ page }) => {
+    await page.goto("/crop/");
+    // 40x20（横長）を投入
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("rect.png", 40, 20));
+
+    const cropButton = page.getByRole("button", {
+      name: "トリミング",
+      exact: true,
+    });
+    await expect(cropButton).toBeEnabled({ timeout: 15_000 });
+
+    // 右に 90° 回転（領域は全体へリセットされ、再度有効化される）
+    await page.getByRole("button", { name: "右に90°回転" }).click();
+    await expect(cropButton).toBeEnabled({ timeout: 15_000 });
+
+    await cropButton.click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isPng(buf)).toBe(true);
+    // 横長（幅 > 高さ）から縦長（高さ > 幅）へ入れ替わっている
+    const size = pngSize(buf);
+    expect(size.height).toBeGreaterThan(size.width);
+  });
+
+  test("画像ごとモードで画像単位に異なる変換を適用できる", async ({ page }) => {
+    await page.goto("/crop/");
+    // 2 枚（いずれも 40x20 横長）を投入
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles([
+        rectPngFile("rect1.png", 40, 20),
+        rectPngFile("rect2.png", 40, 20),
+      ]);
+
+    const cropButton = page.getByRole("button", {
+      name: "トリミング",
+      exact: true,
+    });
+    await expect(cropButton).toBeEnabled({ timeout: 15_000 });
+
+    // 「画像ごと」モードへ切替
+    await page.getByRole("button", { name: "画像ごと", exact: true }).click();
+
+    // 1 枚目だけ右に 90° 回転する
+    await page.getByRole("button", { name: "右に90°回転" }).click();
+    await expect(cropButton).toBeEnabled({ timeout: 15_000 });
+
+    // 2 枚目へ移動（回転させない）
+    await page.getByRole("button", { name: "次の画像" }).click();
+    await expect(cropButton).toBeEnabled({ timeout: 15_000 });
+
+    await cropButton.click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 複数ファイルは ZIP でまとめてダウンロードされる
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toMatch(/\.zip$/);
+    const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+    const first = await zip.file("rect1_cropped.png")?.async("nodebuffer");
+    const second = await zip.file("rect2_cropped.png")?.async("nodebuffer");
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+
+    // 1 枚目は回転して縦長（高さ > 幅）、2 枚目は横長のまま（幅 > 高さ）
+    const size1 = pngSize(first as Buffer);
+    const size2 = pngSize(second as Buffer);
+    expect(size1.height).toBeGreaterThan(size1.width);
+    expect(size2.width).toBeGreaterThan(size2.height);
   });
 });

@@ -1,6 +1,7 @@
 import piexif from "piexifjs";
 import {
   buildSyntheticJpegFromTiff,
+  crc32,
   extractPngExif,
   extractWebpExif,
   insertPngExif,
@@ -109,6 +110,107 @@ export const noisyBmpFile = (name = "noisy.bmp", width = 400, height = 400) => {
   }
 
   return { name, mimeType: "image/bmp", buffer: buf };
+};
+
+/** zlib（stored ブロック）用の adler32 チェックサム */
+const adler32 = (data: Uint8Array): number => {
+  const MOD = 65521;
+  let a = 1;
+  let b = 0;
+  for (let i = 0; i < data.length; i++) {
+    a = (a + data[i]) % MOD;
+    b = (b + a) % MOD;
+  }
+  return ((b << 16) | a) >>> 0;
+};
+
+/** PNG チャンク（length + type + data + crc32）を組み立てる */
+const buildPngChunk = (type: string, data: Uint8Array): Uint8Array => {
+  const typeBytes = Uint8Array.from(type, (c) => c.charCodeAt(0));
+  const body = new Uint8Array(typeBytes.length + data.length);
+  body.set(typeBytes, 0);
+  body.set(data, typeBytes.length);
+  const out = new Uint8Array(4 + body.length + 4);
+  const view = new DataView(out.buffer);
+  view.setUint32(0, data.length);
+  out.set(body, 4);
+  view.setUint32(4 + body.length, crc32(body));
+  return out;
+};
+
+/**
+ * 指定サイズ・単色の RGB PNG を実行時生成する（非正方形の検証用）。
+ * 圧縮は zlib の stored（無圧縮）ブロックで行い、外部ライブラリなしで有効な PNG を組み立てる。
+ * 回転で縦横が入れ替わること・アスペクト比プリセットで正方形に切り出せることの検証に使う。
+ */
+export const rectPngFile = (
+  name = "rect.png",
+  width = 40,
+  height = 20,
+  color: [number, number, number] = [200, 60, 40],
+) => {
+  // IHDR: 幅・高さ・ビット深度 8・カラータイプ 2（RGB）
+  const ihdr = new Uint8Array(13);
+  const ihdrView = new DataView(ihdr.buffer);
+  ihdrView.setUint32(0, width);
+  ihdrView.setUint32(4, height);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // color type: truecolor RGB
+
+  // 各行の先頭にフィルタバイト 0 を付けた生ピクセル列
+  const rowLength = 1 + width * 3;
+  const raw = new Uint8Array(rowLength * height);
+  for (let y = 0; y < height; y++) {
+    const rowStart = y * rowLength;
+    raw[rowStart] = 0; // filter type: none
+    for (let x = 0; x < width; x++) {
+      const p = rowStart + 1 + x * 3;
+      raw[p] = color[0];
+      raw[p + 1] = color[1];
+      raw[p + 2] = color[2];
+    }
+  }
+
+  // zlib（0x78 0x01）+ stored ブロック（無圧縮）+ adler32
+  const stream: number[] = [0x78, 0x01];
+  let offset = 0;
+  while (offset < raw.length || raw.length === 0) {
+    const len = Math.min(65535, raw.length - offset);
+    const isFinal = offset + len >= raw.length;
+    stream.push(isFinal ? 0x01 : 0x00);
+    stream.push(len & 0xff, (len >> 8) & 0xff);
+    const nlen = ~len & 0xffff;
+    stream.push(nlen & 0xff, (nlen >> 8) & 0xff);
+    for (let i = 0; i < len; i++) {
+      stream.push(raw[offset + i]);
+    }
+    offset += len;
+    if (isFinal) break;
+  }
+  const adler = adler32(raw);
+  stream.push(
+    (adler >>> 24) & 0xff,
+    (adler >>> 16) & 0xff,
+    (adler >>> 8) & 0xff,
+    adler & 0xff,
+  );
+
+  const signature = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  const chunks = [
+    signature,
+    buildPngChunk("IHDR", ihdr),
+    buildPngChunk("IDAT", new Uint8Array(stream)),
+    buildPngChunk("IEND", new Uint8Array(0)),
+  ];
+  const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+  const png = new Uint8Array(totalLength);
+  let writeOffset = 0;
+  for (const chunk of chunks) {
+    png.set(chunk, writeOffset);
+    writeOffset += chunk.length;
+  }
+
+  return { name, mimeType: "image/png", buffer: Buffer.from(png) };
 };
 
 /** PNG を装った破損ファイル（デコード失敗時の通知表示の検証に使用） */
@@ -225,6 +327,13 @@ export const loadExifFromWebpBuffer = (
     `data:image/jpeg;base64,${Buffer.from(jpeg).toString("base64")}`,
   );
 };
+
+/** PNG バイナリの IHDR から幅・高さ（px）を読み出す */
+export const pngSize = (buf: Buffer): { width: number; height: number } => ({
+  // 8 バイトのシグネチャ + 4 バイト長 + 4 バイト "IHDR" の後に幅・高さ（BE32）が並ぶ
+  width: buf.readUInt32BE(16),
+  height: buf.readUInt32BE(20),
+});
 
 /** バイナリの先頭がフォーマットのマジックナンバーと一致するか */
 export const magicNumber = {

@@ -1,5 +1,25 @@
+import piexif from "piexifjs";
 import { describe, expect, it } from "vitest";
-import { exifWritableFormat } from "../exifTransfer";
+import { buildSyntheticJpegFromTiff, piexifDumpToTiff } from "../exifBinary";
+import {
+  exifWritableFormat,
+  normalizeExifForBakedImage,
+} from "../exifTransfer";
+import { uint8ArrayToBase64 } from "../imageUtils";
+
+/** 純 TIFF を合成 JPEG に包んで piexif で解釈するヘルパー */
+const loadExif = (tiff: Uint8Array) => {
+  const jpeg = buildSyntheticJpegFromTiff(tiff);
+  return piexif.load(`data:image/jpeg;base64,${uint8ArrayToBase64(jpeg)}`);
+};
+
+/** 純 TIFF の 0th IFD を読み出すヘルパー */
+const load0thIfd = (tiff: Uint8Array): Record<number, unknown> =>
+  (loadExif(tiff)["0th"] ?? {}) as Record<number, unknown>;
+
+/** 純 TIFF の ExifIFD を読み出すヘルパー */
+const loadExifIfd = (tiff: Uint8Array): Record<number, unknown> =>
+  (loadExif(tiff).Exif ?? {}) as Record<number, unknown>;
 
 describe("exifWritableFormat", () => {
   it("JPEG（image/jpeg・image/jpg）は 'jpeg' を返す", () => {
@@ -26,5 +46,80 @@ describe("exifWritableFormat", () => {
     expect(exifWritableFormat("image/bmp")).toBeNull();
     expect(exifWritableFormat("image/gif")).toBeNull();
     expect(exifWritableFormat("")).toBeNull();
+  });
+});
+
+describe("normalizeExifForBakedImage", () => {
+  it("Orientation タグを 1 に正規化し、他のタグは保持する", () => {
+    const tiff = piexifDumpToTiff(
+      piexif.dump({
+        "0th": {
+          [piexif.ImageIFD.Orientation]: 6,
+          [piexif.ImageIFD.Make]: "TestMake",
+        },
+        Exif: {},
+        GPS: {},
+      }),
+    );
+    // 前提: 元の TIFF は Orientation=6 を持つ
+    expect(load0thIfd(tiff)[piexif.ImageIFD.Orientation]).toBe(6);
+
+    const normalized = normalizeExifForBakedImage(tiff, 100, 200);
+    const ifd = load0thIfd(normalized);
+    // Orientation は 1（無回転）へ揃えられる
+    expect(ifd[piexif.ImageIFD.Orientation]).toBe(1);
+    // 回転以外のタグ（Make）は保持される
+    expect(ifd[piexif.ImageIFD.Make]).toBe("TestMake");
+  });
+
+  it("Orientation タグが無くても例外を投げずに TIFF を返す", () => {
+    const tiff = piexifDumpToTiff(
+      piexif.dump({
+        "0th": { [piexif.ImageIFD.Make]: "NoOrientation" },
+        Exif: {},
+        GPS: {},
+      }),
+    );
+    const normalized = normalizeExifForBakedImage(tiff, 100, 200);
+    const ifd = load0thIfd(normalized);
+    // Make は保持され、Orientation は 1 が付与される
+    expect(ifd[piexif.ImageIFD.Make]).toBe("NoOrientation");
+    expect(ifd[piexif.ImageIFD.Orientation]).toBe(1);
+  });
+
+  it("実ピクセル寸法タグが存在する場合は焼き込み後の実寸へ更新する", () => {
+    // 回転で幅・高さが入れ替わったケースを想定（元 4000x3000 → 出力 3000x4000）
+    const tiff = piexifDumpToTiff(
+      piexif.dump({
+        "0th": { [piexif.ImageIFD.Orientation]: 6 },
+        Exif: {
+          [piexif.ExifIFD.PixelXDimension]: 4000,
+          [piexif.ExifIFD.PixelYDimension]: 3000,
+        },
+        GPS: {},
+      }),
+    );
+
+    const normalized = normalizeExifForBakedImage(tiff, 3000, 4000);
+    const exifIfd = loadExifIfd(normalized);
+    expect(exifIfd[piexif.ExifIFD.PixelXDimension]).toBe(3000);
+    expect(exifIfd[piexif.ExifIFD.PixelYDimension]).toBe(4000);
+    // Orientation も併せて 1 に揃う
+    expect(load0thIfd(normalized)[piexif.ImageIFD.Orientation]).toBe(1);
+  });
+
+  it("実ピクセル寸法タグが無い画像には寸法タグを新規追加しない", () => {
+    const tiff = piexifDumpToTiff(
+      piexif.dump({
+        "0th": { [piexif.ImageIFD.Orientation]: 1 },
+        Exif: {},
+        GPS: {},
+      }),
+    );
+
+    const normalized = normalizeExifForBakedImage(tiff, 300, 400);
+    const exifIfd = loadExifIfd(normalized);
+    expect(piexif.ExifIFD.PixelXDimension in exifIfd).toBe(false);
+    expect(piexif.ExifIFD.PixelYDimension in exifIfd).toBe(false);
   });
 });
