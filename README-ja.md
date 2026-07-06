@@ -2,6 +2,7 @@
 
 Next.js App Router を使用した完全にプライバシー重視の画像変換 Web アプリケーションです。
 すべての画像処理はブラウザ内で実行されるため、画像がサーバーに送信されることは一切ありません。
+JPEG・PNG・WebP 間の画像変換に対応しており、HEIC/HEIF（iPhone で撮影した写真など）も変換ページで入力として受け付け、すべてブラウザ内でデコードします。
 
 ## 🔗 デモサイト
 
@@ -90,9 +91,10 @@ npx biome format src/ --write
 
 このプロジェクトは以下のライセンスを持つオープンソースライブラリを使用しています：
 
-- **MIT License**: Next.js, React, TypeScript等の主要ライブラリ
-- **Apache-2.0 License**: 一部のユーティリティライブラリ
-- **LGPL-3.0 License**: Sharp画像処理ライブラリ（ライブラリとして利用）
+- **MIT License**: Next.js, React 等の主要ライブラリ
+- **Apache-2.0 License**: TypeScript 等の一部ライブラリ
+- **ISC License**: heic-decode（HEIC/HEIF デコード）
+- **LGPL-3.0 License**: libheif-js（HEIC/HEIF デコードに使用する libheif の WASM ビルド。未改変の npm パッケージのままライブラリとして利用し、動的 import による独立チャンクに分離）
 - **MPL-2.0 License**: Axe Core（アクセシビリティ検証）
 
 すべての依存関係は商用利用可能なライセンスです。詳細は各ライブラリのライセンスファイルをご確認ください。

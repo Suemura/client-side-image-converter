@@ -106,7 +106,8 @@
     "dropFilesHere": "ファイルをここにドロップ",
     "viewDetails": "{{name}}の詳細を表示",
     "dropAreaLabel": "ファイルをドラッグ&ドロップまたはクリックして選択",
-    "filesSelectedCount": "{{count}}個のファイル選択済み"
+    "filesSelectedCount": "{{count}}個のファイル選択済み",
+    "supportedFormats": "対応形式: {{formats}}"
   },
   "fileDetails": {
     "title": "ファイル詳細",

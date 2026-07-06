@@ -36,9 +36,29 @@ export const SUPPORTED_IMAGE_FORMATS = {
     "image/tiff",
   ],
 
+  // 変換ページのアップロードでサポートされる形式（HEIC/HEIF はデコード専用の入力として受理）
+  CONVERT_UPLOAD_FORMATS: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/bmp",
+    "image/tiff",
+    "image/heic",
+    "image/heif",
+  ],
+
+  // HEIC/HEIF 形式（ブラウザの Image ではデコードできず WASM デコーダーを使用する）
+  // sequence 系（image/heic-sequence / image/heif-sequence、バースト写真等）は
+  // 実ファイルでのデコード検証ができていないため意図的に対象外とする
+  // （対応する場合はフィクスチャの用意と E2E 検証をセットで行うこと）
+  HEIC_FORMATS: ["image/heic", "image/heif"],
+
   // JPEG形式の別名
   JPEG_VARIANTS: ["image/jpeg", "image/jpg"],
 } as const;
+
+// HEIC/HEIF の拡張子（MIME タイプが空になるブラウザ向けのフォールバック判定に使用）
+export const HEIC_EXTENSIONS = [".heic", ".heif"] as const;
 
 // ファイルサイズ表示用の単位
 export const FILE_SIZE_UNITS = ["Bytes", "KB", "MB", "GB", "TB"] as const;
