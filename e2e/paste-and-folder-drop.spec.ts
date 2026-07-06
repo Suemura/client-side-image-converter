@@ -95,4 +95,62 @@ test.describe("クリップボード貼り付け・フォルダドロップ", ()
     // 非画像は MIME フィルタで除外される
     await expect(page.getByText("notes.txt")).toHaveCount(0);
   });
+
+  test("上限を超える件数のドロップで警告が表示され、リストクリアで消える", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+
+    // MAX_INPUT_FILES(200) を超える 201 枚の画像を含むフォルダをドロップする。
+    // 純粋関数（addUniqueFilesWithLimit / collectFilesFromEntries の maxFiles）は
+    // 単体テスト済みなので、ここでは「上限超過 → 警告表示 → クリアで消える」という
+    // ユーザー向けの配線を検証する。
+    await page.evaluate((base64) => {
+      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const children = Array.from({ length: 201 }, (_, i) => ({
+        isFile: true,
+        isDirectory: false,
+        file: (cb: (f: File) => void) =>
+          cb(new File([bytes], `img-${i}.png`, { type: "image/png" })),
+      }));
+      let read = false;
+      const dirEntry = {
+        isFile: false,
+        isDirectory: true,
+        createReader: () => ({
+          readEntries: (cb: (entries: unknown[]) => void) => {
+            if (read) {
+              cb([]);
+              return;
+            }
+            read = true;
+            cb(children);
+          },
+        }),
+      };
+      const dataTransfer = {
+        items: [{ kind: "file", webkitGetAsEntry: () => dirEntry }],
+        files: [],
+      };
+
+      const dropZone = document.querySelector(
+        '[aria-label="ファイルをドラッグ&ドロップまたはクリックして選択"]',
+      );
+      if (!dropZone) {
+        throw new Error("ドロップゾーンが見つかりません");
+      }
+      const event = new Event("drop", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "dataTransfer", { value: dataTransfer });
+      dropZone.dispatchEvent(event);
+    }, pngBase64);
+
+    // 上限超過の非ブロッキング警告（role="alert"）が表示される
+    // （Next.js のルートアナウンサーも role="alert" なので上限件数のテキストで絞り込む）
+    const limitWarning = page.getByRole("alert").filter({ hasText: "200" });
+    await expect(limitWarning).toBeVisible({ timeout: 15_000 });
+
+    // リストをクリアすると警告も消える
+    await page.getByRole("button", { name: "リストをクリア" }).click();
+    await expect(limitWarning).toHaveCount(0);
+  });
 });

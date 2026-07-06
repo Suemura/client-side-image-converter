@@ -153,9 +153,10 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
     generateThumbnails();
   }, [files]);
 
-  // リストがクリアされたら stale な上限警告を消す
+  // 件数が上限未満に戻ったら stale な上限警告を消す
+  // （全クリアはもちろん、将来 1 件ずつ削除する UI で上限未満まで減った場合にも対応）
   useEffect(() => {
-    if (files.length === 0) {
+    if (files.length < MAX_INPUT_FILES) {
       setLimitExceeded(false);
     }
   }, [files.length]);
