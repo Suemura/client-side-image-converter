@@ -1,8 +1,9 @@
 import piexif from "piexifjs";
 import { encodeCanvasToAvifBlob } from "./avifEncoder";
-import { isHeicFile } from "./fileUtils";
+import { isHeicFile, isTiffFile } from "./fileUtils";
 import { decodeHeicToCanvas } from "./heicDecoder";
 import { dataUrlToBlob } from "./imageUtils";
+import { decodeTiffToCanvas } from "./tiffDecoder";
 
 export type ConversionFormat = "jpeg" | "png" | "webp" | "avif";
 
@@ -23,6 +24,18 @@ export interface ConversionResult {
   filename: string;
   originalFilename: string;
   file: File;
+}
+
+/** 変換に失敗したファイルの情報（ユーザーへの通知表示に使用する） */
+export interface ConversionFailure {
+  fileName: string;
+  message: string;
+}
+
+/** 一括変換の結果（成功した変換結果と失敗したファイルの両方を返す） */
+export interface BatchConversionResult {
+  results: ConversionResult[];
+  failures: ConversionFailure[];
 }
 
 /**
@@ -78,7 +91,11 @@ export const convertImage = async (
   options: ConversionOptions,
 ): Promise<ConversionResult> => {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith("image/") && !isHeicFile(file)) {
+    if (
+      !file.type.startsWith("image/") &&
+      !isHeicFile(file) &&
+      !isTiffFile(file)
+    ) {
       reject(new Error("選択されたファイルは画像ではありません"));
       return;
     }
@@ -206,6 +223,16 @@ export const convertImage = async (
       return;
     }
 
+    // TIFF もブラウザの Image でデコードできないため utif2 デコーダーで Canvas に展開する
+    if (isTiffFile(file)) {
+      decodeTiffToCanvas(file)
+        .then((decoded) =>
+          processSource(decoded, decoded.width, decoded.height, null),
+        )
+        .catch(reject);
+      return;
+    }
+
     // Exifデータを読み込む（JPEGの場合のみ）
     const shouldPreserveExif =
       options.preserveExif &&
@@ -246,26 +273,32 @@ export const convertImage = async (
 
 /**
  * 複数の画像を一括変換する
+ * 変換に失敗したファイルがあっても処理を続行し、失敗情報を failures として返す
  */
 export const convertMultipleImages = async (
   files: File[],
   options: ConversionOptions,
   onProgress?: (current: number, total: number) => void,
-): Promise<ConversionResult[]> => {
+): Promise<BatchConversionResult> => {
   const results: ConversionResult[] = [];
+  const failures: ConversionFailure[] = [];
 
   for (let i = 0; i < files.length; i++) {
     try {
       const result = await convertImage(files[i], options);
       results.push(result);
-      onProgress?.(i + 1, files.length);
     } catch (error) {
       console.error(`ファイル ${files[i].name} の変換に失敗:`, error);
-      // エラーが発生しても他のファイルの変換を続行
+      // エラーが発生しても他のファイルの変換を続行し、失敗として記録する
+      failures.push({
+        fileName: files[i].name,
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
+    onProgress?.(i + 1, files.length);
   }
 
-  return results;
+  return { results, failures };
 };
 
 /**

@@ -2,7 +2,11 @@
  * ファイル処理関連のユーティリティ関数群
  */
 
-import { HEIC_EXTENSIONS, SUPPORTED_IMAGE_FORMATS } from "./constants";
+import {
+  HEIC_EXTENSIONS,
+  SUPPORTED_IMAGE_FORMATS,
+  TIFF_EXTENSIONS,
+} from "./constants";
 
 /**
  * URL管理のためのヘルパー関数群
@@ -129,6 +133,46 @@ export const isUnknownMimeType = (file: File): boolean => {
 };
 
 /**
+ * MIME タイプだけでは判定・選択できない形式の拡張子フォールバック定義
+ * （MIME が特定できないブラウザ・OS 向けに、判定と accept 属性の両方で使用する）
+ */
+const FORMAT_EXTENSION_FALLBACKS: ReadonlyArray<{
+  mimeTypes: readonly string[];
+  extensions: readonly string[];
+}> = [
+  {
+    mimeTypes: SUPPORTED_IMAGE_FORMATS.HEIC_FORMATS,
+    extensions: HEIC_EXTENSIONS,
+  },
+  {
+    mimeTypes: SUPPORTED_IMAGE_FORMATS.TIFF_FORMATS,
+    extensions: TIFF_EXTENSIONS,
+  },
+];
+
+/**
+ * MIME タイプ群または拡張子フォールバックでファイル形式を判定する
+ * @param file - チェックするファイル
+ * @param mimeTypes - 対象形式のMIMEタイプの配列
+ * @param extensions - 対象形式の拡張子の配列（ドット付き・小文字）
+ * @returns 対象形式の場合はtrue
+ */
+const matchesFormat = (
+  file: File,
+  mimeTypes: readonly string[],
+  extensions: readonly string[],
+): boolean => {
+  if (mimeTypes.includes(file.type)) {
+    return true;
+  }
+  if (isUnknownMimeType(file)) {
+    const extension = getFileExtension(file.name).toLowerCase();
+    return extensions.includes(extension);
+  }
+  return false;
+};
+
+/**
  * ファイルがHEIC/HEIF形式かどうかを確認する
  * HEIC は MIME タイプが空になるブラウザがあるため、
  * MIME が特定できない場合のみ拡張子でフォールバック判定する
@@ -136,20 +180,31 @@ export const isUnknownMimeType = (file: File): boolean => {
  * @returns HEIC/HEIF の場合はtrue
  */
 export const isHeicFile = (file: File): boolean => {
-  const heicFormats: readonly string[] = SUPPORTED_IMAGE_FORMATS.HEIC_FORMATS;
-  if (heicFormats.includes(file.type)) {
-    return true;
-  }
-  if (isUnknownMimeType(file)) {
-    const extension = getFileExtension(file.name).toLowerCase();
-    return (HEIC_EXTENSIONS as readonly string[]).includes(extension);
-  }
-  return false;
+  return matchesFormat(
+    file,
+    SUPPORTED_IMAGE_FORMATS.HEIC_FORMATS,
+    HEIC_EXTENSIONS,
+  );
+};
+
+/**
+ * ファイルがTIFF形式かどうかを確認する
+ * TIFF も MIME タイプが特定されない環境があるため、
+ * MIME が特定できない場合のみ拡張子でフォールバック判定する
+ * @param file - チェックするファイル
+ * @returns TIFF の場合はtrue
+ */
+export const isTiffFile = (file: File): boolean => {
+  return matchesFormat(
+    file,
+    SUPPORTED_IMAGE_FORMATS.TIFF_FORMATS,
+    TIFF_EXTENSIONS,
+  );
 };
 
 /**
  * ファイルタイプが指定された形式に含まれているかを確認する
- * HEIC/HEIF が許可されている場合は拡張子によるフォールバック判定も行う
+ * HEIC/HEIF や TIFF が許可されている場合は拡張子によるフォールバック判定も行う
  * @param file - チェックするファイル
  * @param acceptedTypes - 許可されたMIMEタイプの配列
  * @returns 許可されている場合はtrue
@@ -161,10 +216,11 @@ export const isAcceptedFileType = (
   if (acceptedTypes.includes(file.type)) {
     return true;
   }
-  const acceptsHeic = SUPPORTED_IMAGE_FORMATS.HEIC_FORMATS.some((type) =>
-    acceptedTypes.includes(type),
+  return FORMAT_EXTENSION_FALLBACKS.some(
+    ({ mimeTypes, extensions }) =>
+      mimeTypes.some((type) => acceptedTypes.includes(type)) &&
+      matchesFormat(file, mimeTypes, extensions),
   );
-  return acceptsHeic && isHeicFile(file);
 };
 
 /**
@@ -182,19 +238,20 @@ export const filterValidFiles = (
 
 /**
  * input[accept] 属性用の文字列を構築する
- * HEIC/HEIF は MIME タイプだけではファイル選択できない環境があるため拡張子も併記する
+ * HEIC/HEIF や TIFF は MIME タイプだけではファイル選択できない環境があるため拡張子も併記する
  * @param acceptedTypes - 許可されたMIMEタイプの配列
  * @returns accept 属性に設定する文字列
  */
 export const buildAcceptAttribute = (
   acceptedTypes: readonly string[],
 ): string => {
-  const acceptsHeic = SUPPORTED_IMAGE_FORMATS.HEIC_FORMATS.some((type) =>
-    acceptedTypes.includes(type),
+  const fallbackExtensions = FORMAT_EXTENSION_FALLBACKS.flatMap(
+    ({ mimeTypes, extensions }) =>
+      mimeTypes.some((type) => acceptedTypes.includes(type))
+        ? [...extensions]
+        : [],
   );
-  return acceptsHeic
-    ? [...acceptedTypes, ...HEIC_EXTENSIONS].join(",")
-    : acceptedTypes.join(",");
+  return [...acceptedTypes, ...fallbackExtensions].join(",");
 };
 
 /** 対応フォーマット表示用の MIME タイプ表示名 */

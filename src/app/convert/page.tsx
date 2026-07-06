@@ -8,9 +8,11 @@ import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
 import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import {
+  type ConversionFailure,
   type ConversionResult,
   convertMultipleImages,
 } from "../../utils/imageConverter";
+import { ConversionErrors } from "./components/ConversionErrors";
 import {
   ConversionSettings,
   type ConversionSettings as ConversionSettingsType,
@@ -30,6 +32,9 @@ export default function Home() {
     });
   const [conversionResults, setConversionResults] = useState<
     ConversionResult[]
+  >([]);
+  const [conversionFailures, setConversionFailures] = useState<
+    ConversionFailure[]
   >([]);
   const [isConverting, setIsConverting] = useState(false);
   const [conversionProgress, setConversionProgress] = useState({
@@ -60,9 +65,10 @@ export default function Home() {
     setIsConverting(true);
     setConversionProgress({ current: 0, total: selectedFiles.length });
     setConversionResults([]);
+    setConversionFailures([]);
 
     try {
-      const results = await convertMultipleImages(
+      const { results, failures } = await convertMultipleImages(
         selectedFiles,
         {
           format: conversionSettings.targetFormat,
@@ -78,6 +84,7 @@ export default function Home() {
       );
 
       setConversionResults(results);
+      setConversionFailures(failures);
     } catch (error) {
       console.error("Conversion error:", error);
       alert(t("convert.conversionError"));
@@ -117,6 +124,7 @@ export default function Home() {
           total={conversionProgress.total}
           isVisible={isConverting}
         />
+        <ConversionErrors failures={conversionFailures} />
         <ConversionResults
           results={conversionResults}
           originalFiles={selectedFiles}

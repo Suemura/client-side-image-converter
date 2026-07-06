@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { calculateTargetSize } from "../imageConverter";
+import { describe, expect, it, vi } from "vitest";
+import { calculateTargetSize, convertMultipleImages } from "../imageConverter";
 
 // convertImage 本体は Canvas / Image / WASM 依存のため単体テスト対象外（E2E で検証する）
 
@@ -65,5 +65,37 @@ describe("calculateTargetSize", () => {
         maintainAspectRatio: false,
       }),
     ).toEqual({ width: 100, height: 600 });
+  });
+});
+
+describe("convertMultipleImages", () => {
+  // 画像以外のファイルは Canvas 到達前に reject されるため happy-dom でも検証できる
+  // （成功経路は Canvas 依存のため E2E で検証する）
+  it("変換に失敗したファイルを failures として収集し処理を続行する", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const invalidFiles = [
+      new File(["not an image"], "note.txt", { type: "text/plain" }),
+      new File(["also not an image"], "data.csv", { type: "text/csv" }),
+    ];
+
+    const progressCalls: Array<[number, number]> = [];
+    const { results, failures } = await convertMultipleImages(
+      invalidFiles,
+      { format: "jpeg", quality: 90, maintainAspectRatio: true },
+      (current, total) => {
+        progressCalls.push([current, total]);
+      },
+    );
+
+    expect(results).toEqual([]);
+    expect(failures).toHaveLength(2);
+    expect(failures.map((f) => f.fileName)).toEqual(["note.txt", "data.csv"]);
+    expect(failures[0].message).toBe("選択されたファイルは画像ではありません");
+    // 失敗したファイルも進捗にカウントされる
+    expect(progressCalls).toEqual([
+      [1, 2],
+      [2, 2],
+    ]);
+    vi.restoreAllMocks();
   });
 });

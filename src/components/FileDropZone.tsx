@@ -10,7 +10,7 @@ interface FileDropZoneProps {
 
 export const FileDropZone: React.FC<FileDropZoneProps> = ({
   onFilesSelected,
-  acceptedTypes = ["image/jpeg", "image/png", "image/bmp", "image/tiff"],
+  acceptedTypes = ["image/jpeg", "image/png", "image/bmp"],
   currentFiles = [],
 }) => {
   const { t } = useTranslation();
