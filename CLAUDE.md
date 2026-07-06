@@ -79,6 +79,7 @@ npm run preview
   - `imageConverter.ts` - 画像フォーマット変換処理
   - `avifEncoder.ts` - AVIF エンコード処理（`@jsquash/avif` の WASM を動的 import）
   - `heicDecoder.ts` - HEIC/HEIF デコード処理（libheif WASM、動的 import）
+  - `tiffDecoder.ts` - TIFF デコード処理（`utif2` の純 JS デコーダー、動的 import）
   - `imageCropper.ts` - 画像トリミング処理
   - `metadataManager.ts` - EXIF データ管理
   - `__tests__/` - 単体テスト
@@ -94,7 +95,7 @@ npm run preview
 ※ vitest 用のエイリアスは `vitest.config.ts` にも定義されている。エイリアスを追加する場合は両方を更新すること。
 
 ### コア機能
-1. **画像フォーマット変換** - JPEG、PNG、WebP、AVIF 形式への変換（品質制御付き。AVIF は出力のみ対応）。HEIC/HEIF（iPhone 写真）は変換ページのみ入力として受理（crop / metadata はブラウザがプレビュー描画できないため対象外）
+1. **画像フォーマット変換** - JPEG、PNG、WebP、AVIF 形式への変換（品質制御付き。AVIF は出力のみ対応）。HEIC/HEIF（iPhone 写真）と TIFF は変換ページのみ入力として受理（crop / metadata はブラウザがプレビュー描画できないため対象外）。変換に失敗したファイルは一覧で画面に通知される
 2. **画像トリミング** - プレビュー付きのビジュアルトリミングインターフェース
 3. **EXIF メタデータ管理** - EXIF データの表示、編集、選択的削除
 4. **バッチ処理** - 複数画像の一括処理
@@ -104,7 +105,8 @@ npm run preview
 - 画像処理はクライアントサイド操作のために Canvas API を使用
 - AVIF エンコードのみ Canvas の `toBlob("image/avif")` が全ブラウザ未実装のため、`@jsquash/avif`（WASM）を動的 import で使用（AVIF 変換実行時のみロードされ、初期バンドルに影響しない。処理はブラウザ内で完結）
 - HEIC/HEIF のデコードは libheif の WASM ビルド（`heic-decode` + `libheif-js`）を使用し、動的 import により HEIC 変換時のみロードする（初期バンドルに影響なし）
-- HEIC は MIME タイプが空になるブラウザがあるため、拡張子（.heic/.heif）によるフォールバック判定を行う（`fileUtils.ts` の `isHeicFile`）
+- TIFF のデコードは `utif2`（純 JS の TIFF デコーダー）を使用し、動的 import により TIFF 変換時のみロードする（初期バンドルに影響なし。マルチページ TIFF は先頭ページのみ対応）
+- HEIC / TIFF は MIME タイプが特定されない環境があるため、拡張子（.heic/.heif/.tif/.tiff）によるフォールバック判定を行う（`fileUtils.ts` の `FORMAT_EXTENSION_FALLBACKS`。`isHeicFile` / `isTiffFile` の判定と input の accept 属性の両方で使用）
 - EXIF データ処理は保存に `piexifjs`、読み取りに `exif-js` を使用
 - テーマ切り替え（ライト/ダーク）は CSS カスタムプロパティで処理
 - 言語設定は localStorage に保存
@@ -185,6 +187,7 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
+- 変換ページに TIFF 入力対応を追加（`utif2` による動的デコード、Issue #26）。crop / metadata の受理形式からブラウザで描画できない TIFF を除外し、変換失敗ファイルの一覧通知を追加
 - Next.js を 16 に更新（PR #45）。Turbopack 本番ビルドが無限ハングする上流バグの回避のため `build` スクリプトを `next build --webpack` に暫定変更（dev は Turbopack のまま。上流修正後に戻す）
 - 変換ページに HEIC/HEIF 入力対応を追加（libheif WASM による動的デコード、Issue #28）
 - 画像フォーマット変換の出力形式に AVIF を追加（`@jsquash/avif` の WASM エンコーダーを動的 import で使用）

@@ -51,6 +51,7 @@
     "converting": "Converting...",
     "pleaseSelectFiles": "Please select files to convert",
     "conversionError": "An error occurred during conversion.",
+    "conversionFailures": "The following files could not be converted (unsupported or possibly corrupted)",
     "auto": "Auto",
     "pngQualityNotice": "PNG format uses lossless compression, so quality settings are not applied. Output is always at maximum quality.",
     "pngQualityExperimental": "Experimental PNG quality control is supported. Lower values result in smaller file sizes but may reduce image quality.",

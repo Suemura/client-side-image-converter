@@ -18,6 +18,7 @@ import {
   isDuplicateFile,
   isHeicFile,
   isImageFile,
+  isTiffFile,
   isUnknownMimeType,
 } from "../fileUtils";
 
@@ -173,6 +174,34 @@ describe("isHeicFile", () => {
   });
 });
 
+describe("isTiffFile", () => {
+  it("TIFF の MIME タイプを判定する", () => {
+    expect(isTiffFile(createFile("a.tiff", 10, "image/tiff"))).toBe(true);
+    expect(isTiffFile(createFile("a.png", 10, "image/png"))).toBe(false);
+  });
+
+  it("MIME タイプが空の場合は拡張子でフォールバック判定する", () => {
+    expect(isTiffFile(createFile("scan.tif", 10, ""))).toBe(true);
+    expect(isTiffFile(createFile("scan.tiff", 10, ""))).toBe(true);
+    expect(isTiffFile(createFile("scan.TIFF", 10, ""))).toBe(true);
+    expect(isTiffFile(createFile("scan.png", 10, ""))).toBe(false);
+  });
+
+  it("MIME タイプが application/octet-stream の場合も拡張子で判定する", () => {
+    expect(
+      isTiffFile(createFile("scan.tiff", 10, "application/octet-stream")),
+    ).toBe(true);
+    expect(
+      isTiffFile(createFile("scan.bin", 10, "application/octet-stream")),
+    ).toBe(false);
+  });
+
+  it("MIME タイプが特定できている場合は拡張子で判定しない", () => {
+    // 拡張子が .tiff でも MIME が別の画像形式なら TIFF とは扱わない
+    expect(isTiffFile(createFile("scan.tiff", 10, "image/png"))).toBe(false);
+  });
+});
+
 describe("isAcceptedFileType (HEIC フォールバック)", () => {
   const acceptedWithHeic = [
     "image/jpeg",
@@ -206,6 +235,34 @@ describe("isAcceptedFileType (HEIC フォールバック)", () => {
   });
 });
 
+describe("isAcceptedFileType (TIFF フォールバック)", () => {
+  const acceptedWithTiff = ["image/jpeg", "image/png", "image/tiff"];
+
+  it("TIFF が許可されている場合は MIME 空でも拡張子で受理する", () => {
+    expect(
+      isAcceptedFileType(createFile("scan.tif", 10, ""), acceptedWithTiff),
+    ).toBe(true);
+    expect(
+      isAcceptedFileType(createFile("scan.tiff", 10, ""), acceptedWithTiff),
+    ).toBe(true);
+  });
+
+  it("TIFF が許可されていない場合は拡張子フォールバックしない", () => {
+    expect(
+      isAcceptedFileType(createFile("scan.tiff", 10, ""), [
+        "image/jpeg",
+        "image/png",
+      ]),
+    ).toBe(false);
+    expect(
+      isAcceptedFileType(createFile("scan.tiff", 10, "image/tiff"), [
+        "image/jpeg",
+        "image/png",
+      ]),
+    ).toBe(false);
+  });
+});
+
 describe("buildAcceptAttribute", () => {
   it("HEIC を含む場合は拡張子を併記する", () => {
     expect(buildAcceptAttribute(["image/jpeg", "image/heic"])).toBe(
@@ -213,7 +270,19 @@ describe("buildAcceptAttribute", () => {
     );
   });
 
-  it("HEIC を含まない場合は MIME タイプのみを返す", () => {
+  it("TIFF を含む場合は拡張子を併記する", () => {
+    expect(buildAcceptAttribute(["image/jpeg", "image/tiff"])).toBe(
+      "image/jpeg,image/tiff,.tif,.tiff",
+    );
+  });
+
+  it("HEIC と TIFF の両方を含む場合は両方の拡張子を併記する", () => {
+    expect(
+      buildAcceptAttribute(["image/jpeg", "image/tiff", "image/heic"]),
+    ).toBe("image/jpeg,image/tiff,image/heic,.heic,.heif,.tif,.tiff");
+  });
+
+  it("フォールバック対象を含まない場合は MIME タイプのみを返す", () => {
     expect(buildAcceptAttribute(["image/jpeg", "image/png"])).toBe(
       "image/jpeg,image/png",
     );

@@ -51,6 +51,7 @@
     "converting": "変換中...",
     "pleaseSelectFiles": "変換するファイルを選択してください",
     "conversionError": "変換中にエラーが発生しました。",
+    "conversionFailures": "以下のファイルは変換できませんでした（未対応の形式、または破損している可能性があります）",
     "auto": "自動",
     "pngQualityNotice": "PNG形式は可逆圧縮のため、品質設定は適用されません。常に最高品質で出力されます。",
     "pngQualityExperimental": "PNG形式での品質制御を実験的にサポートしています。低い値ではファイルサイズが小さくなりますが、画質が劣化する場合があります。",

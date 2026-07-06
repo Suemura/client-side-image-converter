@@ -27,16 +27,11 @@ export const SUPPORTED_IMAGE_FORMATS = {
   // 変換でサポートされる形式
   CONVERSION_FORMATS: ["image/jpeg", "image/png", "image/webp", "image/avif"],
 
-  // アップロードでサポートされる形式
-  UPLOAD_FORMATS: [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/bmp",
-    "image/tiff",
-  ],
+  // アップロードでサポートされる形式（crop / metadata ページ用。
+  // TIFF はブラウザの Image がデコードできずプレビュー描画できないため HEIC 同様に対象外）
+  UPLOAD_FORMATS: ["image/jpeg", "image/png", "image/webp", "image/bmp"],
 
-  // 変換ページのアップロードでサポートされる形式（HEIC/HEIF はデコード専用の入力として受理）
+  // 変換ページのアップロードでサポートされる形式（TIFF / HEIC / HEIF はデコード専用の入力として受理）
   CONVERT_UPLOAD_FORMATS: [
     "image/jpeg",
     "image/png",
@@ -53,12 +48,18 @@ export const SUPPORTED_IMAGE_FORMATS = {
   // （対応する場合はフィクスチャの用意と E2E 検証をセットで行うこと）
   HEIC_FORMATS: ["image/heic", "image/heif"],
 
+  // TIFF 形式（ブラウザの Image ではデコードできず utif2 デコーダーを使用する）
+  TIFF_FORMATS: ["image/tiff"],
+
   // JPEG形式の別名
   JPEG_VARIANTS: ["image/jpeg", "image/jpg"],
 } as const;
 
 // HEIC/HEIF の拡張子（MIME タイプが空になるブラウザ向けのフォールバック判定に使用）
 export const HEIC_EXTENSIONS = [".heic", ".heif"] as const;
+
+// TIFF の拡張子（MIME タイプが特定されない環境向けのフォールバック判定に使用）
+export const TIFF_EXTENSIONS = [".tif", ".tiff"] as const;
 
 // ファイルサイズ表示用の単位
 export const FILE_SIZE_UNITS = ["Bytes", "KB", "MB", "GB", "TB"] as const;
