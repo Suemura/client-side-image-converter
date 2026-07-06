@@ -75,6 +75,7 @@ npm run preview
 - `src/components/` - 再利用可能な React コンポーネント
 - `src/utils/` - コアユーティリティクラス
   - `imageConverter.ts` - 画像フォーマット変換処理
+  - `avifEncoder.ts` - AVIF エンコード処理（`@jsquash/avif` の WASM を動的 import）
   - `imageCropper.ts` - 画像トリミング処理
   - `metadataManager.ts` - EXIF データ管理
   - `__tests__/` - 単体テスト
@@ -90,14 +91,15 @@ npm run preview
 ※ vitest 用のエイリアスは `vitest.config.ts` にも定義されている。エイリアスを追加する場合は両方を更新すること。
 
 ### コア機能
-1. **画像フォーマット変換** - JPEG、PNG、WebP 形式間の変換（品質制御付き）
+1. **画像フォーマット変換** - JPEG、PNG、WebP、AVIF 形式への変換（品質制御付き。AVIF は出力のみ対応）
 2. **画像トリミング** - プレビュー付きのビジュアルトリミングインターフェース
 3. **EXIF メタデータ管理** - EXIF データの表示、編集、選択的削除
 4. **バッチ処理** - 複数画像の一括処理
-5. **プライバシーファースト** - Canvas API を使用したクライアントサイドでの全処理
+5. **プライバシーファースト** - Canvas API / WASM を使用したクライアントサイドでの全処理
 
 ### 重要なパターン
-- すべての画像処理はクライアントサイド操作のために Canvas API を使用
+- 画像処理はクライアントサイド操作のために Canvas API を使用
+- AVIF エンコードのみ Canvas の `toBlob("image/avif")` が全ブラウザ未実装のため、`@jsquash/avif`（WASM）を動的 import で使用（AVIF 変換実行時のみロードされ、初期バンドルに影響しない。処理はブラウザ内で完結）
 - EXIF データ処理は保存に `piexifjs`、読み取りに `exif-js` を使用
 - テーマ切り替え（ライト/ダーク）は CSS カスタムプロパティで処理
 - 言語設定は localStorage に保存
@@ -109,7 +111,7 @@ npm run preview
 - テストファイルはテスト対象と同じディレクトリの `__tests__/` に `<対象ファイル名>.test.ts` として配置する
 - `src/utils/` のロジックを追加・変更した場合は、対応する単体テストを追加・更新すること
 - EXIF 処理のテストは piexifjs でフィクスチャ（EXIF 入り JPEG）を生成して実データで検証する（`metadataManager.test.ts` 参照）
-- Canvas API に依存する処理（描画・変換）は happy-dom では動作しないため、単体テストの対象外とする（純粋ロジック部分を切り出してテストする）
+- Canvas API や WASM に依存する処理（描画・変換・エンコード）は happy-dom では動作しないため、単体テストの対象外とする（純粋ロジック部分を切り出してテストする）
 - Canvas 依存の動作は Playwright E2E（`e2e/`）で実ブラウザ検証する。ダウンロード物はマジックナンバーや piexifjs のバイナリ解析で中身まで検証する（`e2e/metadata.spec.ts` 参照）
 - E2E のフィクスチャはバイナリを置かず `e2e/helpers/fixtures.ts` で実行時生成する
 - E2E は本番同等の静的エクスポート（`npm run build` + `serve out`、ポート 3100）に対して実行される。ローカルで高速に回したい場合は `npm run dev -- --port 3100` を別途起動しておけば `reuseExistingServer` により再利用される（CI では常に build + 静的配信）
@@ -178,5 +180,6 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
+- 画像フォーマット変換の出力形式に AVIF を追加（`@jsquash/avif` の WASM エンコーダーを動的 import で使用）
 - 開発ハーネスを整備（詳細は `docs/HARNESS.md`）: vitest による単体テスト、Claude Code フック（自動フォーマット / 完了時チェック）、サブエージェント（planner / docs-sync / reviewer）、PR 自動レビューフロー、GitHub Actions CI
 - `feat/exif-editor` ブランチで EXIF メタデータの選択的削除機能を実装

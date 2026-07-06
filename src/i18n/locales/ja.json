@@ -23,7 +23,7 @@
     "features": {
       "formatConversion": {
         "title": "フォーマット変換",
-        "description": "JPEG、PNG、WebPなどの\n画像フォーマット間で\n品質･サイズを調整しながら\n変換できます。",
+        "description": "JPEG、PNG、WebP、AVIFなどの\n画像フォーマット間で\n品質･サイズを調整しながら\n変換できます。",
         "iconAlt": "フォーマット変換アイコン"
       },
       "imageCropping": {

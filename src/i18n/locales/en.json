@@ -23,7 +23,7 @@
     "features": {
       "formatConversion": {
         "title": "Format Conversion",
-        "description": "Convert between image formats\nsuch as JPEG, PNG, WebP\nwhile adjusting quality and size.",
+        "description": "Convert between image formats\nsuch as JPEG, PNG, WebP, AVIF\nwhile adjusting quality and size.",
         "iconAlt": "Format conversion icon"
       },
       "imageCropping": {

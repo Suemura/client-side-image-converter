@@ -25,7 +25,7 @@ export const IMAGE_CONSTANTS = {
 // サポートされる画像フォーマット
 export const SUPPORTED_IMAGE_FORMATS = {
   // 変換でサポートされる形式
-  CONVERSION_FORMATS: ["image/jpeg", "image/png", "image/webp"],
+  CONVERSION_FORMATS: ["image/jpeg", "image/png", "image/webp", "image/avif"],
 
   // アップロードでサポートされる形式
   UPLOAD_FORMATS: [
@@ -48,6 +48,7 @@ export const IMAGE_FORMATS = {
   JPEG: "jpeg",
   PNG: "png",
   WEBP: "webp",
+  AVIF: "avif",
 } as const;
 
 // MIME タイプマッピング
@@ -55,6 +56,7 @@ export const MIME_TYPE_MAPPING = {
   [IMAGE_FORMATS.JPEG]: "image/jpeg",
   [IMAGE_FORMATS.PNG]: "image/png",
   [IMAGE_FORMATS.WEBP]: "image/webp",
+  [IMAGE_FORMATS.AVIF]: "image/avif",
 } as const;
 
 // UI関連の定数

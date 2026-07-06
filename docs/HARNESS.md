@@ -135,7 +135,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 ### 9. E2E テスト（`e2e/` + Playwright）
 
 - 実ブラウザ（Chromium）で「アップロード → 変換/トリミング/EXIF 削除 → ダウンロード」を検証する
-- **ダウンロード物の中身まで検証する**: マジックナンバー（JPEG/PNG/WebP）、piexifjs によるバイナリ解析（GPS 削除の確認）
+- **ダウンロード物の中身まで検証する**: マジックナンバー（JPEG/PNG/WebP/AVIF）、piexifjs によるバイナリ解析（GPS 削除の確認）
 - フィクスチャ（EXIF 入り JPEG 等）はバイナリを置かず `e2e/helpers/fixtures.ts` で実行時生成
 - webServer は `npm run build && npx serve out -l 3100` により**本番同等の静的エクスポート（`out/`）を配信**して検証する。ポートは E2E 専用の 3100（他プロジェクトの 3000 番と衝突しない）
 - ローカルで高速に回したい場合は `npm run dev -- --port 3100` を別途起動しておけば `reuseExistingServer` によりそちらが再利用される（CI では常に build + 静的配信）
@@ -152,6 +152,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-06: AVIF 出力対応（Issue #29）に伴い、E2E のマジックナンバー検証対象に AVIF を追加
 - 2026-07-05: `/start-issue` コマンドを追加（Issue 起点でブランチ作成から PR 作成・自動レビューフローまでハーネス全体を自走させる入口）
 - 2026-07-05: Dependabot による依存の週次自動更新、permissions による危険操作のガード（deny / ask）を追加。E2E の webServer を本番同等の静的配信（build + serve）に変更
 - 2026-07-05: docs-sync エージェントを追加（レビュー前に関連ドキュメントの同期を自動化）
