@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Noto_Sans } from "next/font/google";
 import { I18nProvider } from "../components/I18nProvider";
 import { ThemeProvider } from "../contexts/ThemeContext";
+import { SITE_LOCALE, SITE_NAME, SITE_URL } from "../utils/pageMetadata";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -18,9 +19,41 @@ const notoSans = Noto_Sans({
   display: "swap",
 });
 
+// トップページ（"/"）のメタデータ兼サイト全体の既定値。
+// 各ルートの layout.tsx が固有の title / description で上書きする。
+const HOME_DESCRIPTION =
+  "JPEG・PNG・WebP・AVIF などの画像フォーマット変換、トリミング、EXIF メタデータ削除をすべてブラウザ内で実行。画像をサーバーに送信しないプライバシー重視の無料ツールです。";
+// トップページのタイトル。title.default / openGraph.title / twitter.title で共通利用し、
+// og:title には title.template（"%s | サイト名"）が効かないため直値をそろえて drift を防ぐ。
+const HOME_TITLE = `${SITE_NAME} | ブラウザ内で完結する画像変換・トリミングツール`;
+
 export const metadata: Metadata = {
-  title: "Image Converter",
-  description: "Convert images to various formats",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    // トップページに適用される既定タイトル
+    default: HOME_TITLE,
+    // 各ルートの title を "<ページ名> | サイト名" 形式に装飾する
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: HOME_DESCRIPTION,
+  alternates: {
+    // サブページと同様にトップページにも canonical を付与して統一する
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: SITE_LOCALE,
+    url: "/",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+  },
+  twitter: {
+    // 専用の OG 画像アセットが無いため summary カードを使う（buildPageMetadata と同方針）
+    card: "summary",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({

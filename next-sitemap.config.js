@@ -1,6 +1,10 @@
+// 本番 URL の単一の source of truth は site.config.json（canonical を出力する
+// src/utils/pageMetadata.ts と共有し、sitemap.xml と canonical の URL 不整合を防ぐ）。
+const { siteUrl } = require("./site.config.json");
+
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: "https://image-converter.suemura.app",
+  siteUrl,
   generateRobotsTxt: true,
   generateIndexSitemap: false,
   outDir: "./out",
