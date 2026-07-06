@@ -40,7 +40,7 @@ flowchart TD
 | `npm run lint` | Biome によるリント・フォーマットチェック | 常時（完了条件）+ CI |
 | `npm run typecheck` | TypeScript 型チェック（`tsc --noEmit`） | 常時（完了条件）+ CI |
 | `npm run test` | vitest による単体テスト（`src/utils/__tests__/`） | 常時（完了条件）+ CI |
-| `npm run build` | 本番ビルド（静的エクスポート + sitemap 生成） | PR 時に CI が検証 |
+| `npm run build` | 本番ビルド（静的エクスポート + sitemap 生成）。Next.js 16 の Turbopack ビルドが無限ハングする上流バグの回避のため `next build --webpack` を使用（暫定、詳細は CLAUDE.md「開発コマンド」の注記参照） | PR 時に CI が検証 |
 | `npm run e2e` | Playwright E2E（実ブラウザでの動作検証） | PR 時に CI が検証（ローカルは `npm run e2e` / `npm run e2e:ui`） |
 
 コード変更を伴うタスクの完了条件は lint / typecheck / test の 3 つがすべて成功していること（CLAUDE.md「完了条件」。Stop フックが自動実行するのも同じ 3 つ）。build と e2e は完了条件には含まれず、PR 時に CI が検証する。
@@ -152,6 +152,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-06: Next.js 16 更新（PR #45）に伴い、`npm run build` を `next build --webpack` に変更（Turbopack 本番ビルドの上流バグ回避の暫定対応）
 - 2026-07-06: AVIF 出力対応（Issue #29）に伴い、E2E のマジックナンバー検証対象に AVIF を追加
 - 2026-07-05: `/start-issue` コマンドを追加（Issue 起点でブランチ作成から PR 作成・自動レビューフローまでハーネス全体を自走させる入口）
 - 2026-07-05: Dependabot による依存の週次自動更新、permissions による危険操作のガード（deny / ask）を追加。E2E の webServer を本番同等の静的配信（build + serve）に変更

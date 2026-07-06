@@ -36,7 +36,7 @@ npm run e2e
 # E2E テストの UI モード
 npm run e2e:ui
 
-# 本番用ビルド（静的エクスポート）
+# 本番用ビルド（静的エクスポート。webpack ビルド、下記注記参照）
 npm run build
 
 # Cloudflare Pages へのデプロイ
@@ -45,6 +45,8 @@ npm run deploy
 # デプロイ版のローカルプレビュー
 npm run preview
 ```
+
+※ Next.js 16 はデフォルトで Turbopack を本番ビルドに使うが、本プロジェクトでは「Creating an optimized production build ...」で無限ハングする上流の既知問題（vercel/next.js discussion #77102 と同症状）があるため、`build` スクリプトは `next build --webpack` にオプトアウトしている。dev サーバー（`next dev --turbopack`）は正常動作するため Turbopack のまま。**上流修正後に Turbopack ビルドへ戻す暫定対応**。
 
 ## 完了条件（Definition of Done）
 
@@ -59,7 +61,7 @@ npm run preview
 ## アーキテクチャ
 
 ### 技術スタック
-- **フレームワーク**: Next.js 15 with App Router
+- **フレームワーク**: Next.js 16 with App Router
 - **言語**: TypeScript（strict モード）
 - **スタイリング**: CSS Modules
 - **i18n**: react-i18next（日本語/英語サポート）
@@ -183,6 +185,7 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
+- Next.js を 16 に更新（PR #45）。Turbopack 本番ビルドが無限ハングする上流バグの回避のため `build` スクリプトを `next build --webpack` に暫定変更（dev は Turbopack のまま。上流修正後に戻す）
 - 変換ページに HEIC/HEIF 入力対応を追加（libheif WASM による動的デコード、Issue #28）
 - 画像フォーマット変換の出力形式に AVIF を追加（`@jsquash/avif` の WASM エンコーダーを動的 import で使用）
 - 開発ハーネスを整備（詳細は `docs/HARNESS.md`）: vitest による単体テスト、Claude Code フック（自動フォーマット / 完了時チェック）、サブエージェント（planner / docs-sync / reviewer）、PR 自動レビューフロー、GitHub Actions CI
