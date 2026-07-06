@@ -37,7 +37,7 @@
   "dependencies": {
     "@jsquash/avif": "^2.1.1",
     "exif-js": "^2.3.0",
-    "i18next": "^25.10.9",
+    "i18next": "^26.3.4",
     "jszip": "^3.10.1",
     "next": "^15.3.5",
     "pako": "^2.1.0",
