@@ -7,7 +7,7 @@ import {
 import {
   exifWritableFormat,
   insertExifIntoBlob,
-  normalizeExifOrientation,
+  normalizeExifForBakedImage,
   readExifTiffFromDataUrl,
 } from "./exifTransfer";
 
@@ -266,10 +266,15 @@ export const cropImage = async (
     });
 
     // Exif データを出力（入力と同じ形式：JPEG / PNG / WebP）に挿入する。
-    // 向きは既にピクセルへ焼き込んでいるため Orientation タグを 1 に正規化して二重回転を防ぐ。
+    // 向き・寸法は既にピクセルへ焼き込んでいるため、Orientation タグを 1 に正規化しつつ
+    // 実ピクセル寸法タグを出力寸法へ揃えて、二重回転やメタデータの寸法不整合を防ぐ。
     if (exifTiff && exifFormat) {
       try {
-        const normalized = normalizeExifOrientation(exifTiff);
+        const normalized = normalizeExifForBakedImage(
+          exifTiff,
+          canvas.width,
+          canvas.height,
+        );
         croppedBlob = await insertExifIntoBlob(
           croppedBlob,
           normalized,
