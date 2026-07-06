@@ -133,6 +133,7 @@ export const CropToolbar: React.FC<CropToolbarProps> = ({
               {t("crop.perImage")}
             </button>
           </div>
+          <p className={styles.help}>{t("crop.applyModeHelp")}</p>
         </div>
       )}
     </div>

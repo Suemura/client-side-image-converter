@@ -23,6 +23,13 @@
   color: var(--muted-foreground);
 }
 
+.help {
+  max-width: 16rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}
+
 .buttonRow {
   display: flex;
   flex-wrap: wrap;
