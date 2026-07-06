@@ -114,7 +114,8 @@
     "dropAreaLabel": "Drag & drop files or click to select",
     "filesSelectedCount_one": "{{count}} file selected",
     "filesSelectedCount_other": "{{count}} files selected",
-    "supportedFormats": "Supported formats: {{formats}}"
+    "supportedFormats": "Supported formats: {{formats}}",
+    "pasteAndFolderHint": "You can also paste from the clipboard (Ctrl/⌘+V) or drop a folder"
   },
   "fileDetails": {
     "title": "File Details",

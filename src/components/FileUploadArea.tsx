@@ -1,4 +1,8 @@
 import { SUPPORTED_IMAGE_FORMATS } from "@utils/constants";
+import {
+  collectFilesFromEntries,
+  getEntriesFromDataTransferItems,
+} from "@utils/directoryReader";
 import { formatFileSize } from "@utils/fileName";
 import {
   addUniqueFiles,
@@ -10,6 +14,7 @@ import { generateThumbnail } from "@utils/imageUtils";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { usePasteImages } from "../hooks/usePasteImages";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
 import styles from "./FileUploadArea.module.css";
@@ -42,6 +47,23 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ファイル投入の共通処理（ドロップ・ファイル選択・貼り付け・フォルダドロップで共有）
+  // MIME フィルタと重複除外を通し、増えた場合のみ通知する
+  const addFiles = useCallback(
+    (rawFiles: File[]) => {
+      const validFiles = filterValidFiles(rawFiles, acceptedTypes);
+      // 重複ファイルを除外（ファイル名とサイズで判定）して追加
+      const mergedFiles = addUniqueFiles(files, validFiles);
+      if (mergedFiles.length > files.length) {
+        onFilesSelected(mergedFiles);
+      }
+    },
+    [files, onFilesSelected, acceptedTypes],
+  );
+
+  // ページ全体での Ctrl/Cmd+V による画像貼り付けを受け取る
+  usePasteImages(addFiles);
+
   // ドラッグ&ドロップハンドラー
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -54,22 +76,26 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   }, []);
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    async (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragOver(false);
 
-      const validFiles = filterValidFiles(
-        Array.from(e.dataTransfer.files),
-        acceptedTypes,
-      );
+      // フォルダドロップ対応: items から webkitGetAsEntry() を「同期で」取得してから
+      // 再帰走査する（drop イベント中しか items が有効でないため await 前に取得する）
+      const entries = e.dataTransfer.items
+        ? getEntriesFromDataTransferItems(Array.from(e.dataTransfer.items))
+        : [];
 
-      // 重複ファイルを除外（ファイル名とサイズで判定）して追加
-      const mergedFiles = addUniqueFiles(files, validFiles);
-      if (mergedFiles.length > files.length) {
-        onFilesSelected(mergedFiles);
+      if (entries.length > 0) {
+        const collectedFiles = await collectFilesFromEntries(entries);
+        addFiles(collectedFiles);
+        return;
       }
+
+      // webkitGetAsEntry 非対応環境は従来どおり dataTransfer.files を使う
+      addFiles(Array.from(e.dataTransfer.files));
     },
-    [files, onFilesSelected, acceptedTypes],
+    [addFiles],
   );
 
   // ファイル選択ハンドラー
@@ -86,21 +112,11 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const validFiles = filterValidFiles(
-        Array.from(e.target.files || []),
-        acceptedTypes,
-      );
-
-      // 重複ファイルを除外（ファイル名とサイズで判定）して追加
-      const mergedFiles = addUniqueFiles(files, validFiles);
-      if (mergedFiles.length > files.length) {
-        onFilesSelected(mergedFiles);
-      }
-
+      addFiles(Array.from(e.target.files || []));
       // ファイル入力をクリア（同じファイルを再選択できるように）
       e.target.value = "";
     },
-    [files, onFilesSelected, acceptedTypes],
+    [addFiles],
   );
 
   // サムネイル生成
@@ -152,6 +168,9 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
             <p className={styles.dropZoneTitle}>{t("fileUpload.dropFiles")}</p>
             <p className={styles.dropZoneSubtitle}>
               {t("fileUpload.clickToSelect")}
+            </p>
+            <p className={styles.dropZoneHint}>
+              {t("fileUpload.pasteAndFolderHint")}
             </p>
           </div>
           <input

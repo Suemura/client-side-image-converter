@@ -66,6 +66,14 @@
   max-width: 480px;
 }
 
+.dropZoneHint {
+  font-size: 12px;
+  font-weight: normal;
+  text-align: center;
+  color: var(--muted-foreground);
+  max-width: 480px;
+}
+
 .hiddenInput {
   display: none;
 }

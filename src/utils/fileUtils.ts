@@ -236,6 +236,49 @@ export const filterValidFiles = (
   return files.filter((file) => isAcceptedFileType(file, acceptedTypes));
 };
 
+/** クリップボードの 1 アイテムの最小構造型（DataTransferItem 互換） */
+export interface ClipboardItemLike {
+  readonly kind: string;
+  getAsFile(): File | null;
+}
+
+/** paste イベントの clipboardData の最小構造型（DataTransfer 互換） */
+export interface ClipboardDataLike {
+  readonly files?: ArrayLike<File> | null;
+  readonly items?: ArrayLike<ClipboardItemLike> | null;
+}
+
+/**
+ * クリップボード（paste イベント）のデータからファイルを取り出す
+ * .files を優先し、無ければ .items の kind === "file" を getAsFile() で取得する
+ * （画像に限らず全ファイルを返す。MIME フィルタは呼び出し側で行う）
+ * @param clipboardData - paste イベントの clipboardData
+ * @returns 取り出したファイル配列
+ */
+export const getFilesFromClipboardData = (
+  clipboardData: ClipboardDataLike | null,
+): File[] => {
+  if (!clipboardData) {
+    return [];
+  }
+  if (clipboardData.files && clipboardData.files.length > 0) {
+    return Array.from(clipboardData.files);
+  }
+  if (clipboardData.items) {
+    const files: File[] = [];
+    for (const item of Array.from(clipboardData.items)) {
+      if (item.kind === "file") {
+        const file = item.getAsFile();
+        if (file) {
+          files.push(file);
+        }
+      }
+    }
+    return files;
+  }
+  return [];
+};
+
 /**
  * input[accept] 属性用の文字列を構築する
  * HEIC/HEIF や TIFF は MIME タイプだけではファイル選択できない環境があるため拡張子も併記する
