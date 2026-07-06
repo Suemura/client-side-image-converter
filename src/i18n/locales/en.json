@@ -126,7 +126,8 @@
     "filesSelectedCount_one": "{{count}} file selected",
     "filesSelectedCount_other": "{{count}} files selected",
     "supportedFormats": "Supported formats: {{formats}}",
-    "pasteAndFolderHint": "You can also paste from the clipboard (Ctrl/⌘+V) or drop a folder"
+    "pasteAndFolderHint": "You can also paste from the clipboard (Ctrl/⌘+V) or drop a folder",
+    "limitExceeded": "You can work with up to {{max}} files at once. Files beyond the limit were not added."
   },
   "fileDetails": {
     "title": "File Details",

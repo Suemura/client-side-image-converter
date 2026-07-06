@@ -1,11 +1,11 @@
-import { SUPPORTED_IMAGE_FORMATS } from "@utils/constants";
+import { MAX_INPUT_FILES, SUPPORTED_IMAGE_FORMATS } from "@utils/constants";
 import {
   collectFilesFromEntries,
   getEntriesFromDataTransferItems,
 } from "@utils/directoryReader";
 import { formatFileSize } from "@utils/fileName";
 import {
-  addUniqueFiles,
+  addUniqueFilesWithLimit,
   buildAcceptAttribute,
   filterValidFiles,
   getFileTypeBadgeLabel,
@@ -45,17 +45,31 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  // 上限超過で一部を取り込めなかったときの警告表示フラグ
+  const [limitExceeded, setLimitExceeded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ファイル投入の共通処理（ドロップ・ファイル選択・貼り付け・フォルダドロップで共有）
-  // MIME フィルタと重複除外を通し、増えた場合のみ通知する
+  // MIME フィルタ → 重複除外 → 上限件数で切り詰め、増えた場合のみ通知する
   const addFiles = useCallback(
     (rawFiles: File[]) => {
       const validFiles = filterValidFiles(rawFiles, acceptedTypes);
-      // 重複ファイルを除外（ファイル名とサイズで判定）して追加
-      const mergedFiles = addUniqueFiles(files, validFiles);
-      if (mergedFiles.length > files.length) {
+      // 重複ファイルを除外（ファイル名とサイズで判定）し、合計を上限件数まで切り詰める
+      const { files: mergedFiles, truncated } = addUniqueFilesWithLimit(
+        files,
+        validFiles,
+        MAX_INPUT_FILES,
+      );
+      const added = mergedFiles.length > files.length;
+      if (added) {
         onFilesSelected(mergedFiles);
+      }
+      // 取り込み件数が増えたか、上限で切り詰めた場合のみ警告状態を更新する。
+      // 重複のみで件数が変わらない no-op（例: 上限到達中に重複を貼り付け）では、
+      // 直前の「上限を超えて取りこぼした」警告を消さず、上限に張り付いた状態を保つ。
+      // truncated=true は取り込み件数の増減と独立に警告を出す（既存が上限で新規が全て弾かれた場合も含む）
+      if (added || truncated) {
+        setLimitExceeded(truncated);
       }
     },
     [files, onFilesSelected, acceptedTypes],
@@ -87,7 +101,12 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
         : [];
 
       if (entries.length > 0) {
-        const collectedFiles = await collectFilesFromEntries(entries);
+        // 巨大ツリーの再帰走査で File 参照が無制限に積み上がらないよう収集件数を有界化する。
+        // MAX_INPUT_FILES + 1 まで集めることで「ちょうど上限」と「上限超過」を区別できる
+        const collectedFiles = await collectFilesFromEntries(
+          entries,
+          MAX_INPUT_FILES + 1,
+        );
         addFiles(collectedFiles);
         return;
       }
@@ -138,6 +157,23 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
 
     generateThumbnails();
   }, [files]);
+
+  // 件数が上限未満に戻ったら stale な上限警告を消す
+  // （全クリアはもちろん、将来 1 件ずつ削除する UI で上限未満まで減った場合にも対応）
+  useEffect(() => {
+    if (files.length < MAX_INPUT_FILES) {
+      setLimitExceeded(false);
+    }
+  }, [files.length]);
+
+  // 上限超過の警告ボックス（非空 2 分岐で共通利用）
+  const limitWarning = limitExceeded ? (
+    <div className={styles.limitWarning} role="alert">
+      <p className={styles.limitWarningText}>
+        {t("fileUpload.limitExceeded", { max: MAX_INPUT_FILES })}
+      </p>
+    </div>
+  ) : null;
 
   // ファイル詳細モーダルハンドラー
   const handleFileClick = useCallback((file: File) => {
@@ -211,6 +247,8 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
             </div>
           </div>
 
+          {limitWarning}
+
           {/* ドラッグオーバー時のオーバーレイ */}
           {isDragOver && (
             <div className={styles.dragOverlay}>
@@ -265,6 +303,8 @@ export const FileUploadArea: React.FC<FileUploadAreaProps> = ({
           </Button>
         </div>
       </div>
+
+      {limitWarning}
 
       {/* ドラッグオーバー時のオーバーレイ */}
       {isDragOver && (

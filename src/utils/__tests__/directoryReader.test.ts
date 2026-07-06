@@ -101,6 +101,51 @@ describe("collectFilesFromEntries", () => {
   it("エントリが空なら空配列を返す", async () => {
     expect(await collectFilesFromEntries([])).toEqual([]);
   });
+
+  it("maxFiles 未指定なら従来どおり全件収集する", async () => {
+    const children = Array.from({ length: 5 }, (_, i) =>
+      fileEntry(createFile(`f${i}.png`)),
+    );
+    const files = await collectFilesFromEntries(children);
+    expect(files).toHaveLength(5);
+  });
+
+  it("maxFiles に達した時点で収集を打ち切る", async () => {
+    const children = Array.from({ length: 5 }, (_, i) =>
+      fileEntry(createFile(`f${i}.png`)),
+    );
+    const files = await collectFilesFromEntries(children, 3);
+    expect(files.map((f) => f.name)).toEqual(["f0.png", "f1.png", "f2.png"]);
+  });
+
+  it("再帰時もサブフォルダに残余バジェットを渡し全体で上限を超えない", async () => {
+    // ルート直下に 2 ファイル + サブフォルダ（3 ファイル）。上限 4 なら 2 + 2 で打ち切る
+    const entries: EntryLike[] = [
+      fileEntry(createFile("r0.png")),
+      fileEntry(createFile("r1.png")),
+      directoryEntry([
+        fileEntry(createFile("s0.png")),
+        fileEntry(createFile("s1.png")),
+        fileEntry(createFile("s2.png")),
+      ]),
+    ];
+    const files = await collectFilesFromEntries(entries, 4);
+    expect(files.map((f) => f.name)).toEqual([
+      "r0.png",
+      "r1.png",
+      "s0.png",
+      "s1.png",
+    ]);
+  });
+
+  it("上限 +1 まで集めれば超過を検知できる（上限ちょうどでは打ち切らない）", async () => {
+    const children = Array.from({ length: 3 }, (_, i) =>
+      fileEntry(createFile(`f${i}.png`)),
+    );
+    // 上限 2 に対し +1 = 3 を渡すと 3 件集まり、呼び出し側が「2 超過」を検知できる
+    const files = await collectFilesFromEntries(children, 3);
+    expect(files).toHaveLength(3);
+  });
 });
 
 describe("getEntriesFromDataTransferItems", () => {
