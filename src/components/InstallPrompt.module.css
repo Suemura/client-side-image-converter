@@ -1,0 +1,64 @@
+.container {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px 10px 16px;
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.message {
+  font-size: 14px;
+  color: var(--foreground);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.installButton {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  background-color: var(--primary);
+  border-radius: 8px;
+  padding: 6px 14px;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.installButton:hover {
+  opacity: 0.85;
+}
+
+.dismissButton {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted-foreground);
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: color 0.2s;
+}
+
+.dismissButton:hover {
+  color: var(--foreground);
+}
+
+@media (max-width: 768px) {
+  .container {
+    left: 16px;
+    right: 16px;
+    transform: none;
+    justify-content: space-between;
+  }
+}

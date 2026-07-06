@@ -236,5 +236,11 @@
     "allRightsReserved": "All rights reserved.",
     "madeWith": "プライバシーを重視して",
     "forPrivacy": "で作られました"
+  },
+  "install": {
+    "title": "アプリをインストール",
+    "message": "オフラインでも使えるようにインストールできます。",
+    "button": "インストール",
+    "dismiss": "閉じる"
   }
 }

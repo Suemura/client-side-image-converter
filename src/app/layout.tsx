@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope, Noto_Sans } from "next/font/google";
 import { I18nProvider } from "../components/I18nProvider";
+import { InstallPrompt } from "../components/InstallPrompt";
+import { ServiceWorkerRegister } from "../components/ServiceWorkerRegister";
 import { ThemeProvider } from "../contexts/ThemeContext";
 import { SITE_LOCALE, SITE_NAME, SITE_URL } from "../utils/pageMetadata";
 import "./globals.css";
@@ -56,6 +58,15 @@ export const metadata: Metadata = {
   },
 };
 
+// PWA のテーマカラー（ブラウザ UI）はライト/ダークで出し分ける。
+// globals.css の --background と一致させ、テーマ切り替え時の違和感を防ぐ。
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f9fafb" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e1117" },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -91,7 +102,11 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider>
-          <I18nProvider>{children}</I18nProvider>
+          <I18nProvider>
+            <ServiceWorkerRegister />
+            {children}
+            <InstallPrompt />
+          </I18nProvider>
         </ThemeProvider>
       </body>
     </html>

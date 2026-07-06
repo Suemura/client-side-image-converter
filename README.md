@@ -6,6 +6,7 @@ A completely privacy-focused image conversion web application built with Next.js
 All image processing is performed within the browser, ensuring your images are never sent to any server.
 Converts images to JPEG, PNG, WebP, and AVIF. HEIC/HEIF photos (such as those taken on iPhone) and TIFF images are also accepted as input on the convert page and decoded entirely in the browser.
 Images can be added by drag & drop, file selection, clipboard paste (Ctrl/⌘+V), or by dropping a folder (subfolders included).
+It is also a Progressive Web App (PWA): once loaded it works fully offline, and on supported browsers it can be installed to your home screen or desktop.
 
 ## 🔗 Live Demo
 
@@ -18,13 +19,14 @@ https://image-converter.suemura.app/
 - **EXIF Metadata Management**: View EXIF data (JPEG / PNG / WebP), edit tags, and selectively remove sensitive metadata. GPS location can be removed or rounded to roughly city level (about 1 km precision, JPEG only).
 - **EXIF Preservation**: Optionally carry over the original EXIF metadata when converting or cropping (JPEG / PNG / WebP output; AVIF is not supported).
 - **Batch Processing**: Process multiple images at once.
+- **Installable PWA**: Install the app to your home screen or desktop and use every feature offline. A Service Worker precaches all assets on first load, and a theme-aware app icon and Web App Manifest are included.
 
 ## 🛡️ Privacy Features
 
 ### **Complete Local Processing**
 
 - **No Server Transmission**: Images are never sent to any server
-- **Offline Operation**: Works without internet connection once loaded
+- **Offline Operation**: A Service Worker precaches the app on the first visit, so every feature keeps working with no internet connection
 
 ## Development Setup
 

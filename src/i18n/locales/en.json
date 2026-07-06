@@ -237,5 +237,11 @@
     "allRightsReserved": "All rights reserved.",
     "madeWith": "Made with",
     "forPrivacy": "for privacy"
+  },
+  "install": {
+    "title": "Install app",
+    "message": "Install this app to use it offline.",
+    "button": "Install",
+    "dismiss": "Dismiss"
   }
 }

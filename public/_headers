@@ -1,0 +1,15 @@
+# Cloudflare Pages のヘッダー設定。static export では public/ 配下が out/ にコピーされ、
+# out/_headers として配信時に適用される。
+
+# Service Worker は常に再検証させ、デプロイごとに新しい sw.js を確実に取得させる
+# （sw.js の内容が変わると新バージョンがインストールされ、古いキャッシュは activate で破棄される）。
+/sw.js
+  Cache-Control: no-cache
+
+# 内容ハッシュ付きの静的アセットは不変なので長期キャッシュ可
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# manifest の content-type を明示する
+/manifest.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
