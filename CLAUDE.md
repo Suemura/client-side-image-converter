@@ -76,16 +76,25 @@ npm run preview
   - `metadata/` - EXIF メタデータエディターページ
 - `src/components/` - 再利用可能な React コンポーネント
 - `src/utils/` - コアユーティリティクラス
-  - `imageConverter.ts` - 画像フォーマット変換処理
-  - `avifEncoder.ts` - AVIF エンコード処理（`@jsquash/avif` の WASM を動的 import）
-  - `heicDecoder.ts` - HEIC/HEIF デコード処理（libheif WASM、動的 import）
-  - `tiffDecoder.ts` - TIFF デコード処理（`utif2` の純 JS デコーダー、動的 import）
+  - `imageConverter.ts` - 画像フォーマット変換処理（単体変換 `convertImage` と一括変換 `convertMultipleImages`。一括は対応環境で Worker プールへ委譲し、非対応環境ではメインスレッド逐次処理）
+  - `conversionCore.ts` - 変換のコア型（`ConversionFormat` / `ConversionOptions` / `ConversionResult` 等）と Canvas 非依存の純粋ロジック（`searchQualityForTargetSize` / `calculateTargetSize`）。メインスレッドと Worker で共有（`imageConverter.ts` から再エクスポートし既存 import 経路を維持）
+  - `conversionResult.ts` - `ConversionResult` 組み立ての共通化（`buildConversionResult`）。convertImage とワーカープールで共用
+  - `concurrency.ts` - 純粋な並行スケジューラ（`mapWithConcurrency` / `resolveConcurrency`）。同時実行数制限・入力順保持・continue-on-error・逐次進捗
+  - `pngQuality.ts` - PNG 品質ティア判定（`pngQualityStrategy`。閾値 95/70）。メインスレッドと Worker で共有
+  - `decodedImage.ts` - HEIC/TIFF デコード結果（RGBA 生ピクセル）の共有型 `DecodedImage`
+  - `avifEncoder.ts` - AVIF エンコード処理（`@jsquash/avif` の WASM を動的 import。`HTMLCanvasElement | OffscreenCanvas` 両対応）
+  - `heicDecoder.ts` - HEIC/HEIF デコード処理（libheif WASM、動的 import。Canvas 非依存の `decodeHeicToImageData` を含む）
+  - `tiffDecoder.ts` - TIFF デコード処理（`utif2` の純 JS デコーダー、動的 import。Canvas 非依存の `decodeTiffToImageData` を含む）
   - `imageCropper.ts` - 画像トリミング処理
   - `metadataManager.ts` - EXIF データ管理（JPEG / PNG / WebP からの読み取り、GPS の十進変換・丸めの純粋関数を含む）
   - `exifBinary.ts` - Canvas / WASM / ブラウザ API 非依存の純粋なバイナリ操作群（PNG eXIf チャンク・WebP RIFF/VP8X チャンクの抽出/挿入、CRC32、`Exif\0\0` 識別子の付け外し、piexif dump ↔ 純 TIFF 変換、合成 JPEG 生成）
   - `exifTransfer.ts` - ソース EXIF の読み取りから出力 Blob への書き込みまでを橋渡しするブラウザ側ロジック（`exifWritableFormat` / `readExifTiffFromDataUrl` / `insertExifIntoBlob`）。変換・トリミングの両経路で共用
   - `pageMetadata.ts` - ページ別 SEO メタデータ（title / description / OGP / Twitter / canonical）を組み立てる純粋関数 `buildPageMetadata` とサイト定数（`SITE_NAME` / `SITE_URL` / `SITE_LOCALE`）
   - `__tests__/` - 単体テスト
+- `src/workers/` - Web Worker（変換ページのバッチ処理を並列化）
+  - `imageProcessing.worker.ts` - 画像処理 Worker。デコード（createImageBitmap / HEIC / TIFF）→ OffscreenCanvas 描画・リサイズ → エンコード（convertToBlob / `@jsquash/avif`）→ EXIF 挿入 を Worker 内で完結。`new Worker(new URL(..., import.meta.url), { type: "module" })` で生成し、`next build --webpack` + `output: "export"` でワーカーチャンクが `out/_next/static/` に出力される
+  - `imageProcessingPool.ts` - メインスレッド側プール。`isOffscreenPipelineSupported()` で対応判定し `navigator.hardwareConcurrency` を上限に Worker を起動。Worker 失敗・クラッシュ時は当該ファイルのみメインスレッドの `convertImage` にフォールバック。バッチ完了時に terminate
+  - `messages.ts` - Worker とメインスレッド間のメッセージ型
 - `src/i18n/` - 国際化設定
 - `src/types/` - 外部ライブラリの型定義（piexifjs / exif-js / heic-decode）
 
@@ -101,11 +110,12 @@ npm run preview
 1. **画像フォーマット変換** - JPEG、PNG、WebP、AVIF 形式への変換（品質制御付き。AVIF は出力のみ対応）。目標ファイルサイズ (KB) を指定すると品質を二分探索して目標以下で最大品質の結果を出力する（JPEG / WebP のみ。達成不可時は最小サイズで出力し一覧に警告表示）。HEIC/HEIF（iPhone 写真）と TIFF は変換ページのみ入力として受理（crop / metadata はブラウザがプレビュー描画できないため対象外）。変換に失敗したファイルは一覧で画面に通知される
 2. **画像トリミング** - プレビュー付きのビジュアルトリミングインターフェース
 3. **EXIF メタデータ管理** - EXIF データの表示（JPEG / PNG / WebP に対応）、編集、選択的削除。GPS 位置は「削除」に加えて「市区町村レベルに丸める」（約 1km 精度で残す）を選択可能（GPS タグがある場合のみ UI 表示。丸めは JPEG のみ有効で、その他の形式は Canvas 再描画により全メタデータを削除）。変換・トリミングの「EXIF を保持」は JPEG / PNG / WebP 出力で有効（AVIF は非対応）
-4. **バッチ処理** - 複数画像の一括処理
+4. **バッチ処理** - 複数画像の一括処理。変換ページは対応環境で Web Worker + OffscreenCanvas のプール（`navigator.hardwareConcurrency` を上限に並列）で処理し UI をブロックしない（非対応環境はメインスレッド逐次処理にフォールバック）
 5. **プライバシーファースト** - Canvas API / WASM を使用したクライアントサイドでの全処理
 
 ### 重要なパターン
 - 画像処理はクライアントサイド操作のために Canvas API を使用
+- 変換ページのバッチ処理は Web Worker + OffscreenCanvas のワーカープール（`src/workers/`）で並列実行する。`navigator.hardwareConcurrency` を上限に Worker を起動し、デコード〜エンコード〜EXIF 挿入まで Worker 内で完結させメインスレッド（UI）をブロックしない。AVIF の WASM エンコード（従来メインスレッドで同期実行し UI をフリーズさせていた）も Worker 内で実行する。OffscreenCanvas / Worker / createImageBitmap 非対応環境（`isOffscreenPipelineSupported()` で判定）ではメインスレッド逐次処理にフォールバックし、Worker が個別に失敗・クラッシュした場合も当該ファイルのみ `convertImage` で再試行する。メインスレッドと Worker が共有する型・純粋ロジックは Canvas 非依存の `conversionCore.ts` / `concurrency.ts` / `pngQuality.ts` に集約し、Worker バンドルへの Canvas コード混入を防ぐ
 - AVIF エンコードのみ Canvas の `toBlob("image/avif")` が全ブラウザ未実装のため、`@jsquash/avif`（WASM）を動的 import で使用（AVIF 変換実行時のみロードされ、初期バンドルに影響しない。処理はブラウザ内で完結）
 - HEIC/HEIF のデコードは libheif の WASM ビルド（`heic-decode` + `libheif-js`）を使用し、動的 import により HEIC 変換時のみロードする（初期バンドルに影響なし）
 - TIFF のデコードは `utif2`（純 JS の TIFF デコーダー）を使用し、動的 import により TIFF 変換時のみロードする（初期バンドルに影響なし。マルチページ TIFF は先頭ページのみ対応）
@@ -192,6 +202,7 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
+- 変換ページのバッチ処理を Web Worker + OffscreenCanvas のワーカープールへ移し、`navigator.hardwareConcurrency` を上限に並列実行するようにした（Issue #32・#47）。AVIF の WASM エンコード（従来メインスレッドで同期実行し UI をフリーズさせていた）も Worker 内で実行する。Worker（`src/workers/`: `imageProcessing.worker.ts` / `imageProcessingPool.ts` / `messages.ts`）とメインスレッドで共有する型・純粋ロジックを Canvas 非依存の `conversionCore.ts`（コア型 + `searchQualityForTargetSize` / `calculateTargetSize`）・`concurrency.ts`（`mapWithConcurrency` / `resolveConcurrency`）・`pngQuality.ts`（`pngQualityStrategy`）・`conversionResult.ts`（`buildConversionResult`）・`decodedImage.ts` に切り出し。OffscreenCanvas 非対応環境や Worker 個別失敗時はメインスレッドの `convertImage` にフォールバック。出力・対応形式・オプション（EXIF 保持・目標ファイルサイズ・品質・リサイズ）の仕様は不変で crop / metadata は変更なし。単体テストは `concurrency.test.ts` / `pngQuality.test.ts`、実ブラウザ検証は `e2e/convert.spec.ts`（一括変換の ZIP 全件検証 / AVIF バッチ / Worker 生成確認）
 - EXIF 対応を拡張（Issue #34）。(1) メタデータページで WebP（RIFF の EXIF チャンク）と PNG（eXIf チャンク）の EXIF 読み取りに対応（取り出した TIFF を合成 JPEG に包んで exif-js に渡す）、(2) 変換・トリミングの「EXIF を保持」を JPEG 以外の出力（PNG の eXIf チャンク / WebP の VP8X + EXIF チャンク）でも有効化（AVIF は非対応。convert の preserveExif 有効条件を「JPEG のみ」→「AVIF 以外」に変更）、(3) メタデータページに GPS 位置の処理モード選択（削除 / 市区町村レベルに約 1km 精度で丸める。JPEG のみ有効）を追加。バイナリ操作を純粋関数 `exifBinary.ts`（単体テスト `exifBinary.test.ts`）に、ブラウザ側の読み取り〜書き込みの橋渡しを `exifTransfer.ts` に切り出し。GPS 十進変換・丸めは `metadataManager.ts` に純粋関数として追加。実ブラウザ検証は `e2e/metadata.spec.ts`（WebP / PNG 読み取り・GPS 丸め）・`e2e/convert.spec.ts`（JPEG→PNG / →WebP の EXIF 保持）
 - 各ページ（`/`, `/convert`, `/crop`, `/metadata`）に固有の SEO メタデータ（title / description / OGP / Twitter card / canonical）を付与（Issue #27）。`pageMetadata.ts` の純粋関数 `buildPageMetadata` で組み立て、各ルートの `layout.tsx`（サーバーコンポーネント層）から export する。root の `layout.tsx` に `metadataBase`・title テンプレート・共通 description・OGP / Twitter 既定値を集約。主言語は日本語で静的 HTML に出力されるため i18n（ロケール JSON）は非経由。単体テストは `pageMetadata.test.ts`、実 HTML 出力の検証は `e2e/seo-metadata.spec.ts` で実施
 - 変換ページに目標ファイルサイズ (KB) 指定を追加（Issue #30）。指定すると品質値を二分探索し目標サイズ以下で最大品質の結果を採用する（JPEG / WebP のみ。PNG は可逆・AVIF は WASM が低速なため対象外）。探索は Canvas 非依存の純粋関数 `searchQualityForTargetSize`（`imageConverter.ts`）に切り出して単体テスト、実サイズ検証は E2E で実施。達成不可時は最小サイズで出力し結果一覧に警告表示

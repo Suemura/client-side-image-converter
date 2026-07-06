@@ -16,7 +16,7 @@ https://image-converter.suemura.app/
 - **Image Cropping**: Visual cropping tool with live preview.
 - **EXIF Metadata Management**: View EXIF data (JPEG / PNG / WebP), edit tags, and selectively remove sensitive metadata. GPS location can be removed or rounded to roughly city level (about 1 km precision, JPEG only).
 - **EXIF Preservation**: Optionally carry over the original EXIF metadata when converting or cropping (JPEG / PNG / WebP output; AVIF is not supported).
-- **Batch Processing**: Process multiple images at once.
+- **Batch Processing**: Process multiple images at once. On the convert page, batches run in parallel using Web Workers (up to your CPU's core count), keeping the UI responsive even with large or numerous images.
 
 ## 🛡️ Privacy Features
 
