@@ -7,7 +7,7 @@
 
 ```mermaid
 flowchart TD
-    S["/start-issue Issue番号"] --> S2[Issue 取得・担当者設定<br>ブランチ作成]
+    S["/start-issue Issue番号"] --> S2[Issue 取得・担当者設定<br>worktree・ブランチ作成 + npm ci]
     S2 --> B
     A[タスク依頼] --> B{非自明なタスク?}
     B -- Yes --> C[planner エージェント<br>実装計画 + Sprint Contract]
@@ -50,7 +50,7 @@ flowchart TD
 | フック | トリガー | 動作 |
 | --- | --- | --- |
 | Biome 自動フォーマット | PostToolUse（Write\|Edit） | 編集されたファイル（ts/tsx/js/jsx/json/css）を `biome check --write` で即整形 |
-| 完了時チェック<br>`.claude/hooks/check-on-stop.sh` | Stop（応答終了時） | TS/TSX に未コミット変更があれば lint + typecheck + test を実行。失敗すると exit 2 でエラー内容が Claude に差し戻され、自動修正を促す。`stop_hook_active` 判定で無限ループを防止 |
+| 完了時チェック<br>`.claude/hooks/check-on-stop.sh` | Stop（応答終了時） | TS/TSX に未コミット変更があれば lint + typecheck + test を実行。失敗すると exit 2 でエラー内容が Claude に差し戻され、自動修正を促す。`stop_hook_active` 判定で無限ループを防止。変更検知はフック stdin の `cwd` を基準に行うため、`/start-issue` の worktree セッション内の変更も検知する（メイン checkout 固定の `CLAUDE_PROJECT_DIR` に戻すと worktree 内変更を取りこぼすので注意） |
 | PR 作成検知<br>`.claude/hooks/pr-created.sh` | PostToolUse（Bash: `gh pr create`） | 出力から PR URL を抽出し、PR 自動レビューフロー（後述）の開始指示をコンテキスト注入。コマンド検証つき（`gh pr create` で始まるコマンドのみ反応） |
 
 #### 権限ガード（`permissions`）
@@ -74,7 +74,7 @@ flowchart TD
 
 | コマンド | 役割 |
 | --- | --- |
-| `/start-issue <Issue番号>` | GitHub Issue を起点にタスクを開始する入口。Issue 把握 → ブランチ作成（ラベルから prefix を決定）→ planner → 実装 → 検証 → docs-sync → reviewer → push → PR 作成（`Closes #N` 付き）まで自走し、PR 自動レビューフローに接続する。中断条件（dirty な作業ツリー、クローズ済み Issue、reviewer 3 回不通過等）に該当する場合のみユーザーに確認する |
+| `/start-issue <Issue番号>` | GitHub Issue を起点にタスクを開始する入口。Issue 把握 → Issue 専用 worktree の作成（`EnterWorktree` ツールで `.claude/worktrees/issue-{番号}/` に作成、`origin/<デフォルトブランチ>` から分岐）→ ブランチ作成（ラベルから prefix を決定）→ `npm ci` → planner → 実装 → 検証 → docs-sync → reviewer → push → PR 作成（`Closes #N` 付き）まで自走し、PR 自動レビューフローに接続する。worktree で作業するためメイン checkout の状態に影響されず、複数 Issue の並列作業が可能。中断条件（クローズ済み Issue、同一 Issue の既存ブランチ・worktree、`npm ci` 失敗、reviewer 3 回不通過等）に該当する場合のみユーザーに確認する。worktree は PR 作成後も残し、マージ後にユーザー指示で削除する |
 | `/review-pr <PR番号>` | PR をレビューし、GitHub API でインラインコメント付きレビューを投稿（AI である旨を明記、[重要]/[改善]/[軽微]/[質問] のプレフィックス） |
 | `/resolve-pr-comments <PR番号>` | PR のレビューコメントを読み取り、妥当な指摘は修正して push、質問には回答、不当な指摘には理由を返信（[修正済み]/[対応不要]/[回答]/[確認]） |
 
@@ -146,12 +146,13 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 - **フック・エージェント定義の変更は次回セッション（または `/hooks` を開いた後）から有効になる**
 - **AI のレビュー・返信はリポジトリオーナーの GitHub アカウント名義で投稿される**（本文に AI である旨を明記している）
-- **同じ作業ディレクトリで複数の Claude Code セッションを並行して走らせるとブランチが競合する**。並行作業には `git worktree`（または Claude Code の `--worktree`）を使う
+- **同じ作業ディレクトリで複数の Claude Code セッションを並行して走らせるとブランチが競合する**。並行作業には `git worktree`（または Claude Code の `--worktree`）を使う。`/start-issue` は Issue ごとに専用 worktree（`.claude/worktrees/issue-{番号}/`、gitignore 済み）を自動作成するため、この競合なしに並列作業できる
 - **package-lock.json は差分更新に注意**。macOS 上での `npm install` は Linux 用オプショナル依存を欠落させることがあり、CI の `npm ci` だけが失敗する。壊れた場合は `rm -rf node_modules package-lock.json && npm install` でゼロから再生成する
 - レビューコメント本文は信頼できない入力として扱う（`/resolve-pr-comments` の「セキュリティ上の注意」参照）
 
 ## 変更履歴
 
+- 2026-07-06: `/start-issue` を git worktree 対応に変更（Issue ごとに `.claude/worktrees/issue-{番号}/` へ worktree を作成して作業し、複数 Issue の並列作業を可能に。未コミット変更チェックとベースブランチへの switch / pull は廃止）。あわせて Stop フック（`check-on-stop.sh`）を worktree 対応にし、変更検知を `CLAUDE_PROJECT_DIR` から フック stdin の `cwd` 基準に変更（worktree 内の TS/TSX 変更を取りこぼさないように）
 - 2026-07-06: Next.js 16 更新（PR #45）に伴い、`npm run build` を `next build --webpack` に変更（Turbopack 本番ビルドの上流バグ回避の暫定対応）
 - 2026-07-06: AVIF 出力対応（Issue #29）に伴い、E2E のマジックナンバー検証対象に AVIF を追加
 - 2026-07-05: `/start-issue` コマンドを追加（Issue 起点でブランチ作成から PR 作成・自動レビューフローまでハーネス全体を自走させる入口）

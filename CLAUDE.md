@@ -154,7 +154,7 @@ npm run preview
 
 ### コマンド（`.claude/commands/`）
 
-- **/start-issue <Issue番号>**: GitHub Issue を起点にタスクを開始。ブランチ作成 → planner → 実装 → 検証 → docs-sync → reviewer → PR 作成（自動レビューフロー起動）まで自走
+- **/start-issue <Issue番号>**: GitHub Issue を起点にタスクを開始。Issue 専用 worktree（`.claude/worktrees/issue-{番号}/`）とブランチの作成 → planner → 実装 → 検証 → docs-sync → reviewer → PR 作成（自動レビューフロー起動）まで自走。worktree で作業するため複数 Issue の並列作業が可能
 - **/review-pr <PR番号>**: PR のコードレビューを実施し、インラインコメントを投稿
 - **/resolve-pr-comments <PR番号>**: PR のレビューコメントを読み取り、修正対応・返信を実施
 
@@ -187,6 +187,7 @@ npm run preview
 - 実装前に既存のコンポーネントの再利用を検討する
 
 ## 最近の更新
+- `/start-issue` コマンドを git worktree 対応に変更。Issue ごとに `.claude/worktrees/issue-{番号}/`（gitignore 済み）へ worktree を作成して作業するため、複数 Issue の並列作業が可能に
 - 変換ページに TIFF 入力対応を追加（`utif2` による動的デコード、Issue #26）。crop / metadata の受理形式からブラウザで描画できない TIFF を除外し、変換失敗ファイルの一覧通知を追加
 - Next.js を 16 に更新（PR #45）。Turbopack 本番ビルドが無限ハングする上流バグの回避のため `build` スクリプトを `next build --webpack` に暫定変更（dev は Turbopack のまま。上流修正後に戻す）
 - 変換ページに HEIC/HEIF 入力対応を追加（libheif WASM による動的デコード、Issue #28）

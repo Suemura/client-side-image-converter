@@ -16,7 +16,15 @@ elif [[ "$input" == *'"stop_hook_active":true'* ]]; then
   exit 0
 fi
 
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+# 作業ディレクトリを決定する。EnterWorktree でセッションが worktree に入っている場合、
+# 変更は worktree 側にのみ現れ、メイン checkout（CLAUDE_PROJECT_DIR）の git status には出ない。
+# そのためフック stdin の cwd（セッションの現在ディレクトリ＝worktree に追従）を優先する。
+# cwd が取れない場合は CLAUDE_PROJECT_DIR → . の順にフォールバックする（従来挙動）。
+work_dir=""
+if command -v jq > /dev/null 2>&1; then
+  work_dir=$(echo "$input" | jq -r '.cwd // empty' 2>/dev/null)
+fi
+cd "${work_dir:-${CLAUDE_PROJECT_DIR:-.}}" || exit 0
 
 # 変更された TS/TSX ファイルがなければスキップ
 # （-uall: 未追跡ディレクトリ内のファイルも個別に列挙 / quotePath 無効化: 非 ASCII ファイル名の引用を防ぐ）

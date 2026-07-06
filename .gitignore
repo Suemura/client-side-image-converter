@@ -48,6 +48,9 @@ next-env.d.ts
 # Claude Code の個人設定（共有しない）
 .claude/settings.local.json
 
+# Claude Code のセッション用 worktree（/start-issue 等が作成）
+.claude/worktrees/
+
 # Playwright
 /test-results/
 /playwright-report/
