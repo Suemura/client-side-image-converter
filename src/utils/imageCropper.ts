@@ -1,5 +1,8 @@
-import piexif from "piexifjs";
-import { dataUrlToBlob } from "./imageUtils";
+import {
+  exifWritableFormat,
+  insertExifIntoBlob,
+  readExifTiffFromDataUrl,
+} from "./exifTransfer";
 
 export interface CropArea {
   x: number;
@@ -73,18 +76,12 @@ export const cropImage = async (
       throw new Error("Canvas context is not supported");
     }
 
-    // Exifデータを読み込む（JPEGの場合のみ）
-    let exifData: string | null = null;
-    if (
-      preserveExif &&
-      (file.type.includes("jpeg") || file.type.includes("jpg"))
-    ) {
-      try {
-        const dataUrl = await fileToDataUrl(file);
-        exifData = piexif.dump(piexif.load(dataUrl));
-      } catch (error) {
-        console.warn("Failed to read EXIF data:", error);
-      }
+    // Exif データを読み込む（JPEG / PNG / WebP のソースに対応）
+    const exifFormat = exifWritableFormat(file.type);
+    let exifTiff: Uint8Array | null = null;
+    if (preserveExif && exifFormat) {
+      const dataUrl = await fileToDataUrl(file);
+      exifTiff = readExifTiffFromDataUrl(dataUrl, file.type);
     }
 
     // 画像を読み込み
@@ -207,18 +204,16 @@ export const cropImage = async (
       );
     });
 
-    // Exifデータを挿入（JPEGのみ）
-    if (exifData && (file.type.includes("jpeg") || file.type.includes("jpg"))) {
+    // Exif データを出力（入力と同じ形式：JPEG / PNG / WebP）に挿入する
+    if (exifTiff && exifFormat) {
       try {
-        const reader = new FileReader();
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(croppedBlob);
-        });
-
-        const newDataUrl = piexif.insert(exifData, dataUrl);
-        croppedBlob = dataUrlToBlob(newDataUrl, file.type);
+        croppedBlob = await insertExifIntoBlob(
+          croppedBlob,
+          exifTiff,
+          exifFormat,
+          canvas.width,
+          canvas.height,
+        );
       } catch (error) {
         console.warn("Failed to insert EXIF data:", error);
       }

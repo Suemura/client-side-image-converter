@@ -1,4 +1,11 @@
 import piexif from "piexifjs";
+import {
+  buildSyntheticJpegFromTiff,
+  extractPngExif,
+  extractWebpExif,
+  insertWebpExif,
+  piexifDumpToTiff,
+} from "../../src/utils/exifBinary";
 
 /**
  * E2E テスト用の画像フィクスチャ生成ヘルパー
@@ -110,34 +117,40 @@ export const brokenImageFile = (name = "broken.png") => ({
   buffer: Buffer.from("this is not an image", "utf-8"),
 });
 
+// cwebp で生成した 1x1 ピクセルの WebP（VP8X 形式。EXIF 埋め込みのベースに使う）
+const BASE_WEBP_BASE64 =
+  "UklGRlQAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAIAAAAAf1ZQOCAsAAAAkAEAnQEqAQABAAIANCWgAnS6AAOYAP75k2//kB//kB//kB//ID/iF3sgMAA=";
+
+/** GPS・カメラ情報入りの EXIF オブジェクト（各フィクスチャで共用） */
+const sampleExifObj = {
+  "0th": {
+    [piexif.ImageIFD.Make]: "TestMake",
+    [piexif.ImageIFD.Model]: "TestModel",
+  },
+  Exif: {
+    [piexif.ExifIFD.DateTimeOriginal]: "2024:01:01 00:00:00",
+  },
+  GPS: {
+    // GPSVersionID はタグ ID が 0 のため、truthiness 判定による削除漏れの回帰検知に使う
+    [piexif.GPSIFD.GPSVersionID]: [2, 3, 0, 0] as unknown as number[],
+    [piexif.GPSIFD.GPSLatitudeRef]: "N",
+    [piexif.GPSIFD.GPSLatitude]: [
+      [35, 1],
+      [40, 1],
+      [0, 1],
+    ] as unknown as number[],
+    [piexif.GPSIFD.GPSLongitudeRef]: "E",
+    [piexif.GPSIFD.GPSLongitude]: [
+      [139, 1],
+      [45, 1],
+      [0, 1],
+    ] as unknown as number[],
+  },
+};
+
 /** GPS・カメラ情報入りの EXIF を埋め込んだ JPEG ファイル */
 export const jpegFileWithExif = (name = "with-exif.jpg") => {
-  const exifObj = {
-    "0th": {
-      [piexif.ImageIFD.Make]: "TestMake",
-      [piexif.ImageIFD.Model]: "TestModel",
-    },
-    Exif: {
-      [piexif.ExifIFD.DateTimeOriginal]: "2024:01:01 00:00:00",
-    },
-    GPS: {
-      // GPSVersionID はタグ ID が 0 のため、truthiness 判定による削除漏れの回帰検知に使う
-      [piexif.GPSIFD.GPSVersionID]: [2, 3, 0, 0] as unknown as number[],
-      [piexif.GPSIFD.GPSLatitudeRef]: "N",
-      [piexif.GPSIFD.GPSLatitude]: [
-        [35, 1],
-        [40, 1],
-        [0, 1],
-      ] as unknown as number[],
-      [piexif.GPSIFD.GPSLongitudeRef]: "E",
-      [piexif.GPSIFD.GPSLongitude]: [
-        [139, 1],
-        [45, 1],
-        [0, 1],
-      ] as unknown as number[],
-    },
-  };
-  const exifBytes = piexif.dump(exifObj);
+  const exifBytes = piexif.dump(sampleExifObj);
   const dataUrl = piexif.insert(
     exifBytes,
     `data:image/jpeg;base64,${BASE_JPEG_BASE64}`,
@@ -149,9 +162,52 @@ export const jpegFileWithExif = (name = "with-exif.jpg") => {
   };
 };
 
+/**
+ * GPS・カメラ情報入りの EXIF を埋め込んだ WebP ファイル。
+ * ベース WebP に insertWebpExif で EXIF チャンクを付与する（WebP 読み取りの E2E に使う）
+ */
+export const webpFileWithExif = (name = "with-exif.webp") => {
+  const tiff = piexifDumpToTiff(piexif.dump(sampleExifObj));
+  const base = new Uint8Array(Buffer.from(BASE_WEBP_BASE64, "base64"));
+  const webp = insertWebpExif(base, tiff, 1, 1);
+  return {
+    name,
+    mimeType: "image/webp",
+    buffer: Buffer.from(webp),
+  };
+};
+
 /** ダウンロードした JPEG バイナリから EXIF を読み出す */
 export const loadExifFromBuffer = (buf: Buffer) => {
   return piexif.load(`data:image/jpeg;base64,${buf.toString("base64")}`);
+};
+
+/** ダウンロードした PNG バイナリの eXIf チャンクから EXIF を読み出す */
+export const loadExifFromPngBuffer = (
+  buf: Buffer,
+): ReturnType<typeof piexif.load> => {
+  const tiff = extractPngExif(new Uint8Array(buf));
+  if (!tiff) {
+    return {} as ReturnType<typeof piexif.load>;
+  }
+  const jpeg = buildSyntheticJpegFromTiff(tiff);
+  return piexif.load(
+    `data:image/jpeg;base64,${Buffer.from(jpeg).toString("base64")}`,
+  );
+};
+
+/** ダウンロードした WebP バイナリの EXIF チャンクから EXIF を読み出す */
+export const loadExifFromWebpBuffer = (
+  buf: Buffer,
+): ReturnType<typeof piexif.load> => {
+  const tiff = extractWebpExif(new Uint8Array(buf));
+  if (!tiff) {
+    return {} as ReturnType<typeof piexif.load>;
+  }
+  const jpeg = buildSyntheticJpegFromTiff(tiff);
+  return piexif.load(
+    `data:image/jpeg;base64,${Buffer.from(jpeg).toString("base64")}`,
+  );
 };
 
 /** バイナリの先頭がフォーマットのマジックナンバーと一致するか */

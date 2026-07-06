@@ -1,7 +1,12 @@
 import piexif from "piexifjs";
 import { describe, expect, it } from "vitest";
 import { dataUrlToBlob } from "../imageUtils";
-import { assessPrivacyRisk, removeMetadataFromImage } from "../metadataManager";
+import {
+  assessPrivacyRisk,
+  decimalToGpsRationals,
+  gpsRationalsToDecimal,
+  removeMetadataFromImage,
+} from "../metadataManager";
 
 // 1x1 ピクセルの最小 JPEG（EXIF なし）
 const BASE_JPEG_DATA_URL =
@@ -144,5 +149,57 @@ describe("removeMetadataFromImage", () => {
     const result = await removeMetadataFromImage(file, ["GPS"]);
     expect(result.name).toBe("test.jpg");
     expect(result.type).toBe("image/jpeg");
+  });
+
+  it("GPS 丸めモードでは GPS が削除されず精度が落とされ、非 GPS タグは削除される", async () => {
+    const file = createJpegFileWithExif();
+    const result = await removeMetadataFromImage(file, ["GPS", "Make"], {
+      roundGpsInsteadOfRemove: true,
+    });
+    const exif = await loadExifFromFile(result);
+
+    // GPS は残っている（完全削除されていない）
+    expect(exif.GPS?.[piexif.GPSIFD.GPSLatitude]).toBeDefined();
+    expect(exif.GPS?.[piexif.GPSIFD.GPSLatitudeRef]).toBe("N");
+    // 緯度は元の 35.6667 が 2 桁（35.67）に丸められている
+    const lat = gpsRationalsToDecimal(
+      exif.GPS?.[piexif.GPSIFD.GPSLatitude] as unknown as number[][],
+      exif.GPS?.[piexif.GPSIFD.GPSLatitudeRef] as string,
+    );
+    expect(lat).toBeCloseTo(35.67, 2);
+    // 非 GPS タグ（Make）は削除されている
+    expect(exif["0th"]?.[piexif.ImageIFD.Make]).toBeUndefined();
+    // 選択されていない Model は残る
+    expect(exif["0th"]?.[piexif.ImageIFD.Model]).toBe("TestModel");
+  });
+});
+
+describe("GPS 座標の十進変換", () => {
+  it("度分秒と Ref から十進度に変換する（N は正、S/W は負）", () => {
+    expect(
+      gpsRationalsToDecimal(
+        [
+          [35, 1],
+          [40, 1],
+          [0, 1],
+        ],
+        "N",
+      ),
+    ).toBeCloseTo(35.6667, 3);
+    expect(
+      gpsRationalsToDecimal(
+        [
+          [139, 1],
+          [45, 1],
+          [0, 1],
+        ],
+        "W",
+      ),
+    ).toBeCloseTo(-139.75, 3);
+  });
+
+  it("十進度→度分秒→十進度の往復で値が保持される", () => {
+    const dms = decimalToGpsRationals(35.67);
+    expect(gpsRationalsToDecimal(dms, "N")).toBeCloseTo(35.67, 4);
   });
 });

@@ -72,6 +72,9 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
     settings.targetFileSizeKB !== undefined &&
     settings.targetFileSizeKB > 0;
 
+  // EXIF 保持は JPEG / PNG / WebP で対応（AVIF はメタデータ書き込み非対応）
+  const canPreserveExif = settings.targetFormat !== "avif";
+
   // value に型注釈を付け、選択肢と ConversionFormat の整合を型で担保する
   const formatOptions: { label: string; value: ConversionFormat }[] = [
     { label: "JPEG", value: "jpeg" },
@@ -251,7 +254,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
 
       <div className={styles.checkboxContainer}>
         <label
-          className={`${styles.checkboxLabel} ${settings.targetFormat !== "jpeg" ? styles.checkboxDisabled : ""}`}
+          className={`${styles.checkboxLabel} ${canPreserveExif ? "" : styles.checkboxDisabled}`}
         >
           <input
             type="checkbox"
@@ -262,7 +265,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
                 preserveExif: !settings.preserveExif,
               })
             }
-            disabled={settings.targetFormat !== "jpeg"}
+            disabled={!canPreserveExif}
             className={styles.checkbox}
           />
           <span className={styles.checkboxText}>
@@ -271,9 +274,9 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
         </label>
       </div>
       <div className={styles.helpText}>
-        {settings.targetFormat === "jpeg"
+        {canPreserveExif
           ? t("convert.preserveExifHelp")
-          : t("convert.preserveExifJpegOnly")}
+          : t("convert.preserveExifUnsupported")}
       </div>
 
       <div className={styles.buttonContainer}>
