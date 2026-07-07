@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildConversionResult } from "../conversionResult";
+import {
+  buildConversionResult,
+  buildOptimizeResult,
+} from "../conversionResult";
 
 // URL.createObjectURL はブラウザ API のため、返り値を固定してオブジェクト生成分岐を安定的に検証する
 // （ファイル名生成・サイズ・File 化などの純ロジック部分を対象とする）
@@ -76,6 +79,35 @@ describe("buildConversionResult", () => {
     const blob = blobOfSize(5, "image/webp");
     const result = buildConversionResult(original, blob, "webp");
 
+    expect(result.targetSizeAchieved).toBeUndefined();
+  });
+});
+
+describe("buildOptimizeResult", () => {
+  it("同一フォーマットのため元のファイル名・拡張子を維持する", () => {
+    const original = new File(["source-bytes"], "photo.png", {
+      type: "image/png",
+    });
+    const blob = blobOfSize(10, "image/png");
+    const result = buildOptimizeResult(original, blob);
+
+    expect(result.filename).toBe("photo.png");
+    expect(result.originalFilename).toBe("photo.png");
+    expect(result.file.name).toBe("photo.png");
+    expect(result.file.type).toBe("image/png");
+  });
+
+  it("元サイズ・最適化後サイズ・URL を結果に含める（targetSizeAchieved は持たない）", () => {
+    const original = new File(["source-bytes"], "a.jpg", {
+      type: "image/jpeg",
+    });
+    const blob = blobOfSize(8, "image/jpeg");
+    const result = buildOptimizeResult(original, blob);
+
+    expect(result.originalSize).toBe(original.size);
+    expect(result.convertedSize).toBe(blob.size);
+    expect(result.blob).toBe(blob);
+    expect(result.url).toBe("blob:mock-url");
     expect(result.targetSizeAchieved).toBeUndefined();
   });
 });

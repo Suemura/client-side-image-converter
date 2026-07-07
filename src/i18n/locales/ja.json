@@ -40,6 +40,12 @@
   },
   "convert": {
     "title": "変換設定",
+    "mode": "処理モード",
+    "modeConvert": "フォーマット変換",
+    "modeOptimize": "最適化（形式を維持）",
+    "optimizeDescription": "元の形式のまま再圧縮してファイルサイズを削減します。PNG は可逆（ピクセル不変）、JPEG / WebP は高品質で再エンコード（実質劣化最小）。削減できない場合は元のファイルをそのまま採用します。対応形式は PNG / JPEG / WebP です。",
+    "optimize": "最適化",
+    "optimizing": "最適化中...",
     "targetFormat": "対象フォーマット",
     "qualitySettings": "品質設定",
     "quality": "品質 (%)",

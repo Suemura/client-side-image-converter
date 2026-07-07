@@ -20,6 +20,7 @@ import {
   readExifTiffFromDataUrl,
 } from "../utils/exifTransfer";
 import { decodeHeicToImageData } from "../utils/heicDecoder";
+import { optimizeImageBuffer } from "../utils/imageOptimizer";
 import { uint8ArrayToBase64 } from "../utils/imageUtils";
 import {
   PNG_COMPRESSED_QUALITY_HINT,
@@ -98,6 +99,16 @@ const processRequest = async (
   req: WorkerRequest,
 ): Promise<{ blob: Blob; targetSizeAchieved?: boolean }> => {
   const { buffer, fileType, decodeKind, options } = req;
+
+  // 最適化モード（Issue #61）: フォーマットを維持したまま再圧縮する。
+  // Canvas / OffscreenCanvas を経由せず jsquash で完結するため、convert 経路より前に分岐する。
+  if (options.mode === "optimize") {
+    const { buffer: outBuffer, mime } = await optimizeImageBuffer(
+      buffer,
+      fileType,
+    );
+    return { blob: new Blob([outBuffer], { type: mime }) };
+  }
 
   // EXIF 保持は AVIF 以外の出力かつ標準フォーマットのソースでのみ有効（HEIC/TIFF は保持対象外）。
   // メインスレッドの convertImage と同じ条件・読み取り経路を再現する。

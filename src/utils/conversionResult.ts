@@ -41,3 +41,30 @@ export const buildConversionResult = (
     targetSizeAchieved,
   };
 };
+
+/**
+ * 最適化（フォーマット維持）結果の `ConversionResult` を組み立てる（Issue #61）。
+ *
+ * `buildConversionResult` と異なり出力の拡張子は変わらない（同一フォーマット）ため、
+ * ファイル名は元ファイル名をそのまま維持する。`blob` は最適化版または元バイト列のいずれか
+ * （no-worse-than-original 判定済み）で、`convertedSize` が `originalSize` と等しい場合は
+ * 最適化で削減できず元を採用したことを意味する。
+ */
+export const buildOptimizeResult = (
+  originalFile: File,
+  blob: Blob,
+): ConversionResult => {
+  const url = URL.createObjectURL(blob);
+  const filename = originalFile.name;
+  const resultFile = new File([blob], filename, { type: blob.type });
+
+  return {
+    blob,
+    url,
+    originalSize: originalFile.size,
+    convertedSize: blob.size,
+    filename,
+    originalFilename: originalFile.name,
+    file: resultFile,
+  };
+};

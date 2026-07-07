@@ -15,6 +15,7 @@ import { buildConversionResult } from "./conversionResult";
 import { insertExifIntoBlob, readExifTiffFromDataUrl } from "./exifTransfer";
 import { isHeicFile, isTiffFile } from "./fileUtils";
 import { decodeHeicToCanvas } from "./heicDecoder";
+import { optimizeImage } from "./imageOptimizer";
 import { PNG_COMPRESSED_QUALITY_HINT, pngQualityStrategy } from "./pngQuality";
 import { decodeTiffToCanvas } from "./tiffDecoder";
 
@@ -24,6 +25,7 @@ export type {
   BatchConversionResult,
   ConversionFailure,
   ConversionFormat,
+  ConversionMode,
   ConversionOptions,
   ConversionResult,
   QualitySearchOptions,
@@ -33,6 +35,7 @@ export {
   calculateTargetSize,
   searchQualityForTargetSize,
 } from "./conversionCore";
+export { optimizeImage } from "./imageOptimizer";
 
 /**
  * 画像を指定されたオプションで変換する
@@ -244,23 +247,33 @@ export const convertMultipleImages = async (
   options: ConversionOptions,
   onProgress?: (current: number, total: number) => void,
 ): Promise<BatchConversionResult> => {
-  // OffscreenCanvas / Worker が使える環境ではワーカープールで並列処理する。
-  // Worker が個別に失敗した場合は convertImage（メインスレッド）でフォールバックする。
-  if (isOffscreenPipelineSupported()) {
-    return convertFilesWithWorkerPool(files, options, onProgress, convertImage);
+  const isOptimize = options.mode === "optimize";
+  // 最適化はメインスレッドの `optimizeImage`、変換は `convertImage` をフォールバック/逐次処理に使う
+  const processFile = isOptimize ? optimizeImage : convertImage;
+
+  // ワーカープールで並列処理できるかの判定。
+  // - convert: OffscreenCanvas パイプラインが必要（描画・リサイズ・エンコードを Worker 内で行う）
+  // - optimize: jsquash がバッファを直接処理し OffscreenCanvas 不要なため Worker があれば並列化する
+  const canUseWorkerPool = isOptimize
+    ? typeof Worker !== "undefined"
+    : isOffscreenPipelineSupported();
+
+  // Worker が個別に失敗した場合は processFile（メインスレッド）でフォールバックする。
+  if (canUseWorkerPool) {
+    return convertFilesWithWorkerPool(files, options, onProgress, processFile);
   }
 
-  // フォールバック: メインスレッドで逐次変換する（従来挙動）
+  // フォールバック: メインスレッドで逐次処理する（従来挙動）
   const results: ConversionResult[] = [];
   const failures: ConversionFailure[] = [];
 
   for (let i = 0; i < files.length; i++) {
     try {
-      const result = await convertImage(files[i], options);
+      const result = await processFile(files[i], options);
       results.push(result);
     } catch (error) {
-      console.error(`ファイル ${files[i].name} の変換に失敗:`, error);
-      // エラーが発生しても他のファイルの変換を続行し、失敗として記録する
+      console.error(`ファイル ${files[i].name} の処理に失敗:`, error);
+      // エラーが発生しても他のファイルの処理を続行し、失敗として記録する
       failures.push({ fileName: files[i].name });
     }
     onProgress?.(i + 1, files.length);

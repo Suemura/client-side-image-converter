@@ -18,7 +18,10 @@ import type {
   ConversionOptions,
   ConversionResult,
 } from "../utils/conversionCore";
-import { buildConversionResult } from "../utils/conversionResult";
+import {
+  buildConversionResult,
+  buildOptimizeResult,
+} from "../utils/conversionResult";
 import { isHeicFile, isTiffFile } from "../utils/fileUtils";
 import type { DecodeKind, WorkerRequest, WorkerResponse } from "./messages";
 
@@ -207,12 +210,15 @@ export const convertFilesWithWorkerPool = async (
 
           if (response.ok) {
             const blob = new Blob([response.buffer], { type: response.mime });
-            return buildConversionResult(
-              file,
-              blob,
-              options.format,
-              response.targetSizeAchieved,
-            );
+            // 最適化モードは同一フォーマット維持のため元ファイル名を保つ結果を組み立てる
+            return options.mode === "optimize"
+              ? buildOptimizeResult(file, blob)
+              : buildConversionResult(
+                  file,
+                  blob,
+                  options.format,
+                  response.targetSizeAchieved,
+                );
           }
           // Worker がデコード/エンコードに失敗: メインスレッドで再試行する
           // （失敗ログは fallback 側で出力される。ここでは握りつぶさず再試行に委ねる）

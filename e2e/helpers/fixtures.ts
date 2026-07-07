@@ -300,6 +300,24 @@ export const loadExifFromBuffer = (buf: Buffer) => {
   return piexif.load(`data:image/jpeg;base64,${buf.toString("base64")}`);
 };
 
+/**
+ * JPEG バイナリに EXIF Orientation タグを埋め込む（最適化時の向き焼き込み検証用）。
+ * 例: Orientation=6 は「右 90° 回転して表示」を意味する。
+ */
+export const insertJpegOrientation = (
+  jpeg: Buffer,
+  orientation: number,
+): Buffer => {
+  const exif = piexif.dump({
+    "0th": { [piexif.ImageIFD.Orientation]: orientation },
+  });
+  const dataUrl = piexif.insert(
+    exif,
+    `data:image/jpeg;base64,${jpeg.toString("base64")}`,
+  );
+  return Buffer.from(dataUrl.split(",")[1], "base64");
+};
+
 /** ダウンロードした PNG バイナリの eXIf チャンクから EXIF を読み出す */
 export const loadExifFromPngBuffer = (
   buf: Buffer,

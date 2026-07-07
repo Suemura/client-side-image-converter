@@ -4,10 +4,15 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
 import { Input } from "../../../components/Input";
 import { RadioButtonGroup } from "../../../components/RadioButtonGroup";
-import type { ConversionFormat } from "../../../utils/imageConverter";
+import type {
+  ConversionFormat,
+  ConversionMode,
+} from "../../../utils/imageConverter";
 import styles from "./ConversionSettings.module.css";
 
 export interface ConversionSettings {
+  /** 処理モード（"convert": 別形式へ変換 / "optimize": 形式を維持して最適化） */
+  mode: ConversionMode;
   targetFormat: ConversionFormat;
   quality: number;
   width?: number;
@@ -82,6 +87,20 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
     { label: "WebP", value: "webp" },
     { label: "AVIF", value: "avif" },
   ];
+
+  const isOptimize = settings.mode === "optimize";
+
+  const modeOptions: { label: string; value: ConversionMode }[] = [
+    { label: t("convert.modeConvert"), value: "convert" },
+    { label: t("convert.modeOptimize"), value: "optimize" },
+  ];
+
+  const handleModeChange = (mode: string) => {
+    onSettingsChange({
+      ...settings,
+      mode: mode as ConversionMode,
+    });
+  };
 
   const handleFormatChange = (format: string) => {
     onSettingsChange({
@@ -160,124 +179,147 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
     <div className={styles.container}>
       <h2 className={styles.title}>{t("convert.title")}</h2>
 
-      <h3 className={styles.sectionTitle}>{t("convert.targetFormat")}</h3>
+      <h3 className={styles.sectionTitle}>{t("convert.mode")}</h3>
 
       <RadioButtonGroup
-        name="targetFormat"
-        options={formatOptions}
-        selectedValue={settings.targetFormat}
-        onChange={handleFormatChange}
+        name="conversionMode"
+        options={modeOptions}
+        selectedValue={settings.mode}
+        onChange={handleModeChange}
       />
 
-      <h3 className={styles.sectionTitle}>{t("convert.qualitySettings")}</h3>
-
-      {settings.targetFormat === "png" && (
-        <div className={styles.warningBox}>
-          <p className={styles.warningText}>
-            💡 {t("convert.pngQualityExperimental")}
-          </p>
+      {isOptimize && (
+        <div className={styles.helpText}>
+          {t("convert.optimizeDescription")}
         </div>
       )}
 
-      <div className={styles.inputGroup}>
-        <Input
-          label={t("convert.quality")}
-          value={localQuality}
-          onChange={handleQualityChange}
-          placeholder="90"
-          type="number"
-          disabled={targetSizeActive}
-        />
-      </div>
+      {isOptimize ? null : (
+        <>
+          <h3 className={styles.sectionTitle}>{t("convert.targetFormat")}</h3>
 
-      <div className={styles.helpText}>
-        {targetSizeActive
-          ? t("convert.qualityDisabledByTargetSize")
-          : settings.targetFormat === "png"
-            ? t("convert.pngQualityHelp")
-            : t("convert.qualityDescription")}
-      </div>
-
-      <h3 className={styles.sectionTitle}>{t("convert.targetFileSize")}</h3>
-
-      <div className={styles.inputGroup}>
-        <Input
-          label={t("convert.targetFileSizeLabel")}
-          value={localTargetFileSize}
-          onChange={handleTargetFileSizeChange}
-          placeholder={t("convert.auto")}
-          type="number"
-          disabled={!supportsTargetSize}
-        />
-      </div>
-
-      <div className={styles.helpText}>
-        {supportsTargetSize
-          ? t("convert.targetFileSizeHelp")
-          : t("convert.targetFileSizeUnsupported")}
-      </div>
-
-      <h3 className={styles.sectionTitle}>{t("convert.imageSize")}</h3>
-
-      <div className={styles.inputGroup}>
-        <Input
-          label={t("convert.width")}
-          value={localWidth}
-          onChange={handleWidthChange}
-          placeholder={t("convert.auto")}
-          type="number"
-        />
-        <Input
-          label={t("convert.height")}
-          value={localHeight}
-          onChange={handleHeightChange}
-          placeholder={t("convert.auto")}
-          type="number"
-        />
-      </div>
-
-      <div className={styles.checkboxContainer}>
-        <label className={styles.checkboxLabel}>
-          <input
-            type="checkbox"
-            checked={settings.maintainAspectRatio}
-            onChange={handleAspectRatioToggle}
-            className={styles.checkbox}
+          <RadioButtonGroup
+            name="targetFormat"
+            options={formatOptions}
+            selectedValue={settings.targetFormat}
+            onChange={handleFormatChange}
           />
-          <span className={styles.checkboxText}>
-            {t("convert.maintainAspectRatio")}
-          </span>
-        </label>
-      </div>
 
-      <h3 className={styles.sectionTitle}>{t("convert.metadataSettings")}</h3>
+          <h3 className={styles.sectionTitle}>
+            {t("convert.qualitySettings")}
+          </h3>
 
-      <div className={styles.checkboxContainer}>
-        <label
-          className={`${styles.checkboxLabel} ${canPreserveExif ? "" : styles.checkboxDisabled}`}
-        >
-          <input
-            type="checkbox"
-            checked={settings.preserveExif}
-            onChange={() =>
-              onSettingsChange({
-                ...settings,
-                preserveExif: !settings.preserveExif,
-              })
-            }
-            disabled={!canPreserveExif}
-            className={styles.checkbox}
-          />
-          <span className={styles.checkboxText}>
-            {t("convert.preserveExif")}
-          </span>
-        </label>
-      </div>
-      <div className={styles.helpText}>
-        {canPreserveExif
-          ? t("convert.preserveExifHelp")
-          : t("convert.preserveExifUnsupported")}
-      </div>
+          {settings.targetFormat === "png" && (
+            <div className={styles.warningBox}>
+              <p className={styles.warningText}>
+                💡 {t("convert.pngQualityExperimental")}
+              </p>
+            </div>
+          )}
+
+          <div className={styles.inputGroup}>
+            <Input
+              label={t("convert.quality")}
+              value={localQuality}
+              onChange={handleQualityChange}
+              placeholder="90"
+              type="number"
+              disabled={targetSizeActive}
+            />
+          </div>
+
+          <div className={styles.helpText}>
+            {targetSizeActive
+              ? t("convert.qualityDisabledByTargetSize")
+              : settings.targetFormat === "png"
+                ? t("convert.pngQualityHelp")
+                : t("convert.qualityDescription")}
+          </div>
+
+          <h3 className={styles.sectionTitle}>{t("convert.targetFileSize")}</h3>
+
+          <div className={styles.inputGroup}>
+            <Input
+              label={t("convert.targetFileSizeLabel")}
+              value={localTargetFileSize}
+              onChange={handleTargetFileSizeChange}
+              placeholder={t("convert.auto")}
+              type="number"
+              disabled={!supportsTargetSize}
+            />
+          </div>
+
+          <div className={styles.helpText}>
+            {supportsTargetSize
+              ? t("convert.targetFileSizeHelp")
+              : t("convert.targetFileSizeUnsupported")}
+          </div>
+
+          <h3 className={styles.sectionTitle}>{t("convert.imageSize")}</h3>
+
+          <div className={styles.inputGroup}>
+            <Input
+              label={t("convert.width")}
+              value={localWidth}
+              onChange={handleWidthChange}
+              placeholder={t("convert.auto")}
+              type="number"
+            />
+            <Input
+              label={t("convert.height")}
+              value={localHeight}
+              onChange={handleHeightChange}
+              placeholder={t("convert.auto")}
+              type="number"
+            />
+          </div>
+
+          <div className={styles.checkboxContainer}>
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={settings.maintainAspectRatio}
+                onChange={handleAspectRatioToggle}
+                className={styles.checkbox}
+              />
+              <span className={styles.checkboxText}>
+                {t("convert.maintainAspectRatio")}
+              </span>
+            </label>
+          </div>
+
+          <h3 className={styles.sectionTitle}>
+            {t("convert.metadataSettings")}
+          </h3>
+
+          <div className={styles.checkboxContainer}>
+            <label
+              className={`${styles.checkboxLabel} ${canPreserveExif ? "" : styles.checkboxDisabled}`}
+            >
+              <input
+                type="checkbox"
+                checked={settings.preserveExif}
+                onChange={() =>
+                  onSettingsChange({
+                    ...settings,
+                    preserveExif: !settings.preserveExif,
+                  })
+                }
+                disabled={!canPreserveExif}
+                className={styles.checkbox}
+              />
+              <span className={styles.checkboxText}>
+                {t("convert.preserveExif")}
+              </span>
+            </label>
+          </div>
+          <div className={styles.helpText}>
+            {canPreserveExif
+              ? t("convert.preserveExifHelp")
+              : t("convert.preserveExifUnsupported")}
+          </div>
+        </>
+      )}
 
       <div className={styles.buttonContainer}>
         <Button
@@ -286,7 +328,13 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
           onClick={onConvert}
           disabled={!hasFiles || isConverting}
         >
-          {isConverting ? t("convert.converting") : t("convert.convert")}
+          {isConverting
+            ? isOptimize
+              ? t("convert.optimizing")
+              : t("convert.converting")
+            : isOptimize
+              ? t("convert.optimize")
+              : t("convert.convert")}
         </Button>
       </div>
     </div>
