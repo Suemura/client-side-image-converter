@@ -18,6 +18,8 @@ import { buildOptimizeResult } from "./conversionResult";
 import { extractWebpExif } from "./exifBinary";
 import {
   detectWebpEncoding,
+  isAnimatedWebp,
+  type OptimizeEngine,
   pickSmallerSize,
   resolveOptimizeEngine,
 } from "./optimizeCore";
@@ -46,6 +48,17 @@ export interface OptimizeBufferResult {
 }
 
 /**
+ * エンジン（＝出力フォーマット）ごとの正規化 MIME。
+ * 最適化版を採用したときも元を採用したときも常にこの正規化 MIME を返し、
+ * 入力の `file.type` の揺れ（"image/jpg" など）に依らず出力 MIME を一貫させる。
+ */
+const CANONICAL_MIME_BY_ENGINE: Record<OptimizeEngine, string> = {
+  oxipng: "image/png",
+  mozjpeg: "image/jpeg",
+  webp: "image/webp",
+};
+
+/**
  * バッファを同一フォーマットのまま最適化する（Canvas 非依存。メインスレッド / Worker 共用）。
  *
  * 最適化に対応するのは PNG / JPEG / WebP のみ。対応外の形式（BMP / TIFF / HEIC / AVIF 等、
@@ -69,16 +82,17 @@ export const optimizeImageBuffer = async (
     throw new Error(`最適化に対応していない形式です: ${mimeType || "unknown"}`);
   }
 
+  // 出力 MIME は入力の揺れに依らずエンジン（出力フォーマット）で正規化し、
+  // 最適化版・元採用のどちらでも一貫させる
+  const mime = CANONICAL_MIME_BY_ENGINE[engine];
   // no-worse-than-original 判定に使う元サイズを、エンコード呼び出し前に控えておく
   const originalSize = buffer.byteLength;
   let candidate: ArrayBuffer;
-  let mime: string;
 
   if (engine === "oxipng") {
     // index.js 経由だと不要なコードも取り込まれるため optimise モジュールを直接 import する
     const { default: optimise } = await import("@jsquash/oxipng/optimise.js");
     candidate = await optimise(buffer, { level: OXIPNG_LEVEL });
-    mime = "image/png";
   } else if (engine === "mozjpeg") {
     const { default: decode } = await import("@jsquash/jpeg/decode.js");
     const { default: encode } = await import("@jsquash/jpeg/encode.js");
@@ -93,33 +107,32 @@ export const optimizeImageBuffer = async (
       // trellis 量子化で圧縮効率を高める（画質を保ちつつサイズを削る）
       trellis_multipass: true,
     });
-    mime = "image/jpeg";
   } else {
-    // webp: @jsquash/webp/decode には JPEG の preserveOrientation 相当が無く、EXIF Orientation を
-    // 補正できない。かつ再エンコードで EXIF は失われる。そのため EXIF を持つ WebP は最適化せず
-    // 元を採用し、Orientation!=1 の WebP が回転して表示される・メタデータが黙って失われるのを防ぐ
-    // （EXIF を持たない WebP のみ再圧縮する。JPEG は codec 側で焼き込めるため最適化する点と非対称だが、
-    // それぞれ codec の能力に応じた安全側の選択）。
-    if (extractWebpExif(new Uint8Array(buffer)) !== null) {
-      return { buffer, mime: mimeType, optimized: false };
+    // webp: @jsquash/webp/decode は (1) EXIF Orientation を補正できず再エンコードで EXIF を失い、
+    // (2) 先頭フレームのみを返す。そのため EXIF を持つ WebP（向き崩れ・メタデータ喪失を回避）と
+    // アニメーション WebP（静止画化を回避）は最適化せず元を採用する。EXIF 無しの静止 WebP のみ
+    // 再圧縮する（JPEG は codec 側で向きを焼き込めるため最適化する点と非対称だが、いずれも
+    // codec の能力に応じた安全側の選択）。
+    const bytes = new Uint8Array(buffer);
+    if (extractWebpExif(bytes) !== null || isAnimatedWebp(bytes)) {
+      return { buffer, mime, optimized: false };
     }
     // 入力がロスレス(VP8L)ならロスレスで、そうでなければ高品質ロッシーで再エンコードする
     const { default: decode } = await import("@jsquash/webp/decode.js");
     const { default: encode } = await import("@jsquash/webp/encode.js");
-    const encoding = detectWebpEncoding(new Uint8Array(buffer));
+    const encoding = detectWebpEncoding(bytes);
     const imageData = await decode(buffer);
     candidate =
       encoding === "lossless"
         ? await encode(imageData, { lossless: 1 })
         : await encode(imageData, { quality: WEBP_OPTIMIZE_QUALITY });
-    mime = "image/webp";
   }
 
   if (pickSmallerSize(originalSize, candidate.byteLength) === "optimized") {
     return { buffer: candidate, mime, optimized: true };
   }
-  // 最適化で削減できなかった: 元のバイト列・MIME をそのまま採用する
-  return { buffer, mime: mimeType, optimized: false };
+  // 最適化で削減できなかった: 元のバイト列を採用する（MIME は正規化済みで一貫）
+  return { buffer, mime, optimized: false };
 };
 
 /**

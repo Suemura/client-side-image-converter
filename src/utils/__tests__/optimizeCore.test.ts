@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   detectWebpEncoding,
+  isAnimatedWebp,
   isOptimizableType,
   pickSmallerSize,
   resolveOptimizeEngine,
@@ -130,5 +131,27 @@ describe("detectWebpEncoding", () => {
 
   it("16 バイト未満の入力は unknown", () => {
     expect(detectWebpEncoding(new Uint8Array(8))).toBe("unknown");
+  });
+});
+
+describe("isAnimatedWebp", () => {
+  it("VP8X 拡張内に ANIM チャンクがあればアニメーションと判定する", () => {
+    expect(isAnimatedWebp(vp8xWebp(chunk("ANIM", 6), chunk("ANMF", 16)))).toBe(
+      true,
+    );
+  });
+
+  it("VP8X でも ANIM チャンクが無ければ false（静止画）", () => {
+    expect(isAnimatedWebp(vp8xWebp(chunk("VP8L", 5)))).toBe(false);
+  });
+
+  it("単純形式（VP8L / VP8）は VP8X ではないため false", () => {
+    expect(isAnimatedWebp(simpleWebp("VP8L"))).toBe(false);
+    expect(isAnimatedWebp(simpleWebp("VP8 "))).toBe(false);
+  });
+
+  it("非 WebP・短すぎる入力は false", () => {
+    expect(isAnimatedWebp(ascii("not an image at all"))).toBe(false);
+    expect(isAnimatedWebp(new Uint8Array(8))).toBe(false);
   });
 });

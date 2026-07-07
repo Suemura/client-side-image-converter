@@ -144,6 +144,31 @@ describe("optimizeImageBuffer - EXIF を持つ WebP はスキップ", () => {
   });
 });
 
+describe("optimizeImageBuffer - アニメーション WebP はスキップ", () => {
+  it("VP8X + ANIM のアニメーション WebP は最適化せず元を採用する（静止画化回避）", async () => {
+    // RIFF/WEBP/VP8X/ANIM を組み立てる（EXIF は無いのでアニメ判定でスキップされることを確かめる）
+    const rawChunk = (cc: string, size: number): Uint8Array =>
+      concat(ascii(cc), u32le(size), new Uint8Array(size + (size % 2)));
+    const bytes = concat(
+      ascii("RIFF"),
+      u32le(0),
+      ascii("WEBP"),
+      rawChunk("VP8X", 10),
+      rawChunk("ANIM", 6),
+    );
+    const input = new ArrayBuffer(bytes.length);
+    new Uint8Array(input).set(bytes);
+
+    const result = await optimizeImageBuffer(input, "image/webp");
+
+    expect(result.optimized).toBe(false);
+    expect(result.buffer).toBe(input);
+    expect(result.mime).toBe("image/webp");
+    expect(webpDecode).not.toHaveBeenCalled();
+    expect(webpEncode).not.toHaveBeenCalled();
+  });
+});
+
 describe("optimizeImageBuffer - no-worse-than-original", () => {
   it("最適化後が元より大きいときは元バイトをそのまま採用する", async () => {
     const input = bufOfSize(100);
@@ -164,6 +189,15 @@ describe("optimizeImageBuffer - no-worse-than-original", () => {
 
     expect(result.optimized).toBe(false);
     expect(result.buffer).toBe(input);
+  });
+
+  it("元採用時も出力 MIME を正規化する（入力 image/jpg → image/jpeg）", async () => {
+    // 再エンコード結果が元より大きい → 元採用。それでも MIME はエンジンで正規化される
+    vi.mocked(jpegEncode).mockResolvedValue(bufOfSize(200));
+    const result = await optimizeImageBuffer(bufOfSize(100), "image/jpg");
+
+    expect(result.optimized).toBe(false);
+    expect(result.mime).toBe("image/jpeg");
   });
 });
 

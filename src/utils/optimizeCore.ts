@@ -106,3 +106,41 @@ export const detectWebpEncoding = (bytes: Uint8Array): WebpEncoding => {
   }
   return "unknown";
 };
+
+/**
+ * WebP バイト列がアニメーション（VP8X 拡張内に ANIM チャンクを持つ）かを判定する。
+ *
+ * `@jsquash/webp` の decode は先頭フレームのみを返すため、アニメーション WebP をそのまま
+ * 再エンコードすると静止画化してアニメーションが失われる。呼び出し側はアニメーション WebP を
+ * 最適化対象から除外し、元をそのまま採用するために使う。
+ */
+export const isAnimatedWebp = (bytes: Uint8Array): boolean => {
+  if (bytes.length < 16) {
+    return false;
+  }
+  const fourccAt = (offset: number): string =>
+    String.fromCharCode(
+      bytes[offset],
+      bytes[offset + 1],
+      bytes[offset + 2],
+      bytes[offset + 3],
+    );
+  if (fourccAt(0) !== "RIFF" || fourccAt(8) !== "WEBP") {
+    return false;
+  }
+  // アニメーションは拡張フォーマット（VP8X）内の ANIM チャンクで表現される
+  if (fourccAt(12) !== "VP8X") {
+    return false;
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let offset = 12;
+  while (offset + 8 <= bytes.length) {
+    const chunk = fourccAt(offset);
+    const size = view.getUint32(offset + 4, true);
+    if (chunk === "ANIM") {
+      return true;
+    }
+    offset += 8 + size + (size % 2);
+  }
+  return false;
+};
