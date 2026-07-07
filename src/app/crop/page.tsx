@@ -392,8 +392,8 @@ export default function CropPage() {
   const hasResults = cropResults.length > 0;
 
   // プレビュー（焼き込み済み画像）が切り替わったら CropSelector を作り直して初期領域を確定させる。
-  // previewUrl は画像/変換に対応した正しい向きの画像が準備できた時だけ更新されるため、
-  // 変換直後に古い寸法で領域が初期化されるのを防げる。
+  // previewUrl は画像/変換/色調調整に対応した正しい画像が準備できた時だけ更新されるため、
+  // 変換直後に古い寸法で領域が初期化されるのを防げる（回転で寸法が入れ替わる際の競合対策）。
   const selectorKey = previewUrl;
 
   return (
