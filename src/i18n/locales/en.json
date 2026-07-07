@@ -74,8 +74,8 @@
     "preserveExifUnsupported": "EXIF preservation is not supported for AVIF."
   },
   "crop": {
-    "title": "Image Cropping Tool",
-    "subtitle": "Crop and resize images to perfect dimensions",
+    "title": "Image Editing & Cropping Tool",
+    "subtitle": "Crop, rotate/flip, and adjust brightness, contrast, and saturation, or apply grayscale/sepia",
     "preview": "Preview",
     "processing": "Processing...",
     "processedFiles": "Processed Files",
@@ -112,10 +112,17 @@
     "rotateRight": "Rotate 90° right",
     "flipHorizontal": "Flip horizontal",
     "flipVertical": "Flip vertical",
+    "adjustments": "Color & Filters",
+    "brightness": "Brightness",
+    "contrast": "Contrast",
+    "saturation": "Saturation",
+    "grayscale": "Grayscale",
+    "sepia": "Sepia",
+    "resetAdjustments": "Reset",
     "applyMode": "Apply To",
     "applyToAll": "All images",
     "perImage": "Per image",
-    "applyModeHelp": "\"All images\" applies the current settings to every image. \"Per image\" lets you set the crop area and rotation individually while switching images with ←/→."
+    "applyModeHelp": "\"All images\" applies the current settings to every image. \"Per image\" lets you set the crop area, rotation, and color adjustments individually while switching images with ←/→."
   },
   "fileUpload": {
     "dropFiles": "Drop files here",

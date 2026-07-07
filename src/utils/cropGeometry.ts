@@ -6,6 +6,11 @@
  * （conversionCore.ts と同じ「純粋ロジックの切り出し」方針）。
  */
 
+import {
+  IDENTITY_ADJUSTMENTS,
+  type ImageAdjustments,
+} from "./imageAdjustments";
+
 /** トリミング領域（表示座標・自然座標いずれの空間でも使う矩形） */
 export interface CropArea {
   x: number;
@@ -376,31 +381,44 @@ export const clampCropAreaToAspect = (
 
 /** crop ページが保持するトリミング状態（一括 / 画像ごとの両モード） */
 export interface CropState {
-  /** true: 全画像へ共有領域・共有変換を適用 / false: 画像ごとに保持 */
+  /** true: 全画像へ共有領域・共有変換・共有調整を適用 / false: 画像ごとに保持 */
   applyToAll: boolean;
   /** 一括モードの共有トリミング領域（自然座標） */
   sharedArea: CropArea | null;
   /** 一括モードの共有変換 */
   sharedTransform: CropTransform;
+  /** 一括モードの共有色調・フィルタ調整 */
+  sharedAdjustments: ImageAdjustments;
   /** 画像ごとのトリミング領域（自然座標） */
   perImageArea: Record<number, CropArea | null>;
   /** 画像ごとの変換 */
   perImageTransform: Record<number, CropTransform>;
+  /** 画像ごとの色調・フィルタ調整 */
+  perImageAdjustments: Record<number, ImageAdjustments>;
 }
 
 /**
- * 出力時、指定インデックスの画像に適用するトリミング領域と変換を解決する。
- * 一括モードでは共有値を、画像ごとモードでは当該インデックスの値（未設定は無変換・全体）を返す。
+ * 出力時、指定インデックスの画像に適用するトリミング領域・変換・色調調整を解決する。
+ * 一括モードでは共有値を、画像ごとモードでは当該インデックスの値（未設定は無変換・無調整・全体）を返す。
  */
 export const resolveCropForIndex = (
   index: number,
   state: CropState,
-): { area: CropArea | null; transform: CropTransform } => {
+): {
+  area: CropArea | null;
+  transform: CropTransform;
+  adjustments: ImageAdjustments;
+} => {
   if (state.applyToAll) {
-    return { area: state.sharedArea, transform: state.sharedTransform };
+    return {
+      area: state.sharedArea,
+      transform: state.sharedTransform,
+      adjustments: state.sharedAdjustments,
+    };
   }
   return {
     area: state.perImageArea[index] ?? null,
     transform: state.perImageTransform[index] ?? IDENTITY_TRANSFORM,
+    adjustments: state.perImageAdjustments[index] ?? IDENTITY_ADJUSTMENTS,
   };
 };

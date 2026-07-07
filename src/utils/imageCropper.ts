@@ -10,9 +10,15 @@ import {
   normalizeExifForBakedImage,
   readExifTiffFromDataUrl,
 } from "./exifTransfer";
+import {
+  buildCanvasFilter,
+  IDENTITY_ADJUSTMENTS,
+  type ImageAdjustments,
+} from "./imageAdjustments";
 
 // 既存の import 経路（`from "../utils/imageCropper"`）を維持するため型を再エクスポートする
 export type { CropArea, CropTransform } from "./cropGeometry";
+export type { ImageAdjustments } from "./imageAdjustments";
 
 export interface CropResult {
   originalFile: File;
@@ -27,6 +33,7 @@ export interface CropResult {
 export interface CropJob {
   area: CropArea | null;
   transform: CropTransform;
+  adjustments: ImageAdjustments;
 }
 
 /**
@@ -101,12 +108,15 @@ const decodeOrientedSource = async (
 };
 
 /**
- * EXIF Orientation 補正済みの画像に回転・反転を適用したキャンバスを返す。
+ * EXIF Orientation 補正済みの画像に回転・反転・色調/フィルタ調整を適用したキャンバスを返す。
  * プレビュー生成（createOrientedPreviewUrl）と出力（cropImage）で共用し、WYSIWYG を担保する。
+ * 色調調整は drawImage の前に `ctx.filter` を設定して 1 回の描画でピクセルへ焼き込む
+ * （回転/反転と同じ経路に乗せるため、両者が同時に正しく反映される）。
  */
 export const renderOrientedImage = async (
   file: File,
   transform: CropTransform = IDENTITY_TRANSFORM,
+  adjustments: ImageAdjustments = IDENTITY_ADJUSTMENTS,
 ): Promise<HTMLCanvasElement> => {
   const { source, width, height } = await decodeOrientedSource(file);
   const { rotation, flipHorizontal, flipVertical } = transform;
@@ -124,6 +134,9 @@ export const renderOrientedImage = async (
     throw new Error("Canvas context is not supported");
   }
 
+  // 色調・フィルタ調整を drawImage の前に設定する（無調整時は "none"）
+  ctx.filter = buildCanvasFilter(adjustments);
+
   // 出力中心を基準に回転→反転を適用し、元画像を中心合わせで描画する
   ctx.translate(outWidth / 2, outHeight / 2);
   ctx.rotate((rotation * Math.PI) / 180);
@@ -139,14 +152,15 @@ export const renderOrientedImage = async (
 };
 
 /**
- * EXIF 補正 + 回転/反転を適用したプレビュー用 ObjectURL を生成する。
+ * EXIF 補正 + 回転/反転 + 色調/フィルタ調整を適用したプレビュー用 ObjectURL を生成する。
  * 呼び出し側で revokeObjectURL によるクリーンアップを行うこと。
  */
 export const createOrientedPreviewUrl = async (
   file: File,
   transform: CropTransform = IDENTITY_TRANSFORM,
+  adjustments: ImageAdjustments = IDENTITY_ADJUSTMENTS,
 ): Promise<string> => {
-  const canvas = await renderOrientedImage(file, transform);
+  const canvas = await renderOrientedImage(file, transform, adjustments);
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((b) => {
       if (b) {
@@ -195,12 +209,14 @@ const clampAreaToImage = (
 
 /**
  * 画像をトリミングする。
- * EXIF Orientation 補正・回転/反転をピクセルへ焼き込んだ上で、指定領域（自然座標）を切り出す。
+ * EXIF Orientation 補正・回転/反転・色調/フィルタ調整をピクセルへ焼き込んだ上で、
+ * 指定領域（自然座標）を切り出す。
  */
 export const cropImage = async (
   file: File,
   cropArea: CropArea | null,
   transform: CropTransform = IDENTITY_TRANSFORM,
+  adjustments: ImageAdjustments = IDENTITY_ADJUSTMENTS,
   preserveExif = false,
   quality = 0.95,
 ): Promise<CropResult> => {
@@ -213,8 +229,12 @@ export const cropImage = async (
       exifTiff = readExifTiffFromDataUrl(dataUrl, file.type);
     }
 
-    // EXIF Orientation 補正 + 回転/反転を焼き込んだキャンバス
-    const orientedCanvas = await renderOrientedImage(file, transform);
+    // EXIF Orientation 補正 + 回転/反転 + 色調/フィルタ調整を焼き込んだキャンバス
+    const orientedCanvas = await renderOrientedImage(
+      file,
+      transform,
+      adjustments,
+    );
     const imageWidth = orientedCanvas.width;
     const imageHeight = orientedCanvas.height;
 
@@ -335,11 +355,16 @@ export const cropImages = async (
   const results: CropResult[] = [];
 
   for (let i = 0; i < files.length; i++) {
-    const job = jobs[i] ?? { area: null, transform: IDENTITY_TRANSFORM };
+    const job = jobs[i] ?? {
+      area: null,
+      transform: IDENTITY_TRANSFORM,
+      adjustments: IDENTITY_ADJUSTMENTS,
+    };
     const result = await cropImage(
       files[i],
       job.area,
       job.transform,
+      job.adjustments,
       preserveExif,
       quality,
     );

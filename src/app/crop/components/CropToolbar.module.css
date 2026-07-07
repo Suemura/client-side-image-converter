@@ -90,3 +90,60 @@
 .iconButtonActive:hover {
   border-color: var(--primary);
 }
+
+/* 色調・フィルタ調整 */
+.adjustmentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.resetButton {
+  padding: 0.125rem 0.5rem;
+  background: transparent;
+  border: 1px solid var(--border-dashed);
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.resetButton:hover:not(:disabled) {
+  border-color: var(--muted-foreground);
+  color: var(--foreground);
+}
+
+.resetButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sliderLabel {
+  min-width: 4.5rem;
+  font-size: 0.75rem;
+  color: var(--foreground);
+}
+
+.slider {
+  flex: 1;
+  min-width: 8rem;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.sliderValue {
+  min-width: 2.75rem;
+  font-size: 0.75rem;
+  text-align: right;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}

@@ -18,6 +18,12 @@ import {
   rotateRight,
 } from "../../utils/cropGeometry";
 import {
+  type AdjustmentFilterKey,
+  type AdjustmentSliderKey,
+  IDENTITY_ADJUSTMENTS,
+  type ImageAdjustments,
+} from "../../utils/imageAdjustments";
+import {
   type CropJob,
   type CropResult,
   createOrientedPreviewUrl,
@@ -47,12 +53,18 @@ export default function CropPage() {
   const [sharedArea, setSharedArea] = useState<CropArea | null>(null);
   const [sharedTransform, setSharedTransform] =
     useState<CropTransform>(IDENTITY_TRANSFORM);
-  // 画像ごとの領域・変換
+  // 一括モードの共有色調・フィルタ調整
+  const [sharedAdjustments, setSharedAdjustments] =
+    useState<ImageAdjustments>(IDENTITY_ADJUSTMENTS);
+  // 画像ごとの領域・変換・調整
   const [perImageArea, setPerImageArea] = useState<
     Record<number, CropArea | null>
   >({});
   const [perImageTransform, setPerImageTransform] = useState<
     Record<number, CropTransform>
+  >({});
+  const [perImageAdjustments, setPerImageAdjustments] = useState<
+    Record<number, ImageAdjustments>
   >({});
 
   const aspectRatio = useMemo(
@@ -61,13 +73,16 @@ export default function CropPage() {
     [aspectRatioId],
   );
 
-  // 現在表示中の画像に適用される領域・変換（一括 / 画像ごとで解決）
+  // 現在表示中の画像に適用される領域・変換・調整（一括 / 画像ごとで解決）
   const currentArea = applyToAll
     ? sharedArea
     : (perImageArea[currentPreviewIndex] ?? null);
   const currentTransform = applyToAll
     ? sharedTransform
     : (perImageTransform[currentPreviewIndex] ?? IDENTITY_TRANSFORM);
+  const currentAdjustments = applyToAll
+    ? sharedAdjustments
+    : (perImageAdjustments[currentPreviewIndex] ?? IDENTITY_ADJUSTMENTS);
 
   // 変換設定を一括 / 画像ごとの適切なストアへ書き込む
   const setCurrentArea = useCallback(
@@ -101,9 +116,50 @@ export default function CropPage() {
     [applyToAll, currentPreviewIndex, setCurrentArea],
   );
 
-  // 画像 / 変換の変更に合わせて EXIF 補正 + 回転/反転を焼き込んだプレビューを生成する。
-  // 依存は変換の各値（回転角・反転フラグ）に限定し、適用範囲の切替だけでは再生成しない。
+  // 色調・フィルタ調整を一括 / 画像ごとの適切なストアへ書き込む
+  const setCurrentAdjustments = useCallback(
+    (next: ImageAdjustments) => {
+      if (applyToAll) {
+        setSharedAdjustments(next);
+      } else {
+        setPerImageAdjustments((prev) => ({
+          ...prev,
+          [currentPreviewIndex]: next,
+        }));
+      }
+    },
+    [applyToAll, currentPreviewIndex],
+  );
+
+  // スライダー（明るさ / コントラスト / 彩度）の変更を反映する
+  const handleAdjustmentChange = useCallback(
+    (key: AdjustmentSliderKey, value: number) => {
+      setCurrentAdjustments({ ...currentAdjustments, [key]: value });
+    },
+    [currentAdjustments, setCurrentAdjustments],
+  );
+
+  // ワンクリックフィルタ（グレースケール / セピア）のトグル
+  const handleToggleFilter = useCallback(
+    (key: AdjustmentFilterKey) => {
+      setCurrentAdjustments({
+        ...currentAdjustments,
+        [key]: !currentAdjustments[key],
+      });
+    },
+    [currentAdjustments, setCurrentAdjustments],
+  );
+
+  // 調整を初期値（無調整）へ戻す
+  const handleResetAdjustments = useCallback(() => {
+    setCurrentAdjustments(IDENTITY_ADJUSTMENTS);
+  }, [setCurrentAdjustments]);
+
+  // 画像 / 変換 / 色調調整の変更に合わせて EXIF 補正 + 回転/反転 + 色調調整を焼き込んだ
+  // プレビューを生成する。依存は変換・調整の各値に限定し、適用範囲の切替だけでは再生成しない。
   const { rotation, flipHorizontal, flipVertical } = currentTransform;
+  const { brightness, contrast, saturate, grayscale, sepia } =
+    currentAdjustments;
   useEffect(() => {
     if (files.length === 0) {
       return;
@@ -113,7 +169,11 @@ export default function CropPage() {
       return;
     }
     let cancelled = false;
-    createOrientedPreviewUrl(file, { rotation, flipHorizontal, flipVertical })
+    createOrientedPreviewUrl(
+      file,
+      { rotation, flipHorizontal, flipVertical },
+      { brightness, contrast, saturate, grayscale, sepia },
+    )
       .then((generated) => {
         if (cancelled) {
           URL.revokeObjectURL(generated);
@@ -132,7 +192,18 @@ export default function CropPage() {
     return () => {
       cancelled = true;
     };
-  }, [files, currentPreviewIndex, rotation, flipHorizontal, flipVertical]);
+  }, [
+    files,
+    currentPreviewIndex,
+    rotation,
+    flipHorizontal,
+    flipVertical,
+    brightness,
+    contrast,
+    saturate,
+    grayscale,
+    sepia,
+  ]);
 
   // アンマウント時にプレビューURLをクリーンアップ
   useEffect(() => {
@@ -146,8 +217,10 @@ export default function CropPage() {
   const resetCropSettings = useCallback(() => {
     setSharedArea(null);
     setSharedTransform(IDENTITY_TRANSFORM);
+    setSharedAdjustments(IDENTITY_ADJUSTMENTS);
     setPerImageArea({});
     setPerImageTransform({});
+    setPerImageAdjustments({});
   }, []);
 
   const handleFilesSelected = useCallback(
@@ -226,13 +299,14 @@ export default function CropPage() {
     });
   }, [applyTransform, currentTransform]);
 
-  // 一括 / 画像ごとの切替時、表示が飛ばないよう現在値を移行先へ引き継ぐ
+  // 一括 / 画像ごとの切替時、表示が飛ばないよう現在値（領域・変換・調整）を移行先へ引き継ぐ
   const handleApplyModeChange = useCallback(
     (nextApplyToAll: boolean) => {
       if (nextApplyToAll === applyToAll) return;
       if (nextApplyToAll) {
         setSharedArea(currentArea);
         setSharedTransform(currentTransform);
+        setSharedAdjustments(currentAdjustments);
       } else {
         setPerImageArea((prev) => ({
           ...prev,
@@ -242,10 +316,20 @@ export default function CropPage() {
           ...prev,
           [currentPreviewIndex]: currentTransform,
         }));
+        setPerImageAdjustments((prev) => ({
+          ...prev,
+          [currentPreviewIndex]: currentAdjustments,
+        }));
       }
       setApplyToAll(nextApplyToAll);
     },
-    [applyToAll, currentArea, currentTransform, currentPreviewIndex],
+    [
+      applyToAll,
+      currentArea,
+      currentTransform,
+      currentAdjustments,
+      currentPreviewIndex,
+    ],
   );
 
   const handleStartCropping = useCallback(async () => {
@@ -260,8 +344,10 @@ export default function CropPage() {
         applyToAll,
         sharedArea,
         sharedTransform,
+        sharedAdjustments,
         perImageArea,
         perImageTransform,
+        perImageAdjustments,
       };
       const jobs: CropJob[] = files.map((_, index) =>
         resolveCropForIndex(index, state),
@@ -289,8 +375,10 @@ export default function CropPage() {
     applyToAll,
     sharedArea,
     sharedTransform,
+    sharedAdjustments,
     perImageArea,
     perImageTransform,
+    perImageAdjustments,
     preserveExif,
   ]);
 
@@ -350,6 +438,10 @@ export default function CropPage() {
                     onRotateRight={handleRotateRight}
                     onToggleFlipHorizontal={handleToggleFlipHorizontal}
                     onToggleFlipVertical={handleToggleFlipVertical}
+                    adjustments={currentAdjustments}
+                    onAdjustmentChange={handleAdjustmentChange}
+                    onToggleFilter={handleToggleFilter}
+                    onResetAdjustments={handleResetAdjustments}
                     applyToAll={applyToAll}
                     onApplyModeChange={handleApplyModeChange}
                     showApplyMode={files.length > 1}

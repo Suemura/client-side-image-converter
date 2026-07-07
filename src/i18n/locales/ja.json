@@ -74,8 +74,8 @@
     "preserveExifUnsupported": "EXIF情報の保持は AVIF では対応していません。"
   },
   "crop": {
-    "title": "トリミングツール",
-    "subtitle": "画像を自由にトリミング",
+    "title": "画像編集・トリミングツール",
+    "subtitle": "トリミング・回転／反転に加え、明るさ・コントラスト・彩度やグレースケール／セピアを調整できます",
     "preview": "プレビュー",
     "processing": "処理中...",
     "processedFiles": "処理済みファイル",
@@ -112,10 +112,17 @@
     "rotateRight": "右に90°回転",
     "flipHorizontal": "左右反転",
     "flipVertical": "上下反転",
+    "adjustments": "色調・フィルタ",
+    "brightness": "明るさ",
+    "contrast": "コントラスト",
+    "saturation": "彩度",
+    "grayscale": "グレースケール",
+    "sepia": "セピア",
+    "resetAdjustments": "リセット",
     "applyMode": "適用範囲",
     "applyToAll": "全画像一括",
     "perImage": "画像ごと",
-    "applyModeHelp": "「全画像一括」は現在の設定を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に領域・回転を指定できます。"
+    "applyModeHelp": "「全画像一括」は現在の設定を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に領域・回転・色調を指定できます。"
   },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",

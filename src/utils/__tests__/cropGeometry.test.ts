@@ -14,6 +14,7 @@ import {
   scaleCropArea,
   toDisplayArea,
 } from "../cropGeometry";
+import { IDENTITY_ADJUSTMENTS } from "../imageAdjustments";
 
 describe("rotateRight / rotateLeft", () => {
   it("右回転は 90 度ずつ進み 360 で 0 に戻る", () => {
@@ -289,6 +290,20 @@ describe("enforceAspectRatio", () => {
 });
 
 describe("resolveCropForIndex", () => {
+  const sharedAdjustments = {
+    brightness: 1.2,
+    contrast: 1,
+    saturate: 1,
+    grayscale: false,
+    sepia: false,
+  };
+  const perImage2Adjustments = {
+    brightness: 1,
+    contrast: 1,
+    saturate: 1,
+    grayscale: true,
+    sepia: false,
+  };
   const baseState: CropState = {
     applyToAll: true,
     sharedArea: { x: 1, y: 2, width: 3, height: 4 },
@@ -297,6 +312,7 @@ describe("resolveCropForIndex", () => {
       flipHorizontal: true,
       flipVertical: false,
     },
+    sharedAdjustments,
     perImageArea: {
       0: { x: 10, y: 10, width: 10, height: 10 },
       2: { x: 20, y: 20, width: 20, height: 20 },
@@ -304,32 +320,39 @@ describe("resolveCropForIndex", () => {
     perImageTransform: {
       2: { rotation: 180, flipHorizontal: false, flipVertical: true },
     },
+    perImageAdjustments: {
+      2: perImage2Adjustments,
+    },
   };
 
-  it("一括モードは全インデックスで共有値を返す", () => {
+  it("一括モードは全インデックスで共有値（領域・変換・調整）を返す", () => {
     expect(resolveCropForIndex(0, baseState)).toEqual({
       area: baseState.sharedArea,
       transform: baseState.sharedTransform,
+      adjustments: sharedAdjustments,
     });
     expect(resolveCropForIndex(5, baseState)).toEqual({
       area: baseState.sharedArea,
       transform: baseState.sharedTransform,
+      adjustments: sharedAdjustments,
     });
   });
 
-  it("画像ごとモードは当該インデックスの値を返す", () => {
+  it("画像ごとモードは当該インデックスの値（領域・変換・調整）を返す", () => {
     const state = { ...baseState, applyToAll: false };
     expect(resolveCropForIndex(2, state)).toEqual({
       area: { x: 20, y: 20, width: 20, height: 20 },
       transform: { rotation: 180, flipHorizontal: false, flipVertical: true },
+      adjustments: perImage2Adjustments,
     });
   });
 
-  it("画像ごとモードで未設定のインデックスは無変換・領域なしを返す", () => {
+  it("画像ごとモードで未設定のインデックスは無変換・無調整・領域なしを返す", () => {
     const state = { ...baseState, applyToAll: false };
     expect(resolveCropForIndex(1, state)).toEqual({
       area: null,
       transform: IDENTITY_TRANSFORM,
+      adjustments: IDENTITY_ADJUSTMENTS,
     });
   });
 });
