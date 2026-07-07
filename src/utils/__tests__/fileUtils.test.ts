@@ -22,6 +22,7 @@ import {
   isImageFile,
   isTiffFile,
   isUnknownMimeType,
+  shouldClearLimitWarningOnDecrease,
 } from "../fileUtils";
 
 /** テスト用の File オブジェクトを生成する */
@@ -151,6 +152,29 @@ describe("addUniqueFilesWithLimit", () => {
     );
     expect(result.files.map((f) => f.name)).toEqual(["a.png", "b.png"]);
     expect(result.truncated).toBe(false);
+  });
+});
+
+describe("shouldClearLimitWarningOnDecrease", () => {
+  it("件数が減って上限未満になったら true（削除・クリア）", () => {
+    expect(shouldClearLimitWarningOnDecrease(200, 199, 200)).toBe(true);
+    expect(shouldClearLimitWarningOnDecrease(50, 0, 200)).toBe(true);
+  });
+
+  it("件数が増えたら（上限未満でも）false", () => {
+    // フォルダ走査打ち切りで上限未満のまま警告を出すケースを消さないための肝
+    expect(shouldClearLimitWarningOnDecrease(10, 20, 200)).toBe(false);
+    expect(shouldClearLimitWarningOnDecrease(1, 2, 200)).toBe(false);
+  });
+
+  it("件数が変わらなければ false（上限到達中の no-op 投入で警告を消さない）", () => {
+    expect(shouldClearLimitWarningOnDecrease(200, 200, 200)).toBe(false);
+    expect(shouldClearLimitWarningOnDecrease(50, 50, 200)).toBe(false);
+  });
+
+  it("減っても上限以上のままなら false", () => {
+    expect(shouldClearLimitWarningOnDecrease(300, 250, 200)).toBe(false);
+    expect(shouldClearLimitWarningOnDecrease(300, 200, 200)).toBe(false);
   });
 });
 
