@@ -153,6 +153,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-07: crop ページの色調・フィルタ調整（Issue #62）に伴い、E2E（`e2e/crop.spec.ts`）にグレースケール出力の全画素 R=G=B 検証を追加（単色 PNG を投入 → グレースケール適用 → ダウンロード物をデコードして全画素の R/G/B 差が閾値以下かつ元の彩色でないことを確認）
 - 2026-07-06: 変換ページのバッチ処理を Web Worker + OffscreenCanvas プールへ並列化（Issue #32・#47）に伴い、E2E に一括変換の ZIP 全件検証・AVIF バッチ・Web Worker 生成確認を追加
 - 2026-07-06: PWA 化（Issue #33）に伴い、`npm run build` の postbuild チェーンに Service Worker 生成を追加（`next-sitemap && node scripts/generate-sw.ts`。`out/` を走査して `out/sw.js` を生成）。`scripts/` は Node の TypeScript 型ストリップで実行するため tsc 対象外にする（`tsconfig.json` の `exclude` に `scripts` を追加）。E2E に `e2e/pwa.spec.ts` を追加（manifest / theme-color の出力確認と、SW 登録後に `context.setOffline(true)` で全ルートがキャッシュから描画されるオフライン検証）
 - 2026-07-06: EXIF 対応拡張（Issue #34）に伴い、E2E の検証範囲を拡大（WebP の EXIF 読み取り、GPS の市区町村レベル丸め、JPEG→PNG / →WebP 変換時の EXIF 保持）。フィクスチャに WebP（EXIF 入り）生成と PNG/WebP からの EXIF 読み出しヘルパーを追加
