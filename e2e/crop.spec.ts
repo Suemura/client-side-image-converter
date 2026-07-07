@@ -117,6 +117,76 @@ test.describe("画像トリミング", () => {
     expect(size.height).toBeGreaterThan(size.width);
   });
 
+  test("グレースケールを適用すると出力の全画素が R=G=B になる", async ({
+    page,
+  }) => {
+    await page.goto("/crop/");
+    // 各チャンネルが明確に異なる単色（R=200, G=60, B=40）の PNG を投入
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("color.png", 32, 32, [200, 60, 40]));
+
+    const cropButton = page.getByRole("button", {
+      name: "トリミング",
+      exact: true,
+    });
+    await expect(cropButton).toBeEnabled({ timeout: 15_000 });
+
+    // グレースケールフィルタを適用（プレビュー再生成のため一旦無効化される）
+    await page
+      .getByRole("button", { name: "グレースケール", exact: true })
+      .click();
+    await expect(cropButton).toBeEnabled({ timeout: 15_000 });
+
+    await cropButton.click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("color_cropped.png");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isPng(buf)).toBe(true);
+
+    // デコードして全画素が R=G=B（グレースケール）かつ元の彩色でないことを検証
+    const check = await page.evaluate(async (arr) => {
+      const bitmap = await createImageBitmap(
+        new Blob([new Uint8Array(arr)], { type: "image/png" }),
+      );
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("no ctx");
+      }
+      ctx.drawImage(bitmap, 0, 0);
+      const { data } = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+      let maxChannelDiff = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        maxChannelDiff = Math.max(
+          maxChannelDiff,
+          Math.abs(data[i] - data[i + 1]),
+          Math.abs(data[i + 1] - data[i + 2]),
+        );
+      }
+      // グレースケール後の輝度（サンプルとして先頭画素の R 値）
+      return { maxChannelDiff, gray: data[0] };
+    }, Array.from(buf));
+
+    // 全画素で R=G=B（丸め誤差を許容して差 <= 2）
+    expect(check.maxChannelDiff).toBeLessThanOrEqual(2);
+    // 元の彩色（200/60/40）ではなく灰色化されている
+    expect(check.gray).toBeGreaterThan(60);
+    expect(check.gray).toBeLessThan(200);
+  });
+
   test("画像ごとモードで画像単位に異なる変換を適用できる", async ({ page }) => {
     await page.goto("/crop/");
     // 2 枚（いずれも 40x20 横長）を投入
