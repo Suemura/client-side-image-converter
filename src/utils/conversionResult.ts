@@ -68,3 +68,35 @@ export const buildOptimizeResult = (
     file: resultFile,
   };
 };
+
+/**
+ * 画像編集（`/edit`）結果の `ConversionResult` を組み立てる（Issue #66）。
+ *
+ * 編集済みであることが分かるよう元ファイル名の拡張子直前に `_edited` サフィックスを付け
+ * （crop の `_cropped` と同方針）、出力フォーマットに応じた拡張子を付与する
+ * （元形式維持なら入力と同じ形式、形式選択時はその形式）。`originalFilename` は元ファイル名を
+ * 保持するため、`ConversionResults` の変換前後比較（`originalFiles` との突き合わせ）が機能する。
+ */
+export const buildEditResult = (
+  originalFile: File,
+  blob: Blob,
+  format: ConversionFormat,
+): ConversionResult => {
+  const url = URL.createObjectURL(blob);
+  const originalFilename = originalFile.name;
+  const nameWithoutExt =
+    originalFilename.substring(0, originalFilename.lastIndexOf(".")) ||
+    originalFilename;
+  const filename = `${nameWithoutExt}_edited.${format}`;
+  const resultFile = new File([blob], filename, { type: blob.type });
+
+  return {
+    blob,
+    url,
+    originalSize: originalFile.size,
+    convertedSize: blob.size,
+    filename,
+    originalFilename,
+    file: resultFile,
+  };
+};

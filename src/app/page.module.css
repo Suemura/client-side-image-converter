@@ -69,11 +69,13 @@
 /* 特徴セクショングリッド */
 .featuresGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  /* auto-fill で末尾カードが 1 枚でも他と同じ幅を保つ（auto-fit だと引き伸ばされる）。
+     4 枚が広い画面では 1 行に収まり、狭い画面では折り返す */
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 2rem;
   margin-top: 4rem;
   width: 100%;
-  max-width: 1000px;
+  max-width: 1300px;
 }
 
 /* 特徴カード */

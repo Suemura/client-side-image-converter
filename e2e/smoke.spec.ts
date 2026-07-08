@@ -17,6 +17,12 @@ test.describe("スモークテスト", () => {
     const nav = page.getByRole("navigation");
     await expect(nav.getByRole("link", { name: "変換" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "トリミング" })).toBeVisible();
+    await expect(
+      nav.getByRole("link", { name: "編集", exact: true }),
+    ).toBeVisible();
     await expect(nav.getByRole("link", { name: "メタデータ" })).toBeVisible();
+
+    // トップページ本文の各ツールへの CTA（/edit への導線が追加されていること）
+    await expect(page.getByRole("link", { name: "画像編集" })).toBeVisible();
   });
 });

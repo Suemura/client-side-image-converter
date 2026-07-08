@@ -11,6 +11,7 @@
     "top": "トップ",
     "crop": "トリミング",
     "convert": "変換",
+    "edit": "編集",
     "metadata": "メタデータ"
   },
   "home": {
@@ -18,6 +19,7 @@
     "subtitle": "クライアントサイドで画像を一括で変換・トリミングできます。\nサーバに画像を送信しないプライバシー重視の画像変換ツールです。",
     "startConverting": "変換",
     "tryCropTool": "トリミング",
+    "tryEditTool": "画像編集",
     "tryMetadataTool": "メタデータ管理",
     "viewOnGithub": "GitHubで見る",
     "features": {
@@ -30,6 +32,11 @@
         "title": "画像トリミング",
         "description": "直感的な操作で画像を\n完璧なサイズにトリミングできます。",
         "iconAlt": "画像トリミングアイコン"
+      },
+      "imageEditing": {
+        "title": "画像編集",
+        "description": "露光・コントラスト・彩度・色温度\nなどを調整して写真を美しく\n仕上げます。",
+        "iconAlt": "画像編集アイコン"
       },
       "batchProcessing": {
         "title": "バッチ処理",
@@ -116,6 +123,43 @@
     "applyToAll": "全画像一括",
     "perImage": "画像ごと",
     "applyModeHelp": "「全画像一括」は現在の設定を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に領域・回転を指定できます。"
+  },
+  "edit": {
+    "title": "画像編集",
+    "subtitle": "露光・コントラスト・彩度・色温度などを調整して写真を仕上げます。複数の画像へ同じ調整をまとめて適用できます。",
+    "previewTitle": "プレビュー（編集前 / 編集後）",
+    "adjustments": "調整",
+    "selectImageFirst": "画像を選択してください",
+    "light": "ライト",
+    "color": "カラー",
+    "exposure": "露光量",
+    "brightness": "輝度",
+    "contrast": "コントラスト",
+    "highlights": "ハイライト",
+    "shadows": "シャドウ",
+    "whites": "白レベル",
+    "blacks": "黒レベル",
+    "saturation": "彩度",
+    "vibrance": "自然な彩度",
+    "temperature": "色温度",
+    "tint": "色合い",
+    "hue": "色相",
+    "reset": "リセット",
+    "resetAll": "すべてリセット",
+    "outputFormat": "出力フォーマット",
+    "formatOriginal": "元の形式を維持",
+    "preserveExif": "EXIF情報を保持",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が編集後の画像に保持されます。JPEG / PNG / WebP 出力で有効です。",
+    "preserveExifUnsupported": "EXIF情報の保持は AVIF では対応していません。",
+    "apply": "編集を適用",
+    "reEdit": "再編集",
+    "editingInProgress": "編集中...",
+    "selectNewImage": "新しい画像を選択",
+    "before": "編集前",
+    "after": "編集後",
+    "compareHint": "中央の境界をドラッグして編集前後を比較できます。",
+    "applyModeHelp": "「全画像一括」は現在の調整を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に調整を指定できます。",
+    "editFailures": "以下のファイルは編集できませんでした（未対応の形式、または破損している可能性があります）"
   },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",
