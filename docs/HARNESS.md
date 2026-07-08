@@ -134,7 +134,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ### 9. E2E テスト（`e2e/` + Playwright）
 
-- 実ブラウザ（Chromium）で「アップロード → 変換/トリミング/EXIF 削除 → ダウンロード」を検証する
+- 実ブラウザ（Chromium）で「アップロード → 変換/トリミング/編集（ライト/カラー調整）/EXIF 削除 → ダウンロード」を検証する
 - **ダウンロード物の中身まで検証する**: マジックナンバー（JPEG/PNG/WebP/AVIF）、piexifjs / PNG・WebP チャンク解析によるバイナリ検証（GPS の削除・丸めの確認、JPEG→PNG / →WebP 変換時の EXIF 保持の確認）
 - **一括変換は ZIP の全エントリ（件数・ファイル名・マジックナンバー）を検証**し、変換時に本アプリの画像処理 Web Worker（`/_next/static/` の静的チャンク）が生成されることも確認する（バッチ並列化 Issue #32・#47）
 - フィクスチャ（EXIF 入り JPEG 等）はバイナリを置かず `e2e/helpers/fixtures.ts` で実行時生成
@@ -153,6 +153,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-08: 画像編集ページ `/edit`（Phase 1 MVP、Issue #66）の追加に伴い、E2E に `e2e/edit.spec.ts`（WebGL/CPU の実描画検証）を追加し、`e2e/seo-metadata.spec.ts` / `e2e/pwa.spec.ts` の対象ルートに `/edit/` を追加。フィクスチャ（`e2e/helpers/fixtures.ts`）に描画パイプラインの上下反転検証用 `twoToneVerticalPngFile` を追加（共通土台 `buildRgbPng` を抽出）
 - 2026-07-06: 変換ページのバッチ処理を Web Worker + OffscreenCanvas プールへ並列化（Issue #32・#47）に伴い、E2E に一括変換の ZIP 全件検証・AVIF バッチ・Web Worker 生成確認を追加
 - 2026-07-06: PWA 化（Issue #33）に伴い、`npm run build` の postbuild チェーンに Service Worker 生成を追加（`next-sitemap && node scripts/generate-sw.ts`。`out/` を走査して `out/sw.js` を生成）。`scripts/` は Node の TypeScript 型ストリップで実行するため tsc 対象外にする（`tsconfig.json` の `exclude` に `scripts` を追加）。E2E に `e2e/pwa.spec.ts` を追加（manifest / theme-color の出力確認と、SW 登録後に `context.setOffline(true)` で全ルートがキャッシュから描画されるオフライン検証）
 - 2026-07-06: EXIF 対応拡張（Issue #34）に伴い、E2E の検証範囲を拡大（WebP の EXIF 読み取り、GPS の市区町村レベル丸め、JPEG→PNG / →WebP 変換時の EXIF 保持）。フィクスチャに WebP（EXIF 入り）生成と PNG/WebP からの EXIF 読み出しヘルパーを追加
