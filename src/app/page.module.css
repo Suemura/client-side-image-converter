@@ -112,5 +112,6 @@
 .featureDescription {
   color: var(--muted-foreground);
   line-height: 1.6;
-  white-space: pre-wrap;
+  /* カード幅に応じて自然に折り返す（手動改行に依存しないため語中で割れない） */
+  overflow-wrap: break-word;
 }

@@ -19,6 +19,26 @@ export const ADJUSTMENT_UNIFORMS: Record<AdjustmentKey, string> =
 /** テクスチャ座標を受け取るサンプラー uniform 名 */
 export const IMAGE_UNIFORM = "u_image";
 
+/** LUT の 3D テクスチャサンプラー uniform 名 */
+export const LUT_SAMPLER = "u_lut";
+
+/**
+ * LUT 適用の uniform 名（配線の単一の真実）。
+ * `webglImageRenderer.ts` のアップロードと本モジュールのシェーダ生成、単体テストの配線ガードが共有する。
+ */
+export const LUT_UNIFORMS = {
+  /** 3D グリッドサイズ（float） */
+  size: "u_lutSize",
+  /** 適用強度 [0,1]（元色と LUT 適用色のブレンド比） */
+  strength: "u_lutStrength",
+  /** LUT を適用するか（0 / 1）。0 のときはサンプリングをスキップする */
+  enabled: "u_lutEnabled",
+  /** 入力ドメインの下限（vec3） */
+  domainMin: "u_lutDomainMin",
+  /** 入力ドメインの上限（vec3） */
+  domainMax: "u_lutDomainMax",
+} as const;
+
 /**
  * フルスクリーン三角形を描くための頂点シェーダ。
  * gl_VertexID から座標を生成するため頂点バッファ不要（0,1,2 の 3 頂点で画面全体を覆う）。
@@ -50,12 +70,21 @@ export const buildAdjustmentShader = (): string => {
 
   return `#version 300 es
 precision highp float;
+precision highp sampler3D;
 
 in vec2 v_texCoord;
 out vec4 fragColor;
 
 uniform sampler2D ${IMAGE_UNIFORM};
 ${uniformDeclarations}
+
+// LUT（色変換フィルタ）— 調整の後段に適用
+uniform sampler3D ${LUT_SAMPLER};
+uniform float ${LUT_UNIFORMS.size};
+uniform float ${LUT_UNIFORMS.strength};
+uniform float ${LUT_UNIFORMS.enabled};
+uniform vec3 ${LUT_UNIFORMS.domainMin};
+uniform vec3 ${LUT_UNIFORMS.domainMax};
 
 // Rec.709 輝度重み（adjustments.ts の LUMA_WEIGHTS と一致）
 const vec3 W = vec3(0.2126, 0.7152, 0.0722);
@@ -121,7 +150,24 @@ void main() {
     c = hsv2rgb(hsv);
   }
 
-  // 10. 最終クランプ
+  // 10. 調整のクランプ（LUT 入力を [0,1] の妥当な色にそろえる）
+  c = clamp(c, 0.0, 1.0);
+
+  // 11. LUT 色変換フィルタ（applyLutToPixel と同順: ドメイン正規化 → トライリニア lookup → 強度ブレンド）。
+  //     3D テクスチャの LINEAR サンプリングがトライリニア補間を担い、テクセル中心補正
+  //     (v*(N-1)+0.5)/N で節点ベースの補間に一致させる。
+  if (${LUT_UNIFORMS.enabled} > 0.5) {
+    vec3 lutN = clamp(
+      (c - ${LUT_UNIFORMS.domainMin}) / (${LUT_UNIFORMS.domainMax} - ${LUT_UNIFORMS.domainMin}),
+      0.0,
+      1.0
+    );
+    vec3 lutCoord = (lutN * (${LUT_UNIFORMS.size} - 1.0) + 0.5) / ${LUT_UNIFORMS.size};
+    vec3 graded = texture(${LUT_SAMPLER}, lutCoord).rgb;
+    c = mix(c, graded, ${LUT_UNIFORMS.strength});
+  }
+
+  // 12. 最終クランプ
   fragColor = vec4(clamp(c, 0.0, 1.0), texel.a);
 }
 `;

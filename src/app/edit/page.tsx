@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { Header } from "../../components/Header";
@@ -24,13 +24,25 @@ import {
   type EditOutputFormat,
   editImages,
 } from "../../utils/imageEditor";
-import type { EditableSource } from "../../utils/webglImageRenderer";
+import type { LutData } from "../../utils/lutParser";
+import {
+  DEFAULT_LUT_SELECTION,
+  isDefaultLutSelection,
+  type LutSelection,
+  type LutSelectionState,
+  resolveLutForIndex,
+} from "../../utils/lutState";
+import type {
+  EditableSource,
+  LutApplication,
+} from "../../utils/webglImageRenderer";
 import { ConversionErrors } from "../convert/components/ConversionErrors";
 import { ImageUploadSection } from "../convert/components/ImageUploadSection";
 import { ProgressBar } from "../convert/components/ProgressBar";
 import { AdjustmentPanel } from "./components/AdjustmentPanel";
 import { CompareView } from "./components/CompareView";
 import { EditToolbar } from "./components/EditToolbar";
+import { LutPicker } from "./components/LutPicker";
 import styles from "./edit.module.css";
 
 export default function EditPage() {
@@ -60,10 +72,54 @@ export default function EditPage() {
     Record<number, AdjustmentState>
   >({});
 
+  // LUT 選択（調整と同じ applyToAll トグルを共有する dual-store）
+  const [sharedLut, setSharedLut] = useState<LutSelection>(
+    DEFAULT_LUT_SELECTION,
+  );
+  const [perImageLut, setPerImageLut] = useState<Record<number, LutSelection>>(
+    {},
+  );
+  // 選択された LUT データの実体を保持するレジストリ（lutId → LutData）。
+  // 状態には軽量な選択（lutId + strength）だけを持ち、重いデータ本体は ref で参照する。
+  const lutRegistryRef = useRef<Map<string, LutData>>(new Map());
+  const [customLutName, setCustomLutName] = useState<string | null>(null);
+  // レジストリ更新（プリセット読み込み・カスタム上書き）を currentLut の再解決へ伝えるバージョン。
+  // ref は再レンダーを起こさないため、登録時にこのカウンタを進めて useMemo を無効化する。
+  const [lutRegistryVersion, setLutRegistryVersion] = useState(0);
+
   // 現在表示中の画像へ適用する調整（一括 / 画像ごとで解決）
   const currentAdjustments = applyToAll
     ? sharedAdjustments
     : (perImageAdjustments[currentPreviewIndex] ?? DEFAULT_ADJUSTMENTS);
+
+  // 現在表示中の画像へ適用する LUT 選択（一括 / 画像ごとで解決）
+  const currentLutSelection = applyToAll
+    ? sharedLut
+    : (perImageLut[currentPreviewIndex] ?? DEFAULT_LUT_SELECTION);
+
+  // 選択を LUT データ + 強度へ解決する（レジストリ未登録時は null）
+  const resolveLutApplication = useCallback(
+    (selection: LutSelection): LutApplication | null => {
+      if (!selection.lutId) {
+        return null;
+      }
+      const data = lutRegistryRef.current.get(selection.lutId);
+      if (!data) {
+        return null;
+      }
+      return { data, strength: selection.strength / 100 };
+    },
+    [],
+  );
+
+  // currentLut は毎レンダーで新オブジェクトになると CompareView の編集後描画（CPU パスは全画素ループ）を
+  // 無関係な再レンダー（進捗更新など）でも再発火させるため、選択・レジストリ版が変わったときだけ再解決する。
+  // lutRegistryVersion は ref レジストリ（コールバック本体からは読まれない）の更新を反映するための意図的な依存。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: lutRegistryVersion は ref レジストリ更新の再解決トリガ
+  const currentLut = useMemo(
+    () => resolveLutApplication(currentLutSelection),
+    [resolveLutApplication, currentLutSelection, lutRegistryVersion],
+  );
 
   // 調整を一括 / 画像ごとの適切なストアへ書き込む（crop の setCurrentArea 相当）
   const setCurrentAdjustments = useCallback(
@@ -79,6 +135,32 @@ export default function EditPage() {
     },
     [applyToAll, currentPreviewIndex],
   );
+
+  // LUT 選択を一括 / 画像ごとの適切なストアへ書き込む
+  const setCurrentLutSelection = useCallback(
+    (next: LutSelection) => {
+      if (applyToAll) {
+        setSharedLut(next);
+      } else {
+        setPerImageLut((prev) => ({
+          ...prev,
+          [currentPreviewIndex]: next,
+        }));
+      }
+    },
+    [applyToAll, currentPreviewIndex],
+  );
+
+  // 読み込んだ LUT データをレジストリへ登録する（LutPicker から呼ばれる）。
+  // カスタム LUT の再アップロードは同一スロット（CUSTOM_LUT_ID）を上書きするため、
+  // データが実際に変わった場合のみバージョンを進めてプレビューの再解決を促す。
+  const registerLut = useCallback((id: string, data: LutData) => {
+    const prev = lutRegistryRef.current.get(id);
+    lutRegistryRef.current.set(id, data);
+    if (prev !== data) {
+      setLutRegistryVersion((v) => v + 1);
+    }
+  }, []);
 
   // 画像切替に合わせて EXIF 補正済みのプレビューソース（キャンバス）を生成する
   useEffect(() => {
@@ -110,6 +192,8 @@ export default function EditPage() {
   const resetAdjustments = useCallback(() => {
     setSharedAdjustments(DEFAULT_ADJUSTMENTS);
     setPerImageAdjustments({});
+    setSharedLut(DEFAULT_LUT_SELECTION);
+    setPerImageLut({});
   }, []);
 
   // 結果の object URL（buildEditResult の createObjectURL 由来）を解放する。
@@ -145,6 +229,7 @@ export default function EditPage() {
     setEditFailures([]);
     setPreviewSource(null);
     resetAdjustments();
+    setCustomLutName(null);
   }, [resetAdjustments, revokeResultUrls, editResults]);
 
   const handlePreviousImage = useCallback(() => {
@@ -157,21 +242,27 @@ export default function EditPage() {
     setCurrentPreviewIndex((i) => (i < files.length - 1 ? i + 1 : 0));
   }, [files.length]);
 
-  // 一括 / 画像ごとの切替時、表示が飛ばないよう現在値を移行先へ引き継ぐ（crop の handleApplyModeChange 踏襲）
+  // 一括 / 画像ごとの切替時、表示が飛ばないよう現在値を移行先へ引き継ぐ（crop の handleApplyModeChange 踏襲）。
+  // 調整と LUT 選択は同じ applyToAll を共有するため両方を移行する。
   const handleApplyModeChange = useCallback(
     (nextApplyToAll: boolean) => {
       if (nextApplyToAll === applyToAll) return;
       if (nextApplyToAll) {
         setSharedAdjustments(currentAdjustments);
+        setSharedLut(currentLutSelection);
       } else {
         setPerImageAdjustments((prev) => ({
           ...prev,
           [currentPreviewIndex]: currentAdjustments,
         }));
+        setPerImageLut((prev) => ({
+          ...prev,
+          [currentPreviewIndex]: currentLutSelection,
+        }));
       }
       setApplyToAll(nextApplyToAll);
     },
-    [applyToAll, currentAdjustments, currentPreviewIndex],
+    [applyToAll, currentAdjustments, currentLutSelection, currentPreviewIndex],
   );
 
   const handleStartEditing = useCallback(async () => {
@@ -191,8 +282,14 @@ export default function EditPage() {
         sharedAdjustments,
         perImageAdjustments,
       };
+      const lutState: LutSelectionState = {
+        applyToAll,
+        sharedLut,
+        perImageLut,
+      };
       const jobs: EditJob[] = files.map((_, index) => ({
         adjustments: resolveAdjustmentForIndex(index, state),
+        lut: resolveLutApplication(resolveLutForIndex(index, lutState)),
       }));
 
       const { results, failures } = await editImages(
@@ -217,6 +314,9 @@ export default function EditPage() {
     applyToAll,
     sharedAdjustments,
     perImageAdjustments,
+    sharedLut,
+    perImageLut,
+    resolveLutApplication,
     preserveExif,
     outputFormat,
     revokeResultUrls,
@@ -231,11 +331,15 @@ export default function EditPage() {
 
   const hasFiles = files.length > 0;
   const hasResults = editResults.length > 0;
-  // 一括モードは共有調整、画像ごとモードはいずれかの画像に調整があれば全体リセットを有効化
+  // 一括モードは共有値、画像ごとモードはいずれかの画像に調整 or LUT があれば全体リセットを有効化
   const hasAdjustments = applyToAll
-    ? !isDefaultAdjustments(sharedAdjustments)
+    ? !isDefaultAdjustments(sharedAdjustments) ||
+      !isDefaultLutSelection(sharedLut)
     : Object.values(perImageAdjustments).some(
         (adjustments) => !isDefaultAdjustments(adjustments),
+      ) ||
+      Object.values(perImageLut).some(
+        (selection) => !isDefaultLutSelection(selection),
       );
 
   return (
@@ -271,6 +375,7 @@ export default function EditPage() {
                     width={previewSize.width}
                     height={previewSize.height}
                     adjustments={currentAdjustments}
+                    lut={currentLut}
                     currentIndex={currentPreviewIndex}
                     totalImages={files.length}
                     onPreviousImage={handlePreviousImage}
@@ -321,14 +426,23 @@ export default function EditPage() {
               )}
             </div>
 
-            {/* 右カラム: 調整スライダー */}
+            {/* 右カラム: 調整スライダー + LUT フィルタ */}
             <div className={styles.column}>
               <h4 className={styles.columnTitle}>{t("edit.adjustments")}</h4>
               {hasFiles ? (
-                <AdjustmentPanel
-                  adjustments={currentAdjustments}
-                  onAdjustmentsChange={setCurrentAdjustments}
-                />
+                <>
+                  <AdjustmentPanel
+                    adjustments={currentAdjustments}
+                    onAdjustmentsChange={setCurrentAdjustments}
+                  />
+                  <LutPicker
+                    selection={currentLutSelection}
+                    onSelectionChange={setCurrentLutSelection}
+                    registerLut={registerLut}
+                    customName={customLutName}
+                    onCustomLoaded={setCustomLutName}
+                  />
+                </>
               ) : (
                 <div className={styles.placeholder}>
                   {t("edit.selectImageFirst")}

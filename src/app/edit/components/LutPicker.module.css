@@ -1,0 +1,153 @@
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  background-color: var(--background);
+  border: 1px solid var(--border-dashed);
+  border-radius: 8px;
+}
+
+.title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid var(--border-dashed);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 0.5rem;
+}
+
+.swatch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: transparent;
+  border: 2px solid var(--border-dashed);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.swatch:hover {
+  border-color: var(--muted-foreground);
+}
+
+/* 選択中は高コントラストな枠 + 外周リング + チェックマークで明確に示す
+   （--primary は淡くダークテーマで視認しづらいため --foreground を使う） */
+.swatchActive {
+  border-color: var(--foreground);
+  box-shadow: 0 0 0 1px var(--foreground);
+}
+
+.swatchActive:hover {
+  border-color: var(--foreground);
+}
+
+.swatchActive::after {
+  content: "✓";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--background);
+  background: var(--foreground);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--background);
+}
+
+.thumb {
+  width: 100%;
+  aspect-ratio: 56 / 36;
+  border-radius: 4px;
+  background-color: var(--border-dashed);
+  background-size: cover;
+  background-position: center;
+  image-rendering: auto;
+}
+
+/* 「なし」用の斜線プレースホルダ */
+.thumbNone {
+  background-image: linear-gradient(
+    135deg,
+    transparent calc(50% - 1px),
+    var(--muted-foreground) calc(50% - 1px),
+    var(--muted-foreground) calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+}
+
+.swatchLabel {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--foreground);
+  text-align: center;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* 選択中はラベルも強調する（基底 .swatchLabel より後に置き詳細度の降順を避ける） */
+.swatchActive .swatchLabel {
+  font-weight: 700;
+}
+
+.uploadRow {
+  display: flex;
+}
+
+.uploadButton {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border-dashed);
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.uploadButton:hover {
+  border-color: var(--muted-foreground);
+}
+
+.fileInput {
+  display: none;
+}
+
+.hint {
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.error {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--error, #d64545);
+  margin: 0;
+}
+
+.strength {
+  margin-top: 0.25rem;
+}
