@@ -11,6 +11,7 @@ import {
   applyAdjustmentsToCanvas,
   createAdjustmentRenderer,
   type EditableSource,
+  type LutApplication,
 } from "../../../utils/webglImageRenderer";
 import styles from "./CompareView.module.css";
 
@@ -22,6 +23,8 @@ interface CompareViewProps {
   height: number;
   /** 現在表示中の画像へ適用する調整 */
   adjustments: AdjustmentState;
+  /** 現在表示中の画像へ適用する LUT（未選択は null） */
+  lut: LutApplication | null;
   /** 複数画像ナビ */
   currentIndex: number;
   totalImages: number;
@@ -41,6 +44,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
   width,
   height,
   adjustments,
+  lut,
   currentIndex,
   totalImages,
   onPreviousImage,
@@ -102,13 +106,14 @@ export const CompareView: React.FC<CompareViewProps> = ({
         height,
         normalized,
         glRendererRef.current,
+        lut,
       );
       ctx.clearRect(0, 0, width, height);
       ctx.drawImage(out, 0, 0);
     } catch (error) {
       console.error("Preview render failed:", error);
     }
-  }, [source, adjustments, width, height]);
+  }, [source, adjustments, lut, width, height]);
 
   const updateDivider = useCallback((clientX: number) => {
     const el = stageRef.current;

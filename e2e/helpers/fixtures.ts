@@ -249,6 +249,37 @@ export const brokenImageFile = (name = "broken.png") => ({
   buffer: Buffer.from("this is not an image", "utf-8"),
 });
 
+/**
+ * R↔B を入れ替える 2^3 の 3D LUT（.cube テキスト）。線形変換なのでトライリニアで厳密に
+ * 入替が再現でき、既知 LUT の出力ピクセル検証に使う。
+ * データ順は R 最速（(r,g,b) の r が最初に変化する）。
+ */
+export const SWAP_RB_CUBE_TEXT = `TITLE "Swap RB"
+LUT_3D_SIZE 2
+0 0 0
+0 0 1
+0 1 0
+0 1 1
+1 0 0
+1 0 1
+1 1 0
+1 1 1
+`;
+
+/** setInputFiles に渡せる .cube LUT ファイル（テキストを実行時にバッファ化） */
+export const cubeLutFile = (name = "lut.cube", text = SWAP_RB_CUBE_TEXT) => ({
+  name,
+  mimeType: "application/octet-stream",
+  buffer: Buffer.from(text, "utf-8"),
+});
+
+/** 不正な .cube（サイズ宣言なし）。読み込み失敗のエラー通知検証に使う */
+export const invalidCubeFile = (name = "broken.cube") => ({
+  name,
+  mimeType: "application/octet-stream",
+  buffer: Buffer.from("not a valid cube file\n0 0 0\n", "utf-8"),
+});
+
 // cwebp で生成した 1x1 ピクセルの WebP（VP8X 形式。EXIF 埋め込みのベースに使う）
 const BASE_WEBP_BASE64 =
   "UklGRlQAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAIAAAAAf1ZQOCAsAAAAkAEAnQEqAQABAAIANCWgAnS6AAOYAP75k2//kB//kB//kB//ID/iF3sgMAA=";

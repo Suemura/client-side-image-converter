@@ -159,7 +159,29 @@
     "after": "編集後",
     "compareHint": "中央の境界をドラッグして編集前後を比較できます。",
     "applyModeHelp": "「全画像一括」は現在の調整を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に調整を指定できます。",
-    "editFailures": "以下のファイルは編集できませんでした（未対応の形式、または破損している可能性があります）"
+    "editFailures": "以下のファイルは編集できませんでした（未対応の形式、または破損している可能性があります）",
+    "lut": {
+      "title": "フィルター (LUT)",
+      "none": "なし",
+      "strength": "適用強度",
+      "upload": "LUT を読み込む",
+      "uploadHint": ".cube ファイル、または HALD CLUT の PNG に対応しています。",
+      "custom": "カスタム",
+      "invalidFile": "LUT ファイルを読み込めませんでした。.cube または HALD CLUT の PNG かご確認ください。",
+      "presets": {
+        "cinematic": "シネマ",
+        "movie": "ムービー",
+        "film": "フィルム",
+        "teal": "ティール",
+        "nightfall": "ナイト",
+        "cool": "寒色",
+        "warm": "暖色",
+        "urban": "アーバン",
+        "retro": "レトロ",
+        "vintage": "ヴィンテージ",
+        "mono": "モノクロ"
+      }
+    }
   },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",

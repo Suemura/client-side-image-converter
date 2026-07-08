@@ -159,7 +159,29 @@
     "after": "After",
     "compareHint": "Drag the divider in the middle to compare before and after.",
     "applyModeHelp": "\"All images\" applies the current adjustments to every image. \"Per image\" lets you set adjustments individually while switching images with ←/→.",
-    "editFailures": "The following files could not be edited (unsupported format or possibly corrupted)"
+    "editFailures": "The following files could not be edited (unsupported format or possibly corrupted)",
+    "lut": {
+      "title": "Filter (LUT)",
+      "none": "None",
+      "strength": "Strength",
+      "upload": "Load LUT",
+      "uploadHint": "Supports .cube files or HALD CLUT PNG.",
+      "custom": "Custom",
+      "invalidFile": "Could not load the LUT file. Please check it is a .cube or HALD CLUT PNG.",
+      "presets": {
+        "cinematic": "Cinematic",
+        "movie": "Movie",
+        "film": "Film",
+        "teal": "Teal",
+        "nightfall": "Nightfall",
+        "cool": "Cool",
+        "warm": "Warm",
+        "urban": "Urban",
+        "retro": "Retro",
+        "vintage": "Vintage",
+        "mono": "Mono"
+      }
+    }
   },
   "fileUpload": {
     "dropFiles": "Drop files here",

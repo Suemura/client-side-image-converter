@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import JSZip from "jszip";
 import {
+  cubeLutFile,
+  invalidCubeFile,
   magicNumber,
   rectPngFile,
   twoToneVerticalPngFile,
@@ -147,9 +149,11 @@ test.describe("画像編集 /edit", () => {
     const exposure = page.getByLabel("露光量", { exact: true });
     await expect(exposure).toHaveValue("70");
 
-    // 2 枚目を追加（FileUploadArea は既存に追記する）
+    // 2 枚目を追加（FileUploadArea は既存に追記する）。ファイル選択後は LUT アップロード用の
+    // file input も存在するため、先頭（画像アップロード用）を明示的に選ぶ
     await page
       .locator('input[type="file"]')
+      .first()
       .setInputFiles(rectPngFile("second.png", 16, 16, [128, 128, 128]));
 
     // ファイルが 2 枚に増えても、編集中の露光量はリセットされず維持される
@@ -336,5 +340,175 @@ test.describe("画像編集 /edit", () => {
     ]);
     expect(download.suggestedFilename()).toBe("photo_edited.jpeg");
     expect(magicNumber.isJpeg(readFileSync(await download.path()))).toBe(true);
+  });
+
+  // --- LUT フィルタ（Issue #67） ---
+
+  /** LUT のアップロード input（accept に cube を含むもの）を特定する */
+  const lutFileInput = (page: Page) => page.locator('input[accept*="cube"]');
+
+  test("カスタム LUT（R↔B 入替）でプレビューと出力の R/B が入れ替わる", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    // 赤みの強い画像（R=200, B=30）
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("rb.png", 16, 16, [200, 30, 30]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(150);
+
+    // R↔B を入れ替える .cube を読み込む（アップロード時に自動選択される）
+    await lutFileInput(page).setInputFiles(cubeLutFile("swap.cube"));
+
+    // プレビューで R と B が入れ替わる（R が下がり B が上がる）
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 10_000,
+      })
+      .toBeLessThan(70);
+    expect((await readPreviewPixel(page, 0.5, 0.5))[2]).toBeGreaterThan(180);
+
+    await applyButton(page).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 出力も同様に入れ替わっている（WYSIWYG）
+    const result = page.locator('img[alt="rb_edited.png"]');
+    await expect(result).toBeVisible();
+    const [r, , b] = await readImagePixel(result, 0.5, 0.5);
+    expect(r).toBeLessThan(70);
+    expect(b).toBeGreaterThan(180);
+  });
+
+  test("適用強度 0 で LUT が無効化され元色に戻る", async ({ page }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("rb2.png", 16, 16, [200, 30, 30]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(150);
+
+    await lutFileInput(page).setInputFiles(cubeLutFile("swap.cube"));
+
+    // フル適用で入れ替わる
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 10_000,
+      })
+      .toBeLessThan(70);
+
+    // 強度を 0 にすると元色（R=200）へ戻る
+    await setSlider(page, "適用強度", 0);
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(150);
+    expect((await readPreviewPixel(page, 0.5, 0.5))[2]).toBeLessThan(70);
+  });
+
+  test("プリセット LUT（暖色）を選択するとプレビューが暖色に寄る", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("gray2.png", 16, 16, [128, 128, 128]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(100);
+
+    // プリセット「暖色」を選択（public/luts/warm.cube を fetch して適用）
+    await page.getByRole("button", { name: "暖色", exact: true }).click();
+
+    // 暖色は R > B（元のグレーは R==B）
+    await expect
+      .poll(
+        async () => {
+          const [r, , b] = await readPreviewPixel(page, 0.5, 0.5);
+          return r - b;
+        },
+        { timeout: 10_000 },
+      )
+      .toBeGreaterThan(8);
+  });
+
+  test("不正な LUT ファイルでエラー通知を表示する", async ({ page }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("x.png", 16, 16, [128, 128, 128]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(100);
+
+    await lutFileInput(page).setInputFiles(invalidCubeFile("bad.cube"));
+
+    // LutPicker のエラー通知（Next の route announcer とは別に、テキストで特定する）
+    await expect(
+      page.getByText("LUT ファイルを読み込めませんでした", { exact: false }),
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("WebGL2 非対応時も LUT が CPU パスで適用される", async ({ page }) => {
+    await page.addInitScript(() => {
+      const proto = HTMLCanvasElement.prototype as unknown as {
+        getContext: (type: string, ...args: unknown[]) => unknown;
+      };
+      const original = proto.getContext;
+      proto.getContext = function (type: string, ...args: unknown[]) {
+        if (type === "webgl2" || type === "webgl") {
+          return null;
+        }
+        return original.call(this, type, ...args);
+      };
+    });
+
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("cpu-lut.png", 16, 16, [200, 30, 30]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(150);
+
+    await lutFileInput(page).setInputFiles(cubeLutFile("swap.cube"));
+
+    // CPU パス（applyLutToPixel）でも R↔B が入れ替わる
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 10_000,
+      })
+      .toBeLessThan(70);
+    expect((await readPreviewPixel(page, 0.5, 0.5))[2]).toBeGreaterThan(180);
+
+    await applyButton(page).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+    const result = page.locator('img[alt="cpu-lut_edited.png"]');
+    await expect(result).toBeVisible();
+    const [r, , b] = await readImagePixel(result, 0.5, 0.5);
+    expect(r).toBeLessThan(70);
+    expect(b).toBeGreaterThan(180);
   });
 });
