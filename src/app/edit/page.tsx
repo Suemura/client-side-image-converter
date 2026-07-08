@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { Header } from "../../components/Header";
@@ -83,6 +83,9 @@ export default function EditPage() {
   // 状態には軽量な選択（lutId + strength）だけを持ち、重いデータ本体は ref で参照する。
   const lutRegistryRef = useRef<Map<string, LutData>>(new Map());
   const [customLutName, setCustomLutName] = useState<string | null>(null);
+  // レジストリ更新（プリセット読み込み・カスタム上書き）を currentLut の再解決へ伝えるバージョン。
+  // ref は再レンダーを起こさないため、登録時にこのカウンタを進めて useMemo を無効化する。
+  const [lutRegistryVersion, setLutRegistryVersion] = useState(0);
 
   // 現在表示中の画像へ適用する調整（一括 / 画像ごとで解決）
   const currentAdjustments = applyToAll
@@ -109,7 +112,14 @@ export default function EditPage() {
     [],
   );
 
-  const currentLut = resolveLutApplication(currentLutSelection);
+  // currentLut は毎レンダーで新オブジェクトになると CompareView の編集後描画（CPU パスは全画素ループ）を
+  // 無関係な再レンダー（進捗更新など）でも再発火させるため、選択・レジストリ版が変わったときだけ再解決する。
+  // lutRegistryVersion は ref レジストリ（コールバック本体からは読まれない）の更新を反映するための意図的な依存。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: lutRegistryVersion は ref レジストリ更新の再解決トリガ
+  const currentLut = useMemo(
+    () => resolveLutApplication(currentLutSelection),
+    [resolveLutApplication, currentLutSelection, lutRegistryVersion],
+  );
 
   // 調整を一括 / 画像ごとの適切なストアへ書き込む（crop の setCurrentArea 相当）
   const setCurrentAdjustments = useCallback(
@@ -141,9 +151,15 @@ export default function EditPage() {
     [applyToAll, currentPreviewIndex],
   );
 
-  // 読み込んだ LUT データをレジストリへ登録する（LutPicker から呼ばれる）
+  // 読み込んだ LUT データをレジストリへ登録する（LutPicker から呼ばれる）。
+  // カスタム LUT の再アップロードは同一スロット（CUSTOM_LUT_ID）を上書きするため、
+  // データが実際に変わった場合のみバージョンを進めてプレビューの再解決を促す。
   const registerLut = useCallback((id: string, data: LutData) => {
+    const prev = lutRegistryRef.current.get(id);
     lutRegistryRef.current.set(id, data);
+    if (prev !== data) {
+      setLutRegistryVersion((v) => v + 1);
+    }
   }, []);
 
   // 画像切替に合わせて EXIF 補正済みのプレビューソース（キャンバス）を生成する

@@ -113,9 +113,33 @@ export const parseCubeLut = (text: string): LutData => {
       domainMax[2] = b;
       continue;
     }
+    // LUT_3D_INPUT_RANGE / LUT_1D_INPUT_RANGE（Adobe Cube 仕様）: 全チャンネル共通の入力域 min max。
+    // DOMAIN_MIN/MAX の別表記なので同じドメインへ反映する。
+    if (keyword === "LUT_3D_INPUT_RANGE" || keyword === "LUT_1D_INPUT_RANGE") {
+      const range = tokens.slice(1).map(Number);
+      if (range.length !== 2 || !range.every((n) => Number.isFinite(n))) {
+        throw new Error(`Invalid ${keyword} in .cube file`);
+      }
+      domainMin[0] = range[0];
+      domainMin[1] = range[0];
+      domainMin[2] = range[0];
+      domainMax[0] = range[1];
+      domainMax[1] = range[1];
+      domainMax[2] = range[1];
+      continue;
+    }
 
     // それ以外はデータ行（RGB の 3 値）として扱う
     rows.push(parseTriple(tokens, "data line"));
+  }
+
+  // 退化ドメイン（max <= min）は正規化でゼロ除算になる（GPU は NaN、CPU は 0 を返し乖離する）。
+  // 妥当な範囲でない軸は既定 [0,1] へ戻して GPU/CPU の一致を保つ。
+  for (let c = 0; c < 3; c++) {
+    if (!(domainMax[c] > domainMin[c])) {
+      domainMin[c] = 0;
+      domainMax[c] = 1;
+    }
   }
 
   if (size3d > 0 && size1d > 0) {

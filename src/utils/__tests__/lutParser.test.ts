@@ -62,6 +62,42 @@ DOMAIN_MAX 0.8 0.9 1.0
     expect(lut.domainMax).toEqual([0.8, 0.9, 1.0]);
   });
 
+  it("LUT_3D_INPUT_RANGE を全チャンネル共通ドメインとして反映する", () => {
+    const cube = `LUT_3D_SIZE 2
+LUT_3D_INPUT_RANGE 0.0 2.0
+0 0 0
+0 0 0
+0 0 0
+0 0 0
+0 0 0
+0 0 0
+0 0 0
+0 0 0
+`;
+    const lut = parseCubeLut(cube);
+    expect(lut.domainMin).toEqual([0, 0, 0]);
+    expect(lut.domainMax).toEqual([2, 2, 2]);
+  });
+
+  it("退化ドメイン（max <= min）は既定 [0,1] に戻す", () => {
+    const cube = `LUT_3D_SIZE 2
+DOMAIN_MIN 0.5 0.0 0.0
+DOMAIN_MAX 0.5 1.0 1.0
+0 0 0
+0 0 0
+0 0 0
+0 0 0
+0 0 0
+0 0 0
+0 0 0
+0 0 0
+`;
+    const lut = parseCubeLut(cube);
+    // R 軸は max==min のため [0,1] へ、他軸は指定どおり
+    expect(lut.domainMin).toEqual([0, 0, 0]);
+    expect(lut.domainMax).toEqual([1, 1, 1]);
+  });
+
   it("コメント行・空行・前後の空白を無視する", () => {
     const cube = `# comment line
 
