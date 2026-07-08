@@ -139,16 +139,14 @@ const buildPngChunk = (type: string, data: Uint8Array): Uint8Array => {
 };
 
 /**
- * 指定サイズ・単色の RGB PNG を実行時生成する（非正方形の検証用）。
- * 圧縮は zlib の stored（無圧縮）ブロックで行い、外部ライブラリなしで有効な PNG を組み立てる。
- * 回転で縦横が入れ替わること・アスペクト比プリセットで正方形に切り出せることの検証に使う。
+ * 幅・高さと「ピクセルごとの色を返す関数」から、外部ライブラリなしで有効な RGB PNG を組み立てる。
+ * 圧縮は zlib の stored（無圧縮）ブロックで行う。単色・二色などの検証用画像生成の共通土台。
  */
-export const rectPngFile = (
-  name = "rect.png",
-  width = 40,
-  height = 20,
-  color: [number, number, number] = [200, 60, 40],
-) => {
+const buildRgbPng = (
+  width: number,
+  height: number,
+  colorAt: (x: number, y: number) => [number, number, number],
+): Uint8Array => {
   // IHDR: 幅・高さ・ビット深度 8・カラータイプ 2（RGB）
   const ihdr = new Uint8Array(13);
   const ihdrView = new DataView(ihdr.buffer);
@@ -165,9 +163,10 @@ export const rectPngFile = (
     raw[rowStart] = 0; // filter type: none
     for (let x = 0; x < width; x++) {
       const p = rowStart + 1 + x * 3;
-      raw[p] = color[0];
-      raw[p + 1] = color[1];
-      raw[p + 2] = color[2];
+      const [r, g, b] = colorAt(x, y);
+      raw[p] = r;
+      raw[p + 1] = g;
+      raw[p + 2] = b;
     }
   }
 
@@ -209,7 +208,37 @@ export const rectPngFile = (
     png.set(chunk, writeOffset);
     writeOffset += chunk.length;
   }
+  return png;
+};
 
+/**
+ * 指定サイズ・単色の RGB PNG を実行時生成する（非正方形の検証用）。
+ * 回転で縦横が入れ替わること・アスペクト比プリセットで正方形に切り出せることの検証に使う。
+ */
+export const rectPngFile = (
+  name = "rect.png",
+  width = 40,
+  height = 20,
+  color: [number, number, number] = [200, 60, 40],
+) => {
+  const png = buildRgbPng(width, height, () => color);
+  return { name, mimeType: "image/png", buffer: Buffer.from(png) };
+};
+
+/**
+ * 上半分と下半分で色が異なる二色の RGB PNG を実行時生成する。
+ * 画像編集の描画パイプライン（WebGL の Y 反転など）で上下が入れ替わらないことの検証に使う。
+ */
+export const twoToneVerticalPngFile = (
+  name = "twotone.png",
+  width = 16,
+  height = 16,
+  top: [number, number, number] = [230, 230, 230],
+  bottom: [number, number, number] = [20, 20, 20],
+) => {
+  const png = buildRgbPng(width, height, (_x, y) =>
+    y < height / 2 ? top : bottom,
+  );
   return { name, mimeType: "image/png", buffer: Buffer.from(png) };
 };
 

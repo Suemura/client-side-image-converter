@@ -29,6 +29,12 @@ const PAGES = [
     title: "画像メタデータ・プライバシー管理 | Client-Side Image Converter",
     descriptionContains: "EXIF メタデータ",
   },
+  {
+    name: "編集",
+    path: "/edit/",
+    title: "画像編集 | Client-Side Image Converter",
+    descriptionContains: "ライト/カラー調整",
+  },
 ] as const;
 
 test.describe("ページ別 SEO メタデータ", () => {
