@@ -112,28 +112,38 @@ export default function EditPage() {
     setPerImageAdjustments({});
   }, []);
 
+  // 結果の object URL（buildEditResult の createObjectURL 由来）を解放する。
+  // ConversionResults 側では revoke されないため、結果を破棄・置換する前にページ側で解放する。
+  const revokeResultUrls = useCallback((results: ConversionResult[]) => {
+    for (const result of results) {
+      URL.revokeObjectURL(result.url);
+    }
+  }, []);
+
   const handleFilesSelected = useCallback(
     (selectedFiles: File[]) => {
       const imageFiles = selectedFiles.filter((file) =>
         file.type.startsWith("image/"),
       );
+      revokeResultUrls(editResults);
       setFiles(imageFiles);
       setCurrentPreviewIndex(0);
       setEditResults([]);
       setEditFailures([]);
       resetAdjustments();
     },
-    [resetAdjustments],
+    [resetAdjustments, revokeResultUrls, editResults],
   );
 
   const handleClearFiles = useCallback(() => {
+    revokeResultUrls(editResults);
     setFiles([]);
     setCurrentPreviewIndex(0);
     setEditResults([]);
     setEditFailures([]);
     setPreviewSource(null);
     resetAdjustments();
-  }, [resetAdjustments]);
+  }, [resetAdjustments, revokeResultUrls, editResults]);
 
   const handlePreviousImage = useCallback(() => {
     if (files.length === 0) return;
@@ -168,6 +178,8 @@ export default function EditPage() {
     setIsProcessing(true);
     setProgressCurrent(0);
     setProgressTotal(files.length);
+    // 再編集時は旧結果の object URL を解放してから置き換える（リーク防止）
+    revokeResultUrls(editResults);
     setEditResults([]);
     setEditFailures([]);
 
@@ -205,15 +217,15 @@ export default function EditPage() {
     perImageAdjustments,
     preserveExif,
     outputFormat,
+    revokeResultUrls,
+    editResults,
   ]);
 
   const handleClearResults = useCallback(() => {
-    for (const result of editResults) {
-      URL.revokeObjectURL(result.url);
-    }
+    revokeResultUrls(editResults);
     setEditResults([]);
     setEditFailures([]);
-  }, [editResults]);
+  }, [revokeResultUrls, editResults]);
 
   const hasFiles = files.length > 0;
   const hasResults = editResults.length > 0;

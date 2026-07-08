@@ -32,7 +32,6 @@ import {
   type AdjustmentRenderer,
   applyAdjustmentsToCanvas,
   createAdjustmentRenderer,
-  isWebGLPipelineSupported,
 } from "./webglImageRenderer";
 
 /** 出力フォーマット。"original" は入力と同じ形式を維持する（非エンコード形式は PNG へ） */
@@ -207,9 +206,10 @@ export const editImages = async (
   onProgress?: (completed: number, total: number) => void,
   options: EditOptions = {},
 ): Promise<BatchEditResult> => {
-  const renderer = isWebGLPipelineSupported()
-    ? createAdjustmentRenderer()
-    : null;
+  // createAdjustmentRenderer() は WebGL2 非対応（document 未定義 / getContext 失敗 / シェーダ
+  // コンパイル失敗）でいずれも null を返すため、事前の可用性チェックは不要。
+  // null のとき呼び出し先（applyAdjustmentsToCanvas）が CPU フォールバックへ切り替わる。
+  const renderer = createAdjustmentRenderer();
 
   const results: ConversionResult[] = [];
   const failures: ConversionFailure[] = [];
