@@ -125,14 +125,16 @@ export default function EditPage() {
       const imageFiles = selectedFiles.filter((file) =>
         file.type.startsWith("image/"),
       );
+      // FileUploadArea は既存ファイルを保持して末尾に追加する（追記のみ・既存の
+      // インデックスは不変）ため、編集中の調整値（共有 / 画像ごと）とプレビュー位置は
+      // 維持する。フルリセットは「リストをクリア」（handleClearFiles）で行う。
+      // 旧結果は追加後のファイルセットと不整合になるため解放して閉じる。
       revokeResultUrls(editResults);
       setFiles(imageFiles);
-      setCurrentPreviewIndex(0);
       setEditResults([]);
       setEditFailures([]);
-      resetAdjustments();
     },
-    [resetAdjustments, revokeResultUrls, editResults],
+    [revokeResultUrls, editResults],
   );
 
   const handleClearFiles = useCallback(() => {

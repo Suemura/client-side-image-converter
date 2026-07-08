@@ -130,6 +130,33 @@ test.describe("画像編集 /edit", () => {
     expect(r).toBeGreaterThan(180);
   });
 
+  test("画像を追加しても編集中の調整値が維持される", async ({ page }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("first.png", 16, 16, [128, 128, 128]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(100);
+
+    // 露光量を設定し、スライダーに反映されていることを確認
+    await setSlider(page, "露光量", 70);
+    const exposure = page.getByLabel("露光量", { exact: true });
+    await expect(exposure).toHaveValue("70");
+
+    // 2 枚目を追加（FileUploadArea は既存に追記する）
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("second.png", 16, 16, [128, 128, 128]));
+
+    // ファイルが 2 枚に増えても、編集中の露光量はリセットされず維持される
+    await expect(page.getByText("選択されたファイル (2個)")).toBeVisible();
+    await expect(exposure).toHaveValue("70");
+  });
+
   test("編集で上下が入れ替わらない（向き保持）", async ({ page }) => {
     await page.goto("/edit/");
     await page
