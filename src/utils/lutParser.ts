@@ -212,6 +212,10 @@ export const haldClutToLutData = (
   if (size < 2 || size ** 3 !== pixels) {
     throw new Error(`Invalid HALD CLUT dimensions: ${width}x${height}`);
   }
+  // 巨大な HALD PNG による過大なメモリ確保を防ぐ（.cube の 3D と同じ上限でガード）
+  if (size > MAX_3D_SIZE) {
+    throw new Error(`Unsupported HALD CLUT size: ${size}`);
+  }
   if (rgba.length < pixels * 4) {
     throw new Error("HALD CLUT pixel data is too short");
   }

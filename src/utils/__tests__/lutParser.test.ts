@@ -154,6 +154,14 @@ describe("haldClutToLutData", () => {
     const rgba = new Uint8Array(5 * 4);
     expect(() => haldClutToLutData(rgba, 5, 1)).toThrow();
   });
+
+  it("上限を超える巨大な HALD サイズはエラーを投げる", () => {
+    // size = 200（> MAX_3D_SIZE 144）。実データ確保を避けるためスパースな型付き配列風の
+    // 長さだけを満たすオブジェクトで検証する（size チェックはピクセルデータ読み取り前に走る）
+    const pixels = 200 ** 3;
+    const fake = { length: pixels * 4 } as unknown as Uint8Array;
+    expect(() => haldClutToLutData(fake, 200 ** 2, 200)).toThrow();
+  });
 });
 
 describe("applyLutToPixel", () => {
