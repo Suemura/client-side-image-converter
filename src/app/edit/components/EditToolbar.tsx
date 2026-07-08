@@ -72,7 +72,7 @@ export const EditToolbar: React.FC<EditToolbarProps> = ({
               {t("crop.perImage")}
             </button>
           </div>
-          <p className={styles.help}>{t("crop.applyModeHelp")}</p>
+          <p className={styles.help}>{t("edit.applyModeHelp")}</p>
         </div>
       )}
 
