@@ -19,6 +19,7 @@
     "subtitle": "Convert and crop images in batches on the client-side.\nA privacy-focused image conversion tool that never sends images to servers.",
     "startConverting": "Start Converting",
     "tryCropTool": "Try Crop Tool",
+    "tryEditTool": "Image Editor",
     "tryMetadataTool": "Metadata Manager",
     "viewOnGithub": "View on GitHub",
     "features": {
@@ -31,6 +32,11 @@
         "title": "Image Cropping",
         "description": "Crop images to perfect sizes\nwith intuitive operations.",
         "iconAlt": "Image cropping icon"
+      },
+      "imageEditing": {
+        "title": "Image Editing",
+        "description": "Adjust exposure, contrast, saturation,\ncolor temperature and more to\nperfect your photos.",
+        "iconAlt": "Image editing icon"
       },
       "batchProcessing": {
         "title": "Batch Processing",

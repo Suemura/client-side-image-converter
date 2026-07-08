@@ -16,6 +16,7 @@ export default function Home() {
     "icon_convert_dark.svg",
   );
   const cropIcon = useThemeAwareImage("icon_crop.svg", "icon_crop_dark.svg");
+  const editIcon = useThemeAwareImage("icon_edit.svg", "icon_edit_dark.svg");
   const batchIcon = useThemeAwareImage("icon_batch.svg", "icon_batch_dark.svg");
 
   return (
@@ -34,6 +35,11 @@ export default function Home() {
             <Link href="/crop">
               <Button variant="secondary" size="large">
                 {t("home.tryCropTool")}
+              </Button>
+            </Link>
+            <Link href="/edit">
+              <Button variant="secondary" size="large">
+                {t("home.tryEditTool")}
               </Button>
             </Link>
             <Link href="/metadata">
@@ -89,6 +95,22 @@ export default function Home() {
               </h3>
               <p className={styles.featureDescription}>
                 {t("home.features.imageCropping.description")}
+              </p>
+            </div>
+
+            <div className={styles.featureCard}>
+              {/* 画像編集アイコン */}
+              <img
+                className={styles.featureIcon}
+                src={editIcon}
+                alt={t("home.features.imageEditing.iconAlt")}
+                suppressHydrationWarning
+              />
+              <h3 className={styles.featureTitle}>
+                {t("home.features.imageEditing.title")}
+              </h3>
+              <p className={styles.featureDescription}>
+                {t("home.features.imageEditing.description")}
               </p>
             </div>
 

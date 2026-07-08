@@ -19,6 +19,7 @@
     "subtitle": "クライアントサイドで画像を一括で変換・トリミングできます。\nサーバに画像を送信しないプライバシー重視の画像変換ツールです。",
     "startConverting": "変換",
     "tryCropTool": "トリミング",
+    "tryEditTool": "画像編集",
     "tryMetadataTool": "メタデータ管理",
     "viewOnGithub": "GitHubで見る",
     "features": {
@@ -31,6 +32,11 @@
         "title": "画像トリミング",
         "description": "直感的な操作で画像を\n完璧なサイズにトリミングできます。",
         "iconAlt": "画像トリミングアイコン"
+      },
+      "imageEditing": {
+        "title": "画像編集",
+        "description": "露光・コントラスト・彩度・色温度\nなどを調整して写真を美しく\n仕上げます。",
+        "iconAlt": "画像編集アイコン"
       },
       "batchProcessing": {
         "title": "バッチ処理",
