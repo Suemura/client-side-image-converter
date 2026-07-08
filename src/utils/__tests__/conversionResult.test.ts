@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildConversionResult,
+  buildEditResult,
   buildOptimizeResult,
 } from "../conversionResult";
 
@@ -109,5 +110,55 @@ describe("buildOptimizeResult", () => {
     expect(result.blob).toBe(blob);
     expect(result.url).toBe("blob:mock-url");
     expect(result.targetSizeAchieved).toBeUndefined();
+  });
+});
+
+describe("buildEditResult", () => {
+  it("_edited サフィックスを付け、出力フォーマットの拡張子にする（形式変更）", () => {
+    const original = new File(["source-bytes"], "photo.jpg", {
+      type: "image/jpeg",
+    });
+    const blob = blobOfSize(10, "image/webp");
+    const result = buildEditResult(original, blob, "webp");
+
+    expect(result.filename).toBe("photo_edited.webp");
+    // originalFilename は元名を保持（変換前後比較の突き合わせに使う）
+    expect(result.originalFilename).toBe("photo.jpg");
+    expect(result.file.name).toBe("photo_edited.webp");
+    expect(result.file.type).toBe("image/webp");
+  });
+
+  it("元形式維持でも _edited を付けて同じ拡張子にする", () => {
+    const original = new File(["source-bytes"], "shot.png", {
+      type: "image/png",
+    });
+    const blob = blobOfSize(12, "image/png");
+    const result = buildEditResult(original, blob, "png");
+
+    expect(result.filename).toBe("shot_edited.png");
+    expect(result.originalFilename).toBe("shot.png");
+  });
+
+  it("複数のドットを含む場合は最後のドット以降だけを置き換える", () => {
+    const original = new File(["src"], "my.photo.image.jpeg", {
+      type: "image/jpeg",
+    });
+    const blob = blobOfSize(8, "image/jpeg");
+    const result = buildEditResult(original, blob, "jpeg");
+
+    expect(result.filename).toBe("my.photo.image_edited.jpeg");
+  });
+
+  it("元サイズ・編集後サイズ・URL を結果に含める", () => {
+    const original = new File(["source-bytes"], "a.jpg", {
+      type: "image/jpeg",
+    });
+    const blob = blobOfSize(30, "image/jpeg");
+    const result = buildEditResult(original, blob, "jpeg");
+
+    expect(result.originalSize).toBe(original.size);
+    expect(result.convertedSize).toBe(blob.size);
+    expect(result.blob).toBe(blob);
+    expect(result.url).toBe("blob:mock-url");
   });
 });
