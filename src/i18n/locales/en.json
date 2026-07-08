@@ -25,22 +25,22 @@
     "features": {
       "formatConversion": {
         "title": "Format Conversion",
-        "description": "Convert between image formats\nsuch as JPEG, PNG, WebP, AVIF\nwhile adjusting quality and size.",
+        "description": "Convert between image formats such as JPEG, PNG, WebP, and AVIF while adjusting quality and size.",
         "iconAlt": "Format conversion icon"
       },
       "imageCropping": {
         "title": "Image Cropping",
-        "description": "Crop images to perfect sizes\nwith intuitive operations.",
+        "description": "Crop images to perfect sizes with intuitive operations.",
         "iconAlt": "Image cropping icon"
       },
       "imageEditing": {
         "title": "Image Editing",
-        "description": "Adjust exposure, contrast, saturation,\ncolor temperature and more to\nperfect your photos.",
+        "description": "Adjust exposure, contrast, saturation, and color temperature, plus LUT filters (presets and .cube import) to perfect your photos.",
         "iconAlt": "Image editing icon"
       },
       "batchProcessing": {
         "title": "Batch Processing",
-        "description": "Process multiple images at once\nand download them together.",
+        "description": "Process multiple images at once and download them together.",
         "iconAlt": "Batch processing icon"
       }
     }

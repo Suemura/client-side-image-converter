@@ -25,22 +25,22 @@
     "features": {
       "formatConversion": {
         "title": "フォーマット変換",
-        "description": "JPEG、PNG、WebP、AVIFなどの\n画像フォーマット間で\n品質･サイズを調整しながら\n変換できます。",
+        "description": "JPEG、PNG、WebP、AVIF などの画像フォーマット間で、品質・サイズを調整しながら変換できます。",
         "iconAlt": "フォーマット変換アイコン"
       },
       "imageCropping": {
         "title": "画像トリミング",
-        "description": "直感的な操作で画像を\n完璧なサイズにトリミングできます。",
+        "description": "直感的な操作で画像を完璧なサイズにトリミングできます。",
         "iconAlt": "画像トリミングアイコン"
       },
       "imageEditing": {
         "title": "画像編集",
-        "description": "露光・コントラスト・彩度・色温度\nなどを調整して写真を美しく\n仕上げます。",
+        "description": "露光・コントラスト・彩度・色温度などの調整に加え、LUT フィルタ（プリセット・.cube 取り込み）で写真を美しく仕上げます。",
         "iconAlt": "画像編集アイコン"
       },
       "batchProcessing": {
         "title": "バッチ処理",
-        "description": "複数の画像を一度に処理し、\nダウンロードできます。",
+        "description": "複数の画像を一度に処理し、まとめてダウンロードできます。",
         "iconAlt": "バッチ処理アイコン"
       }
     }

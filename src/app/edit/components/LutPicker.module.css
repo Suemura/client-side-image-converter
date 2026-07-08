@@ -25,6 +25,7 @@
 }
 
 .swatch {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -41,8 +42,34 @@
   border-color: var(--muted-foreground);
 }
 
+/* 選択中は高コントラストな枠 + 外周リング + チェックマークで明確に示す
+   （--primary は淡くダークテーマで視認しづらいため --foreground を使う） */
 .swatchActive {
-  border-color: var(--primary);
+  border-color: var(--foreground);
+  box-shadow: 0 0 0 1px var(--foreground);
+}
+
+.swatchActive:hover {
+  border-color: var(--foreground);
+}
+
+.swatchActive::after {
+  content: "✓";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--background);
+  background: var(--foreground);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--background);
 }
 
 .thumb {
@@ -76,6 +103,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+}
+
+/* 選択中はラベルも強調する（基底 .swatchLabel より後に置き詳細度の降順を避ける） */
+.swatchActive .swatchLabel {
+  font-weight: 700;
 }
 
 .uploadRow {

@@ -86,18 +86,26 @@
 
 .fileListHeader {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 8px 12px;
   padding-bottom: 12px;
 }
 
 .fileListTitle {
   font-weight: 500;
   color: var(--foreground);
+  margin: 0;
+  /* 狭い列でタイトルが 1 文字ずつ折り返す不具合を防ぐ。最小幅を確保することで
+     入りきらないときは flex-wrap でボタン群が次行へ回り、タイトルは列幅いっぱいで折り返す */
+  flex: 1 1 auto;
+  min-width: 7rem;
 }
 
 .buttonGroup {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
