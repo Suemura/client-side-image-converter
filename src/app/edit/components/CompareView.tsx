@@ -11,7 +11,6 @@ import {
   applyAdjustmentsToCanvas,
   createAdjustmentRenderer,
   type EditableSource,
-  isWebGLPipelineSupported,
 } from "../../../utils/webglImageRenderer";
 import styles from "./CompareView.module.css";
 
@@ -56,11 +55,11 @@ export const CompareView: React.FC<CompareViewProps> = ({
   // 分割位置（%）。左が編集前、右が編集後
   const [divider, setDivider] = useState(50);
 
-  // WebGL レンダラは 1 個だけ生成して再利用し、アンマウントで破棄する（先に生成しておく）
+  // WebGL レンダラは 1 個だけ生成して再利用し、アンマウントで破棄する（先に生成しておく）。
+  // createAdjustmentRenderer は WebGL2 非対応時に null を返すため、事前の可用性チェックは不要
+  // （null のとき applyAdjustmentsToCanvas が CPU フォールバックへ切り替わる）。
   useEffect(() => {
-    if (isWebGLPipelineSupported()) {
-      glRendererRef.current = createAdjustmentRenderer();
-    }
+    glRendererRef.current = createAdjustmentRenderer();
     return () => {
       glRendererRef.current?.dispose();
       glRendererRef.current = null;

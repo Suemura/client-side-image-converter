@@ -24,28 +24,6 @@ import {
 /** テクスチャ / drawImage の双方に渡せる描画ソース */
 export type EditableSource = HTMLCanvasElement | HTMLImageElement | ImageBitmap;
 
-/** WebGL2 パイプラインが利用可能かを判定する（`isOffscreenPipelineSupported` と同思想） */
-export const isWebGLPipelineSupported = (): boolean => {
-  if (
-    typeof document === "undefined" ||
-    typeof WebGL2RenderingContext === "undefined"
-  ) {
-    return false;
-  }
-  try {
-    const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl2");
-    if (!gl) {
-      return false;
-    }
-    // 取得できたコンテキストは即座に破棄する（判定のみ）
-    gl.getExtension("WEBGL_lose_context")?.loseContext();
-    return true;
-  } catch {
-    return false;
-  }
-};
-
 /** 調整を適用して自身の canvas へ描画する永続レンダラ */
 export interface AdjustmentRenderer {
   /** ソースを width×height の canvas へ調整適用して描画する */
@@ -156,31 +134,46 @@ export const createAdjustmentRenderer = (): AdjustmentRenderer | null => {
       gl.uniform1i(imageLocation, 0);
     }
 
+    // 直前にアップロードしたソース。同一ソースでの調整値のみ変更時（プレビューの
+    // スライダー操作など）にフル解像度テクスチャの再アップロードを避けるために保持する。
+    // 呼び出し側はソースの内容を変えるときは必ず別のオブジェクトを渡す前提
+    // （renderOrientedImage / imageEditor は毎回新しい canvas を生成する）。
+    let lastSource: EditableSource | null = null;
+
     const render: AdjustmentRenderer["render"] = (
       source,
       width,
       height,
       normalized,
     ) => {
-      canvas.width = width;
-      canvas.height = height;
+      // canvas のサイズ代入はドローバッファをリセットするため、変化時のみ行う
+      if (canvas.width !== width) {
+        canvas.width = width;
+      }
+      if (canvas.height !== height) {
+        canvas.height = height;
+      }
       gl.viewport(0, 0, width, height);
 
       gl.useProgram(program);
       gl.bindVertexArray(vao);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, texture);
-      // テクスチャは下から上へ格納されるため Y 反転して向きを合わせる
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        source,
-      );
+      // ソースが変わったときだけテクスチャを再アップロードする（調整値のみ変更時は転送を省く）。
+      // テクスチャは下から上へ格納されるため Y 反転して向きを合わせる。
+      if (source !== lastSource) {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.RGBA,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          source,
+        );
+        lastSource = source;
+      }
 
       // 調整 uniform をアップロード
       for (const [key, uniformName] of Object.entries(ADJUSTMENT_UNIFORMS)) {
