@@ -3,11 +3,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { downloadMultiple, downloadSingle } from "../utils/fileDownloader";
 import { formatFileSize, truncateFileName } from "../utils/fileName";
+import {
+  conversionResultsToFiles,
+  cropResultsToFiles,
+  type ToolId,
+} from "../utils/handoff";
 import type { ConversionResult } from "../utils/imageConverter";
 import { calculateCompressionRatio } from "../utils/imageConverter";
 import type { CropResult } from "../utils/imageCropper";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
+import { HandoffSend } from "./HandoffSend";
 import { ImageComparisonModal } from "./ImageComparisonModal";
 import styles from "./Results.module.css";
 
@@ -17,6 +23,8 @@ interface ConversionResultsProps {
   originalFiles?: File[];
   onClear: () => void;
   showComparison?: boolean;
+  /** 指定するとハンドオフの送出コントロール（この結果を次のツールへ）を表示する */
+  handoffOrigin?: ToolId;
 }
 
 export const ConversionResults: React.FC<ConversionResultsProps> = ({
@@ -25,6 +33,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   originalFiles = [],
   onClear,
   showComparison = true,
+  handoffOrigin,
 }) => {
   const { t } = useTranslation();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -146,6 +155,36 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   const resultsToShow = useMemo(() => results || [], [results]);
   const cropResultsToShow = useMemo(() => cropResults || [], [cropResults]);
 
+  // ハンドオフ送出用: 成功結果の MIME タイプ一覧（送り先候補の絞り込みに使う）。
+  // crop は croppedFile.type（元ファイルの MIME）ではなく実エンコード結果の
+  // croppedBlob.type を使う（BMP 入力の PNG フォールバック等で乖離するため）。
+  const handoffMimeTypes = useMemo(() => {
+    if (isCropMode && cropResults) {
+      return [
+        ...new Set(
+          cropResults
+            .filter((result) => result.success)
+            .map((result) => result.croppedBlob.type),
+        ),
+      ];
+    }
+    if (results) {
+      return [...new Set(results.map((result) => result.blob.type))];
+    }
+    return [];
+  }, [isCropMode, cropResults, results]);
+
+  // ハンドオフ送出用: File[] の生成（送出クリック時にのみ実行される）
+  const getHandoffFiles = useCallback(() => {
+    if (isCropMode && cropResults) {
+      return cropResultsToFiles(cropResults);
+    }
+    if (results) {
+      return conversionResultsToFiles(results);
+    }
+    return [];
+  }, [isCropMode, cropResults, results]);
+
   // 統計情報の計算を最適化
   const statistics = useMemo(() => {
     if (!isConversionMode) {
@@ -209,6 +248,16 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
           {t("results.clear")}
         </Button>
       </div>
+
+      {/* ハンドオフ送出コントロール（結果をダウンロードせず次のツールへ） */}
+      {handoffOrigin && (
+        <HandoffSend
+          origin={handoffOrigin}
+          mimeTypes={handoffMimeTypes}
+          getFiles={getHandoffFiles}
+          onSent={onClear}
+        />
+      )}
 
       {/* 統計情報（コンバージョンモードのみ） */}
       {isConversionMode && (

@@ -1,16 +1,18 @@
 import Link from "next/link";
 import type React from "react";
 import { useTranslation } from "react-i18next";
+import { HANDOFF_TOOLS } from "../utils/handoff";
 
 export const Navigation: React.FC = () => {
   const { t } = useTranslation();
 
+  // ツールのメタ定義（パス・ラベルキー）はハンドオフと共有の HANDOFF_TOOLS を単一の真実とする
   const navItems = [
     { label: t("navigation.top"), href: "/" },
-    { label: t("navigation.crop"), href: "/crop" },
-    { label: t("navigation.convert"), href: "/convert" },
-    { label: t("navigation.edit"), href: "/edit" },
-    { label: t("navigation.metadata"), href: "/metadata" },
+    ...HANDOFF_TOOLS.map((tool) => ({
+      label: t(tool.labelKey),
+      href: tool.path,
+    })),
   ];
 
   return (

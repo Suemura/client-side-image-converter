@@ -339,5 +339,12 @@
     "message": "Install this app to use it offline.",
     "button": "Install",
     "dismiss": "Dismiss"
+  },
+  "handoff": {
+    "sendTo": "Send these results to another tool (no download needed)",
+    "sendToTool": "Send to {{tool}}",
+    "received": "Received {{count}} result(s) from {{tool}}",
+    "skipped": "{{count}} file(s) could not be imported (unsupported format or file limit)",
+    "dismiss": "Dismiss"
   }
 }
