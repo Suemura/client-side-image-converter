@@ -3,6 +3,7 @@ import {
   ADJUSTMENT_KEYS,
   type AdjustmentState,
   applyAdjustmentToPixel,
+  blacksToneWeight,
   clampAdjustments,
   DEFAULT_ADJUSTMENTS,
   type EditState,
@@ -10,6 +11,9 @@ import {
   LUMA_WEIGHTS,
   normalizeAdjustments,
   resolveAdjustmentForIndex,
+  TEMPERATURE_SHIFT,
+  TINT_SHIFT,
+  whitesToneWeight,
 } from "../adjustments";
 
 /** UI 状態から正規化して 1 ピクセルへ適用するテストヘルパー */
@@ -164,6 +168,43 @@ describe("applyAdjustmentToPixel", () => {
     expect(after[0]).toBeCloseTo(0.5, 4);
     expect(after[1]).toBeCloseTo(0.5, 4);
     expect(after[2]).toBeCloseTo(0.5, 4);
+  });
+});
+
+describe("パイプライン係数の輸出（自動補正の逆算用）", () => {
+  it("blacksToneWeight は暗部 0.5・中点 0 の smoothstep マスク", () => {
+    expect(blacksToneWeight(0)).toBeCloseTo(0.5, 10);
+    expect(blacksToneWeight(0.25)).toBeCloseTo(0.25, 10);
+    expect(blacksToneWeight(0.5)).toBeCloseTo(0, 10);
+    expect(blacksToneWeight(1)).toBeCloseTo(0, 10);
+  });
+
+  it("whitesToneWeight は明部 0.5・中点 0 の smoothstep マスク", () => {
+    expect(whitesToneWeight(1)).toBeCloseTo(0.5, 10);
+    expect(whitesToneWeight(0.75)).toBeCloseTo(0.25, 10);
+    expect(whitesToneWeight(0.5)).toBeCloseTo(0, 10);
+    expect(whitesToneWeight(0)).toBeCloseTo(0, 10);
+  });
+
+  it("シフト係数は GLSL 側のリテラル（0.2）と一致する", () => {
+    expect(TEMPERATURE_SHIFT).toBe(0.2);
+    expect(TINT_SHIFT).toBe(0.2);
+  });
+
+  it("整合ガード: applyAdjustmentToPixel の黒/白レベルは輸出した重みと同じシフト量になる", () => {
+    // グレー 0.25 に blacks=-100（n=-1）→ 0.25 - blacksToneWeight(0.25) = 0
+    const black = apply([0.25, 0.25, 0.25], { blacks: -100 });
+    expect(black[0]).toBeCloseTo(0.25 - blacksToneWeight(0.25), 5);
+    // グレー 0.75 に whites=100（n=1）→ 0.75 + whitesToneWeight(0.75) = 1
+    const white = apply([0.75, 0.75, 0.75], { whites: 100 });
+    expect(white[0]).toBeCloseTo(0.75 + whitesToneWeight(0.75), 5);
+  });
+
+  it("整合ガード: applyAdjustmentToPixel の色温度/色合いは輸出した係数と同じシフト量になる", () => {
+    const [r, g, b] = apply([0.5, 0.5, 0.5], { temperature: 50, tint: 50 });
+    expect(r).toBeCloseTo(0.5 + 0.5 * TEMPERATURE_SHIFT, 5);
+    expect(b).toBeCloseTo(0.5 - 0.5 * TEMPERATURE_SHIFT, 5);
+    expect(g).toBeCloseTo(0.5 + 0.5 * TINT_SHIFT, 5);
   });
 });
 

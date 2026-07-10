@@ -8,6 +8,7 @@ import {
   rectPngFile,
   twoToneVerticalPngFile,
 } from "./helpers/fixtures";
+import { disableWebGL } from "./helpers/webgl";
 
 /** レンジスライダー（aria-label で特定）へ React 経由で値を設定する */
 const setSlider = async (page: Page, label: string, value: number) => {
@@ -271,19 +272,7 @@ test.describe("画像編集 /edit", () => {
   test("WebGL2 非対応時に Canvas2D フォールバックで動作する", async ({
     page,
   }) => {
-    // WebGL コンテキストを無効化して CPU パスへフォールバックさせる
-    await page.addInitScript(() => {
-      const proto = HTMLCanvasElement.prototype as unknown as {
-        getContext: (type: string, ...args: unknown[]) => unknown;
-      };
-      const original = proto.getContext;
-      proto.getContext = function (type: string, ...args: unknown[]) {
-        if (type === "webgl2" || type === "webgl") {
-          return null;
-        }
-        return original.call(this, type, ...args);
-      };
-    });
+    await disableWebGL(page);
 
     await page.goto("/edit/");
     await page
@@ -340,6 +329,143 @@ test.describe("画像編集 /edit", () => {
     ]);
     expect(download.suggestedFilename()).toBe("photo_edited.jpeg");
     expect(magicNumber.isJpeg(readFileSync(await download.path()))).toBe(true);
+  });
+
+  // --- 自動補正（Issue #68 第 3 項目） ---
+
+  test("オートレベルで低コントラスト画像のレンジが拡張される（再押下で不変・冪等）", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(
+        twoToneVerticalPngFile(
+          "lowcontrast.png",
+          16,
+          16,
+          [192, 192, 192],
+          [64, 64, 64],
+        ),
+      );
+
+    // プレビュー生成を待つ（上半分は元の明るいグレー ~192）
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.25))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(150);
+
+    await page
+      .getByRole("button", { name: "オートレベル", exact: true })
+      .click();
+
+    // 黒点 64 / 白点 192 が推定され、明部はほぼ白・暗部はほぼ黒へストレッチされる
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.25))[0], {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(240);
+    expect((await readPreviewPixel(page, 0.5, 0.75))[0]).toBeLessThan(15);
+
+    // 結果はスライダー値として可視化され、手動微調整の出発点になる
+    const blacks = await page
+      .getByLabel("黒レベル", { exact: true })
+      .inputValue();
+    const whites = await page
+      .getByLabel("白レベル", { exact: true })
+      .inputValue();
+    expect(Number(blacks)).toBeLessThan(0);
+    expect(Number(whites)).toBeGreaterThan(0);
+
+    // 冪等: 編集前統計基準のため再押下しても値が変わらない
+    await page
+      .getByRole("button", { name: "オートレベル", exact: true })
+      .click();
+    await expect(page.getByLabel("黒レベル", { exact: true })).toHaveValue(
+      blacks,
+    );
+    await expect(page.getByLabel("白レベル", { exact: true })).toHaveValue(
+      whites,
+    );
+  });
+
+  test("自動ホワイトバランスで色かぶりのチャンネル平均が等化される", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("bluecast.png", 16, 16, [100, 128, 156]));
+
+    // プレビュー生成を待つ（青かぶり: B が R より十分大きい）
+    await expect
+      .poll(
+        async () => {
+          const [r, , b] = await readPreviewPixel(page, 0.5, 0.5);
+          return b - r;
+        },
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(40);
+
+    await page
+      .getByRole("button", { name: "自動ホワイトバランス", exact: true })
+      .click();
+
+    // gray-world: R ≈ B、G ≈ (R+B)/2 へ等化される（UI 丸め分の誤差を許容）
+    await expect
+      .poll(
+        async () => {
+          const [r, , b] = await readPreviewPixel(page, 0.5, 0.5);
+          return Math.abs(r - b);
+        },
+        { timeout: 10_000 },
+      )
+      .toBeLessThan(6);
+    const [r, g, b] = await readPreviewPixel(page, 0.5, 0.5);
+    expect(Math.abs(g - (r + b) / 2)).toBeLessThan(6);
+
+    // 青かぶりの補正なので色温度は暖色方向（正）になる
+    expect(
+      Number(await page.getByLabel("色温度", { exact: true }).inputValue()),
+    ).toBeGreaterThan(0);
+  });
+
+  test("WebGL2 非対応時も自動補正が Canvas2D フォールバックで機能する", async ({
+    page,
+  }) => {
+    await disableWebGL(page);
+
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(
+        twoToneVerticalPngFile(
+          "cpu-auto.png",
+          16,
+          16,
+          [192, 192, 192],
+          [64, 64, 64],
+        ),
+      );
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.25))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(150);
+
+    await page
+      .getByRole("button", { name: "オートレベル", exact: true })
+      .click();
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.25))[0], {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(240);
+    expect((await readPreviewPixel(page, 0.5, 0.75))[0]).toBeLessThan(15);
   });
 
   // --- LUT フィルタ（Issue #67） ---
@@ -535,18 +661,7 @@ test.describe("画像編集 /edit", () => {
   });
 
   test("WebGL2 非対応時もヒストグラムが表示される", async ({ page }) => {
-    await page.addInitScript(() => {
-      const proto = HTMLCanvasElement.prototype as unknown as {
-        getContext: (type: string, ...args: unknown[]) => unknown;
-      };
-      const original = proto.getContext;
-      proto.getContext = function (type: string, ...args: unknown[]) {
-        if (type === "webgl2" || type === "webgl") {
-          return null;
-        }
-        return original.call(this, type, ...args);
-      };
-    });
+    await disableWebGL(page);
 
     await page.goto("/edit/");
     await page
@@ -571,18 +686,7 @@ test.describe("画像編集 /edit", () => {
   });
 
   test("WebGL2 非対応時も LUT が CPU パスで適用される", async ({ page }) => {
-    await page.addInitScript(() => {
-      const proto = HTMLCanvasElement.prototype as unknown as {
-        getContext: (type: string, ...args: unknown[]) => unknown;
-      };
-      const original = proto.getContext;
-      proto.getContext = function (type: string, ...args: unknown[]) {
-        if (type === "webgl2" || type === "webgl") {
-          return null;
-        }
-        return original.call(this, type, ...args);
-      };
-    });
+    await disableWebGL(page);
 
     await page.goto("/edit/");
     await page
@@ -732,18 +836,7 @@ test.describe("画像編集 /edit", () => {
   test("WebGL2 非対応時もトーンカーブが CPU パスで適用される", async ({
     page,
   }) => {
-    await page.addInitScript(() => {
-      const proto = HTMLCanvasElement.prototype as unknown as {
-        getContext: (type: string, ...args: unknown[]) => unknown;
-      };
-      const original = proto.getContext;
-      proto.getContext = function (type: string, ...args: unknown[]) {
-        if (type === "webgl2" || type === "webgl") {
-          return null;
-        }
-        return original.call(this, type, ...args);
-      };
-    });
+    await disableWebGL(page);
 
     await page.goto("/edit/");
     await page

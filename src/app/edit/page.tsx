@@ -15,6 +15,10 @@ import {
   resolveAdjustmentForIndex,
 } from "../../utils/adjustments";
 import {
+  computeAutoLevels,
+  computeAutoWhiteBalance,
+} from "../../utils/autoAdjust";
+import {
   computeHistogram,
   type HistogramData,
   resolveHistogramSampleSize,
@@ -268,6 +272,11 @@ export default function EditPage() {
     if (!file) {
       return;
     }
+    // 新しい画像の読み込み開始時点で編集前ヒストグラムを破棄する。
+    // currentPreviewIndex は同期的に切り替わる一方 sourceHistogram はデコード完了後に
+    // しか更新されないため、破棄しないとデコード中に前の画像の統計で自動補正が押せて
+    // しまう（stale 統計の適用）。null の間は autoDisabled が自動補正ボタンを無効化する。
+    setSourceHistogram(null);
     let cancelled = false;
     renderOrientedImage(file)
       .then((canvas) => {
@@ -285,6 +294,23 @@ export default function EditPage() {
       cancelled = true;
     };
   }, [files, currentPreviewIndex]);
+
+  // 自動補正（ワンショット）: 編集前ヒストグラムの統計から該当スライダー値を算出して
+  // 上書きする。書き込みは setCurrentAdjustments 経由のため一括 / 画像ごとの挙動は
+  // 手動スライダー操作と同一。編集前統計基準なので同じ画像で再押下しても値は変わらない（冪等）。
+  const handleAutoLevels = useCallback(() => {
+    if (!sourceHistogram) return;
+    const result = computeAutoLevels(sourceHistogram);
+    if (!result) return;
+    setCurrentAdjustments({ ...currentAdjustments, ...result });
+  }, [sourceHistogram, currentAdjustments, setCurrentAdjustments]);
+
+  const handleAutoWhiteBalance = useCallback(() => {
+    if (!sourceHistogram) return;
+    const result = computeAutoWhiteBalance(sourceHistogram);
+    if (!result) return;
+    setCurrentAdjustments({ ...currentAdjustments, ...result });
+  }, [sourceHistogram, currentAdjustments, setCurrentAdjustments]);
 
   const resetAdjustments = useCallback(() => {
     setSharedAdjustments(DEFAULT_ADJUSTMENTS);
@@ -574,6 +600,9 @@ export default function EditPage() {
                   <AdjustmentPanel
                     adjustments={currentAdjustments}
                     onAdjustmentsChange={setCurrentAdjustments}
+                    onAutoLevels={handleAutoLevels}
+                    onAutoWhiteBalance={handleAutoWhiteBalance}
+                    autoDisabled={!sourceHistogram}
                   />
                   <ToneCurvePanel
                     curve={currentToneCurve}
