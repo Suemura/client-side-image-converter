@@ -4,7 +4,8 @@
  * カーブは正規化座標 [0,1]² の制御点列で表し、Fritsch–Carlson の単調 3 次 Hermite 補間で
  * 256 エントリの 1D LUT へ焼成する（単調性保証・オーバーシュートなし）。GPU / CPU が共有する
  * 唯一のデータ形式は `buildToneCurveTable` が生成する RGBA インターリーブの
- * `Float32Array(256 * 4)` で、GPU は 256×1 テクスチャの LINEAR サンプリング、CPU は同式の
+ * `Float32Array(256 * 4)`（焼成時に 8bit 量子化済み）で、GPU は 256×1 RGBA8 テクスチャの
+ * LINEAR サンプリング、CPU は同式の
  * floor + lerp（`sampleCurveTable`）で lookup する（`adjustments.ts` の `applyAdjustmentToPixel` を
  * 唯一の真実とするのと同方針。GLSL 側は `applyToneCurveToPixel` を同順序・同係数でミラーする）。
  *
@@ -236,23 +237,29 @@ export const buildCurveLut = (points: CurvePoint[]): Float32Array => {
   return lut;
 };
 
+/** 焼成時の 8bit 量子化（GPU の RGBA8 テクセルと同じ値へ丸める）。恒等 i/255 は不変 */
+const quantize8 = (v: number): number => Math.round(v * 255) / 255;
+
 /**
  * トーンカーブ状態を GPU / CPU 共通の lookup テーブルへ焼成する。
  *
  * 形式は RGBA インターリーブの `Float32Array(256 * 4)`:
  * `.rgb` に各チャンネルのカーブ（現状は 3 つともマスターカーブの同値。将来 R/G/B 個別カーブを
  * 追加してもテクスチャ形式・シェーダを変えずに拡張できる）、`.a` に輝度カーブを詰める。
- * GPU はこれを 256×1 の RGBA8 テクスチャとしてアップロードする。
+ * GPU はこれを 256×1 の RGBA8 テクスチャとしてアップロードするため、各エントリは焼成時に
+ * 8bit 量子化しておく（GPU テクセルと CPU の参照値が同一になり lookup の量子化差が出ない。
+ * 恒等カーブの i/255 は量子化で不変のため恒等の厳密性も保たれる）。
  */
 export const buildToneCurveTable = (state: ToneCurveState): Float32Array => {
   const master = buildCurveLut(state.rgb);
   const luminance = buildCurveLut(state.luminance);
   const table = new Float32Array(CURVE_LUT_SIZE * 4);
   for (let i = 0; i < CURVE_LUT_SIZE; i++) {
-    table[i * 4] = master[i];
-    table[i * 4 + 1] = master[i];
-    table[i * 4 + 2] = master[i];
-    table[i * 4 + 3] = luminance[i];
+    const m = quantize8(master[i]);
+    table[i * 4] = m;
+    table[i * 4 + 1] = m;
+    table[i * 4 + 2] = m;
+    table[i * 4 + 3] = quantize8(luminance[i]);
   }
   return table;
 };
@@ -260,7 +267,8 @@ export const buildToneCurveTable = (state: ToneCurveState): Float32Array => {
 /**
  * 焼成テーブルの 1 チャンネルを v ∈ [0,1] で線形補間 lookup する。
  * GPU（256×1 テクスチャの LINEAR サンプリング + テクセル中心補正 (v*255+0.5)/256）と
- * 同じ floor + lerp の式で、GPU / CPU の一致を担保する。
+ * 同じ floor + lerp の式で lookup する。テーブル値は焼成時に 8bit 量子化済み
+ * （`buildToneCurveTable`）のため、GPU のテクセル値と CPU の参照値も同一で一致する。
  * channel: 0=R / 1=G / 2=B / 3=輝度。
  */
 export const sampleCurveTable = (

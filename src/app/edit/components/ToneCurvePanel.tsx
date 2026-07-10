@@ -29,7 +29,11 @@ interface ToneCurvePanelProps {
   curve: ToneCurveState;
   /** 不変更新契約: 新しい state オブジェクトを渡す（AdjustmentPanel と同方針） */
   onCurveChange: (next: ToneCurveState) => void;
-  /** プロット背景に重ねる輝度ヒストグラム（null は背景なし） */
+  /**
+   * プロット背景に重ねる輝度ヒストグラム（null は背景なし）。
+   * x 軸＝カーブの入力値に対する分布として読むため、編集前（カーブ適用前）の
+   * 分布を渡すこと（編集後の分布を渡すとカーブ操作で背景自体が動いてしまう）。
+   */
   histogram: HistogramData | null;
 }
 
@@ -84,6 +88,11 @@ export const ToneCurvePanel: React.FC<ToneCurvePanelProps> = ({
   // 既存の点の上では追加せずドラッグを開始する。
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
+      // 右クリック（コンテキストメニュー）やマルチタッチの 2 本目以降では
+      // 点の追加・ドラッグを開始しない
+      if (!e.isPrimary || e.button !== 0) {
+        return;
+      }
       e.currentTarget.setPointerCapture(e.pointerId);
       const indexAttr = (e.target as SVGElement).getAttribute(
         "data-point-index",
@@ -107,7 +116,8 @@ export const ToneCurvePanel: React.FC<ToneCurvePanelProps> = ({
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<SVGSVGElement>) => {
-      if (draggingIndexRef.current === null) {
+      // 2 本目の指の move でドラッグ中の点が飛ばないようプライマリのみ処理する
+      if (!e.isPrimary || draggingIndexRef.current === null) {
         return;
       }
       const { x, y } = toNormalized(e);
@@ -116,7 +126,11 @@ export const ToneCurvePanel: React.FC<ToneCurvePanelProps> = ({
     [points, toNormalized, updateChannel],
   );
 
-  const stopDragging = useCallback(() => {
+  const stopDragging = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    // 2 本目の指の up / cancel でプライマリのドラッグを中断しない
+    if (!e.isPrimary) {
+      return;
+    }
     draggingIndexRef.current = null;
   }, []);
 

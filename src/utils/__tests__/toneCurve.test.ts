@@ -147,8 +147,11 @@ describe("制御点の操作", () => {
   });
 });
 
+/** 焼成時の 8bit 量子化（buildToneCurveTable と同式） */
+const quantize8 = (v: number): number => Math.round(v * 255) / 255;
+
 describe("buildToneCurveTable / sampleCurveTable", () => {
-  it("RGBA インターリーブで .rgb にマスター、.a に輝度カーブを詰める", () => {
+  it("RGBA インターリーブで .rgb にマスター、.a に輝度カーブを詰める（8bit 量子化済み）", () => {
     const state: ToneCurveState = {
       rgb: liftedPoints(),
       luminance: identityPoints(),
@@ -157,11 +160,23 @@ describe("buildToneCurveTable / sampleCurveTable", () => {
     expect(table).toHaveLength(CURVE_LUT_SIZE * 4);
     const master = buildCurveLut(liftedPoints());
     for (const i of [0, 64, 128, 255]) {
-      expect(table[i * 4]).toBe(master[i]);
-      expect(table[i * 4 + 1]).toBe(master[i]);
-      expect(table[i * 4 + 2]).toBe(master[i]);
+      // Float32Array 格納による丸めがあるため双方 fround で比較する
+      const expected = Math.fround(quantize8(master[i]));
+      expect(table[i * 4]).toBe(expected);
+      expect(table[i * 4 + 1]).toBe(expected);
+      expect(table[i * 4 + 2]).toBe(expected);
       // 輝度は恒等
       expect(table[i * 4 + 3]).toBeCloseTo(i / 255, 6);
+    }
+  });
+
+  it("全エントリが 8bit 量子化済み（GPU の RGBA8 テクセルと同値。量子化は冪等）", () => {
+    const table = buildToneCurveTable({
+      rgb: liftedPoints(),
+      luminance: liftedPoints(),
+    });
+    for (let k = 0; k < table.length; k++) {
+      expect(table[k]).toBe(Math.fround(quantize8(table[k])));
     }
   });
 
@@ -202,9 +217,10 @@ describe("applyToneCurveToPixel", () => {
       luminance: identityPoints(),
     });
     const [r, g, b] = applyToneCurveToPixel(0.5, 0.5, 0.5, table);
-    expect(r).toBeCloseTo(0.75, 3);
-    expect(g).toBeCloseTo(0.75, 3);
-    expect(b).toBeCloseTo(0.75, 3);
+    // 8bit 量子化（最大 ~1/510）と 256 エントリ補間の誤差を許容する
+    expect(r).toBeCloseTo(0.75, 2);
+    expect(g).toBeCloseTo(0.75, 2);
+    expect(b).toBeCloseTo(0.75, 2);
   });
 
   it("輝度カーブは加算シフト（Rec.709 luma 基準で 3 チャンネル等量）として作用する", () => {

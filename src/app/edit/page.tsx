@@ -14,7 +14,11 @@ import {
   isDefaultAdjustments,
   resolveAdjustmentForIndex,
 } from "../../utils/adjustments";
-import { computeHistogram, type HistogramData } from "../../utils/histogram";
+import {
+  computeHistogram,
+  type HistogramData,
+  resolveHistogramSampleSize,
+} from "../../utils/histogram";
 import type {
   ConversionFailure,
   ConversionResult,
@@ -56,6 +60,33 @@ import { LutPicker } from "./components/LutPicker";
 import { ToneCurvePanel } from "./components/ToneCurvePanel";
 import styles from "./edit.module.css";
 
+/**
+ * 編集前ソース（EXIF 補正済みキャンバス）から輝度ヒストグラムを縮小サンプリングで算出する。
+ * トーンカーブ背景用（x 軸＝カーブ入力値に対する分布）で、画像切替時に 1 回だけ実行される。
+ * CompareView の編集後サンプリングと同じく point sampling（smoothing 無効）で決定的に縮小する。
+ */
+const computeSourceHistogram = (
+  canvas: HTMLCanvasElement,
+): HistogramData | null => {
+  const { width, height } = resolveHistogramSampleSize(
+    canvas.width,
+    canvas.height,
+  );
+  if (width <= 0 || height <= 0) {
+    return null;
+  }
+  const sample = document.createElement("canvas");
+  sample.width = width;
+  sample.height = height;
+  const ctx = sample.getContext("2d", { willReadFrequently: true });
+  if (!ctx) {
+    return null;
+  }
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(canvas, 0, 0, width, height);
+  return computeHistogram(ctx.getImageData(0, 0, width, height).data);
+};
+
 export default function EditPage() {
   const { t } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
@@ -72,6 +103,13 @@ export default function EditPage() {
 
   // 調整・LUT 適用後のプレビューから算出したヒストグラム（CompareView からフレームを受け取る）
   const [histogram, setHistogram] = useState<HistogramData | null>(null);
+
+  // トーンカーブ背景用の編集前（カーブ適用前）ヒストグラム。編集後の histogram を流用すると
+  // カーブのドラッグで背景の分布自体が動くフィードバックループになるため分離する
+  // （HistogramPanel = 適用後のモニタ / カーブ背景 = 入力側の安定した参照、と役割を分ける）
+  const [sourceHistogram, setSourceHistogram] = useState<HistogramData | null>(
+    null,
+  );
 
   // CompareView へ渡すコールバックは安定参照にし、無関係な再レンダーで
   // 編集後描画（GPU 再描画・再サンプリング）を誘発しない
@@ -238,6 +276,7 @@ export default function EditPage() {
         }
         setPreviewSource(canvas);
         setPreviewSize({ width: canvas.width, height: canvas.height });
+        setSourceHistogram(computeSourceHistogram(canvas));
       })
       .catch((error) => {
         console.error("Preview generation failed:", error);
@@ -289,6 +328,7 @@ export default function EditPage() {
     setEditFailures([]);
     setPreviewSource(null);
     setHistogram(null);
+    setSourceHistogram(null);
     resetAdjustments();
     setCustomLutName(null);
   }, [resetAdjustments, revokeResultUrls, editResults]);
@@ -538,7 +578,7 @@ export default function EditPage() {
                   <ToneCurvePanel
                     curve={currentToneCurve}
                     onCurveChange={setCurrentToneCurve}
-                    histogram={histogram}
+                    histogram={sourceHistogram}
                   />
                   <LutPicker
                     selection={currentLutSelection}
