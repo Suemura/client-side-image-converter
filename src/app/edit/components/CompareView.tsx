@@ -212,6 +212,11 @@ export const CompareView: React.FC<CompareViewProps> = ({
       // Before/After の両キャンバスは同寸で完全重畳しているため、分割位置に関わらず
       // どちら側をクリックしても同じソース画素に写像される。
       if (eyedropperActive) {
+        // ピックは調整値の書き換え + モード解除を伴うため、ToneCurvePanel の点操作と
+        // 同様にプライマリポインタの左ボタンのみ受け付ける（右クリック・多点タッチを無視）
+        if (!e.isPrimary || e.button !== 0) {
+          return;
+        }
         const canvas = editedCanvasRef.current;
         if (!canvas || !onEyedropperPick) {
           return;
