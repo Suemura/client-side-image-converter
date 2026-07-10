@@ -163,7 +163,9 @@
     "auto": {
       "title": "自動補正",
       "levels": "オートレベル",
-      "whiteBalance": "自動ホワイトバランス"
+      "whiteBalance": "自動ホワイトバランス",
+      "eyedropper": "WB スポイト",
+      "eyedropperHint": "無彩色（グレー）にしたい点をプレビューでクリックしてください（Esc で解除）"
     },
     "histogram": {
       "title": "ヒストグラム",

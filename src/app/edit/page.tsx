@@ -15,8 +15,12 @@ import {
   resolveAdjustmentForIndex,
 } from "../../utils/adjustments";
 import {
+  averageRgb,
+  clampSampleWindow,
   computeAutoLevels,
   computeAutoWhiteBalance,
+  computeWhiteBalanceForNeutralPoint,
+  WB_SAMPLE_RADIUS,
 } from "../../utils/autoAdjust";
 import {
   computeHistogram,
@@ -49,10 +53,7 @@ import {
   type ToneCurveEditState,
   type ToneCurveState,
 } from "../../utils/toneCurve";
-import type {
-  EditableSource,
-  LutApplication,
-} from "../../utils/webglImageRenderer";
+import type { LutApplication } from "../../utils/webglImageRenderer";
 import { ConversionErrors } from "../convert/components/ConversionErrors";
 import { ImageUploadSection } from "../convert/components/ImageUploadSection";
 import { ProgressBar } from "../convert/components/ProgressBar";
@@ -95,7 +96,9 @@ export default function EditPage() {
   const { t } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
-  const [previewSource, setPreviewSource] = useState<EditableSource | null>(
+  // EXIF 補正済みのプレビューソース。WB スポイトが getImageData で近傍を読むため
+  // EditableSource ではなく 2D キャンバスに絞って保持する（renderOrientedImage の実返却型）
+  const [previewSource, setPreviewSource] = useState<HTMLCanvasElement | null>(
     null,
   );
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
@@ -114,6 +117,9 @@ export default function EditPage() {
   const [sourceHistogram, setSourceHistogram] = useState<HistogramData | null>(
     null,
   );
+
+  // WB スポイトモード（モード中はプレビューのクリックで中性点を指定する）
+  const [wbEyedropperActive, setWbEyedropperActive] = useState(false);
 
   // CompareView へ渡すコールバックは安定参照にし、無関係な再レンダーで
   // 編集後描画（GPU 再描画・再サンプリング）を誘発しない
@@ -277,6 +283,9 @@ export default function EditPage() {
     // しか更新されないため、破棄しないとデコード中に前の画像の統計で自動補正が押せて
     // しまう（stale 統計の適用）。null の間は autoDisabled が自動補正ボタンを無効化する。
     setSourceHistogram(null);
+    // 画像切替・ファイル変更時は WB スポイトモードも解除する（前の画像を狙った
+    // クリックが新しい画像のソースをサンプルする誤適用を防ぐ）
+    setWbEyedropperActive(false);
     let cancelled = false;
     renderOrientedImage(file)
       .then((canvas) => {
@@ -311,6 +320,58 @@ export default function EditPage() {
     if (!result) return;
     setCurrentAdjustments({ ...currentAdjustments, ...result });
   }, [sourceHistogram, currentAdjustments, setCurrentAdjustments]);
+
+  const handleToggleEyedropper = useCallback(() => {
+    setWbEyedropperActive((active) => !active);
+  }, []);
+
+  // WB スポイト: クリック点（ソース自然座標）の編集前ソース近傍（5×5）平均から
+  // temperature / tint を逆算してセットする。編集後キャンバスから読むと補正結果が
+  // 次のサンプル値へ混入するフィードバックになるため、必ず編集前ソースを読む
+  // （同じ点の再クリックで値が変わらない = 冪等。自動補正と同じ編集前統計基準）。
+  // 適用後はワンショットとして自動解除する。透明画素（サンプル無効）はモード維持。
+  const handleEyedropperPick = useCallback(
+    (x: number, y: number) => {
+      if (!previewSource) return;
+      const sampleWindow = clampSampleWindow(
+        x,
+        y,
+        WB_SAMPLE_RADIUS,
+        previewSource.width,
+        previewSource.height,
+      );
+      if (!sampleWindow) return;
+      const ctx = previewSource.getContext("2d");
+      if (!ctx) return;
+      const rgb = averageRgb(
+        ctx.getImageData(
+          sampleWindow.x,
+          sampleWindow.y,
+          sampleWindow.width,
+          sampleWindow.height,
+        ).data,
+      );
+      if (!rgb) return;
+      setCurrentAdjustments({
+        ...currentAdjustments,
+        ...computeWhiteBalanceForNeutralPoint(rgb),
+      });
+      setWbEyedropperActive(false);
+    },
+    [previewSource, currentAdjustments, setCurrentAdjustments],
+  );
+
+  // Esc キーでスポイトモードを解除する（モード中のみ購読）
+  useEffect(() => {
+    if (!wbEyedropperActive) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setWbEyedropperActive(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [wbEyedropperActive]);
 
   const resetAdjustments = useCallback(() => {
     setSharedAdjustments(DEFAULT_ADJUSTMENTS);
@@ -355,6 +416,7 @@ export default function EditPage() {
     setPreviewSource(null);
     setHistogram(null);
     setSourceHistogram(null);
+    setWbEyedropperActive(false);
     resetAdjustments();
     setCustomLutName(null);
   }, [resetAdjustments, revokeResultUrls, editResults]);
@@ -545,6 +607,8 @@ export default function EditPage() {
                     onPreviousImage={handlePreviousImage}
                     onNextImage={handleNextImage}
                     onEditedFrame={handleEditedFrame}
+                    eyedropperActive={wbEyedropperActive}
+                    onEyedropperPick={handleEyedropperPick}
                   />
 
                   <EditToolbar
@@ -602,6 +666,8 @@ export default function EditPage() {
                     onAdjustmentsChange={setCurrentAdjustments}
                     onAutoLevels={handleAutoLevels}
                     onAutoWhiteBalance={handleAutoWhiteBalance}
+                    onToggleEyedropper={handleToggleEyedropper}
+                    eyedropperActive={wbEyedropperActive}
                     autoDisabled={!sourceHistogram}
                   />
                   <ToneCurvePanel

@@ -163,7 +163,9 @@
     "auto": {
       "title": "Auto Enhance",
       "levels": "Auto Levels",
-      "whiteBalance": "Auto White Balance"
+      "whiteBalance": "Auto White Balance",
+      "eyedropper": "WB Eyedropper",
+      "eyedropperHint": "Click a point in the preview that should be neutral gray (press Esc to cancel)"
     },
     "histogram": {
       "title": "Histogram",

@@ -46,3 +46,15 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* WB スポイトのトグル中（HistogramPanel の chipActive を踏襲） */
+.autoButton[aria-pressed="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+/* トグル中のホバーで .autoButton:hover の border-color に負けないよう再固定
+   （HistogramPanel の .chipActive:hover と同趣旨） */
+.autoButton[aria-pressed="true"]:hover:not(:disabled) {
+  border-color: var(--primary);
+}

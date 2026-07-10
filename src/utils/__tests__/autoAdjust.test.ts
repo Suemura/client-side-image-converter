@@ -7,10 +7,15 @@ import {
 } from "../adjustments";
 import {
   AUTO_LEVELS_CLIP_RATIO,
+  averageRgb,
   channelMeansFromHistogram,
+  clampSampleWindow,
   computeAutoLevels,
   computeAutoWhiteBalance,
+  computeWhiteBalanceForNeutralPoint,
+  displayPointToSourcePixel,
   histogramPercentileRange,
+  WB_SAMPLE_RADIUS,
 } from "../autoAdjust";
 import { computeHistogram, HISTOGRAM_BINS } from "../histogram";
 
@@ -206,5 +211,166 @@ describe("computeAutoWhiteBalance", () => {
 
   it("空のヒストグラムは null を返す", () => {
     expect(computeAutoWhiteBalance(histogramOf([]))).toBeNull();
+  });
+});
+
+describe("computeWhiteBalanceForNeutralPoint", () => {
+  const toRgb = ([r, g, b]: [number, number, number]) => ({
+    r: r / 255,
+    g: g / 255,
+    b: b / 255,
+  });
+
+  it("無彩色グレーは無補正を返す", () => {
+    expect(computeWhiteBalanceForNeutralPoint(toRgb([128, 128, 128]))).toEqual({
+      temperature: 0,
+      tint: 0,
+    });
+  });
+
+  it("青被りの点で temperature が正（暖色方向）になる", () => {
+    // b - r = 56/255 → temperature = 100·(56/255)/0.4 ≈ 55
+    expect(computeWhiteBalanceForNeutralPoint(toRgb([100, 128, 156]))).toEqual({
+      temperature: 55,
+      tint: 0,
+    });
+  });
+
+  it("極端な色は ±100 にクランプされる", () => {
+    // b - r = -1 → temperature = -250 → -100 へ飽和
+    const result = computeWhiteBalanceForNeutralPoint({ r: 1, g: 0.5, b: 0 });
+    expect(result.temperature).toBe(-100);
+    expect(result.tint).toBe(0);
+  });
+
+  it("クロスチェック: 逆算値をパイプラインへ通すと対象点がほぼ中性になる", () => {
+    const cast: [number, number, number] = [100, 128, 156];
+    const result = computeWhiteBalanceForNeutralPoint(toRgb(cast));
+    const [r, g, b] = applyResult(
+      [cast[0] / 255, cast[1] / 255, cast[2] / 255],
+      result,
+    );
+    expect(Math.abs(r - b)).toBeLessThan(0.01);
+    expect(Math.abs(g - (r + b) / 2)).toBeLessThan(0.01);
+  });
+
+  it("等価性: 均一色画像への gray-world は同色へのスポイトと一致する（リファクタ回帰ガード）", () => {
+    const cast: [number, number, number] = [100, 128, 156];
+    expect(computeAutoWhiteBalance(histogramOf(fill(cast, 100)))).toEqual(
+      computeWhiteBalanceForNeutralPoint(toRgb(cast)),
+    );
+  });
+});
+
+describe("clampSampleWindow", () => {
+  it("内部点では radius=2 の 5×5 窓を返す", () => {
+    expect(clampSampleWindow(10, 10, WB_SAMPLE_RADIUS, 16, 16)).toEqual({
+      x: 8,
+      y: 8,
+      width: 5,
+      height: 5,
+    });
+  });
+
+  it("角では窓が縮む（(0,0) → 3×3）", () => {
+    expect(clampSampleWindow(0, 0, WB_SAMPLE_RADIUS, 16, 16)).toEqual({
+      x: 0,
+      y: 0,
+      width: 3,
+      height: 3,
+    });
+  });
+
+  it("右下端でも境界内に収まる", () => {
+    expect(clampSampleWindow(15, 15, WB_SAMPLE_RADIUS, 16, 16)).toEqual({
+      x: 13,
+      y: 13,
+      width: 3,
+      height: 3,
+    });
+  });
+
+  it("小数の中心は floor される", () => {
+    expect(clampSampleWindow(10.7, 10.2, WB_SAMPLE_RADIUS, 16, 16)).toEqual(
+      clampSampleWindow(10, 10, WB_SAMPLE_RADIUS, 16, 16),
+    );
+  });
+
+  it("画像外の中心・不正寸法は null を返す", () => {
+    expect(clampSampleWindow(-1, 5, WB_SAMPLE_RADIUS, 16, 16)).toBeNull();
+    expect(clampSampleWindow(16, 5, WB_SAMPLE_RADIUS, 16, 16)).toBeNull();
+    expect(clampSampleWindow(5, 5, WB_SAMPLE_RADIUS, 0, 16)).toBeNull();
+    expect(
+      clampSampleWindow(5, Number.NaN, WB_SAMPLE_RADIUS, 16, 16),
+    ).toBeNull();
+  });
+});
+
+describe("averageRgb", () => {
+  const rgbaOf = (
+    pixels: Array<[number, number, number, number]>,
+  ): Uint8ClampedArray => {
+    const data = new Uint8ClampedArray(pixels.length * 4);
+    pixels.forEach(([r, g, b, a], i) => {
+      data.set([r, g, b, a], i * 4);
+    });
+    return data;
+  };
+
+  it("混合ピクセルの平均色を [0,1] 正規化で返す", () => {
+    const avg = averageRgb(
+      rgbaOf([
+        [100, 150, 200, 255],
+        [200, 150, 100, 255],
+      ]),
+    );
+    expect(avg?.r).toBeCloseTo(150 / 255, 10);
+    expect(avg?.g).toBeCloseTo(150 / 255, 10);
+    expect(avg?.b).toBeCloseTo(150 / 255, 10);
+  });
+
+  it("alpha = 0 の完全透明ピクセルは平均から除外する", () => {
+    const avg = averageRgb(
+      rgbaOf([
+        [100, 100, 100, 255],
+        [255, 255, 255, 0],
+      ]),
+    );
+    expect(avg?.r).toBeCloseTo(100 / 255, 10);
+  });
+
+  it("全透明・空データは null を返す", () => {
+    expect(averageRgb(rgbaOf([[255, 255, 255, 0]]))).toBeNull();
+    expect(averageRgb(new Uint8ClampedArray(0))).toBeNull();
+  });
+});
+
+describe("displayPointToSourcePixel", () => {
+  it("縮小表示のクリック位置をソース自然座標へ写像する", () => {
+    // 16×16 のソースを 8×8 で表示 → (4, 2) は (8, 4)
+    expect(displayPointToSourcePixel(4, 2, 8, 8, 16, 16)).toEqual({
+      x: 8,
+      y: 4,
+    });
+  });
+
+  it("右端・下端のクリックは寸法-1 にクランプされる", () => {
+    expect(displayPointToSourcePixel(8, 8, 8, 8, 16, 16)).toEqual({
+      x: 15,
+      y: 15,
+    });
+  });
+
+  it("負のオフセットは 0 にクランプされる", () => {
+    expect(displayPointToSourcePixel(-1, -1, 8, 8, 16, 16)).toEqual({
+      x: 0,
+      y: 0,
+    });
+  });
+
+  it("表示・ソース寸法が不正なときは null を返す", () => {
+    expect(displayPointToSourcePixel(4, 2, 0, 8, 16, 16)).toBeNull();
+    expect(displayPointToSourcePixel(4, 2, 8, 8, 0, 16)).toBeNull();
+    expect(displayPointToSourcePixel(Number.NaN, 2, 8, 8, 16, 16)).toBeNull();
   });
 });
