@@ -75,8 +75,9 @@ export const computeHistogram = (
 /**
  * サンプリング用キャンバスの寸法を解決する。
  * アスペクト比を維持したまま総ピクセル数が maxPixels 以下になるよう縮小する
- * （拡大はしない。各辺は最小 1）。縦横比が極端な画像では floor と最小 1 の
- * 組み合わせにより上限を多少超えることがあるが、性能上の目安として許容する。
+ * （拡大はしない。各辺は最小 1）。縦横比が極端な画像で片辺が最小 1 に
+ * クランプされた場合も、確定した辺で残余バジェットを割り直すことで
+ * 総ピクセル数 ≤ maxPixels を厳密に保つ。
  * 不正な寸法（非有限・0 以下）は { width: 0, height: 0 } を返し、呼び出し側でスキップする。
  */
 export const resolveHistogramSampleSize = (
@@ -97,10 +98,17 @@ export const resolveHistogramSampleSize = (
     return { width, height };
   }
   const scale = Math.sqrt(maxPixels / total);
-  return {
-    width: Math.max(1, Math.floor(width * scale)),
-    height: Math.max(1, Math.floor(height * scale)),
-  };
+  // 高さが最小 1 にクランプされるケース（横長）でも上限を超えないよう幅は maxPixels 以下に抑える
+  const sampleWidth = Math.min(
+    Math.max(1, Math.floor(width * scale)),
+    maxPixels,
+  );
+  // 幅が最小 1 にクランプされるケース（縦長）は残余バジェット（maxPixels / 幅）で高さを再クランプする
+  const sampleHeight = Math.max(
+    1,
+    Math.min(Math.floor(height * scale), Math.floor(maxPixels / sampleWidth)),
+  );
+  return { width: sampleWidth, height: sampleHeight };
 };
 
 /** 複数チャンネルの共通スケール（最大カウント）を求める。RGB 重畳表示で共用する */

@@ -103,6 +103,11 @@ export const CompareView: React.FC<CompareViewProps> = ({
       if (!sctx) {
         return;
       }
+      // point sampling（nearest-neighbor の等間隔サブサンプリング）で縮小する。
+      // 既定の smoothing（バイリニア平均）は分布を中間調へ収縮させ、黒/白クリッピングの
+      // 裾や孤立ハイライトを鈍らせるため無効化する（ブラウザ非依存で決定的）。
+      // 寸法代入でコンテキスト状態がリセットされるため drawImage の直前で毎回設定する
+      sctx.imageSmoothingEnabled = false;
       sctx.drawImage(canvas, 0, 0, sw, sh);
       callback(sctx.getImageData(0, 0, sw, sh));
     });

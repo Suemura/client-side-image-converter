@@ -99,6 +99,20 @@ describe("resolveHistogramSampleSize", () => {
     expect(height).toBeGreaterThanOrEqual(1);
   });
 
+  it("極端な縦横比でも総ピクセル数は上限を超えない（縦長: 幅が最小 1 のとき残余バジェットで高さを再クランプ）", () => {
+    const { width, height } = resolveHistogramSampleSize(1, 1_000_000, 65536);
+    expect(width).toBe(1);
+    expect(height).toBe(65536);
+    expect(width * height).toBeLessThanOrEqual(65536);
+  });
+
+  it("極端な縦横比でも総ピクセル数は上限を超えない（横長: 高さが最小 1 のとき幅を上限でクランプ）", () => {
+    const { width, height } = resolveHistogramSampleSize(1_000_000, 1, 65536);
+    expect(height).toBe(1);
+    expect(width).toBe(65536);
+    expect(width * height).toBeLessThanOrEqual(65536);
+  });
+
   it("不正な寸法は { width: 0, height: 0 } を返す", () => {
     expect(resolveHistogramSampleSize(0, 100)).toEqual({
       width: 0,
