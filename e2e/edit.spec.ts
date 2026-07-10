@@ -466,6 +466,110 @@ test.describe("画像編集 /edit", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
+  // --- ヒストグラム（Issue #68） ---
+
+  /**
+   * ヒストグラム SVG パス（`buildHistogramPath` の固定形式 `M0 100 L{x} {y} ... Z`）から
+   * 非ゼロビン（y が下辺 100 より上の点）の x 座標一覧を得る
+   */
+  const histogramSpikeXs = async (
+    page: Page,
+    testId: string,
+  ): Promise<number[]> => {
+    const d = await page.getByTestId(testId).getAttribute("d");
+    if (!d) {
+      return [];
+    }
+    const xs: number[] = [];
+    for (const match of d.matchAll(/L([\d.]+) ([\d.]+)/g)) {
+      const x = Number(match[1]);
+      const y = Number(match[2]);
+      if (y < 99.5) {
+        xs.push(x);
+      }
+    }
+    return xs;
+  };
+
+  test("ヒストグラムが表示され、輝度分布が調整に追従する", async ({ page }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("hist.png", 16, 16, [128, 128, 128]));
+
+    // プレビュー描画後にヒストグラムパネルが現れる（既定は RGB モードで 3 パス）
+    await expect(page.getByTestId("histogram-panel")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId("histogram-path-r")).toBeVisible();
+    await expect(page.getByTestId("histogram-path-g")).toBeVisible();
+    await expect(page.getByTestId("histogram-path-b")).toBeVisible();
+
+    // 輝度モードへ切替（1 パスのみ）。均一グレー 128 のスパイクは中央付近（x ≈ 128.5）
+    await page.getByTestId("histogram-mode-luminance").click();
+    await expect(page.getByTestId("histogram-path-r")).toHaveCount(0);
+    await expect
+      .poll(() => histogramSpikeXs(page, "histogram-path-luminance"), {
+        timeout: 10_000,
+      })
+      .not.toHaveLength(0);
+    const centered = await histogramSpikeXs(page, "histogram-path-luminance");
+    expect(centered.length).toBeLessThan(10);
+    for (const x of centered) {
+      expect(x).toBeGreaterThan(112);
+      expect(x).toBeLessThan(145);
+    }
+
+    // 露光量 +100（×2）でグレー 128 は白飛び（255）し、スパイクが右端へ移動する
+    await setSlider(page, "露光量", 100);
+    await expect
+      .poll(
+        async () =>
+          Math.max(
+            0,
+            ...(await histogramSpikeXs(page, "histogram-path-luminance")),
+          ),
+        { timeout: 10_000 },
+      )
+      .toBeGreaterThan(240);
+  });
+
+  test("WebGL2 非対応時もヒストグラムが表示される", async ({ page }) => {
+    await page.addInitScript(() => {
+      const proto = HTMLCanvasElement.prototype as unknown as {
+        getContext: (type: string, ...args: unknown[]) => unknown;
+      };
+      const original = proto.getContext;
+      proto.getContext = function (type: string, ...args: unknown[]) {
+        if (type === "webgl2" || type === "webgl") {
+          return null;
+        }
+        return original.call(this, type, ...args);
+      };
+    });
+
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("hist-cpu.png", 16, 16, [128, 128, 128]));
+
+    await expect(page.getByTestId("histogram-panel")).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByTestId("histogram-mode-luminance").click();
+    // CPU パス（Canvas2D）でも同じ経路（転写済み 2D キャンバス）から算出される
+    await expect
+      .poll(() => histogramSpikeXs(page, "histogram-path-luminance"), {
+        timeout: 10_000,
+      })
+      .not.toHaveLength(0);
+    const xs = await histogramSpikeXs(page, "histogram-path-luminance");
+    for (const x of xs) {
+      expect(x).toBeGreaterThan(112);
+      expect(x).toBeLessThan(145);
+    }
+  });
+
   test("WebGL2 非対応時も LUT が CPU パスで適用される", async ({ page }) => {
     await page.addInitScript(() => {
       const proto = HTMLCanvasElement.prototype as unknown as {

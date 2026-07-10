@@ -14,6 +14,7 @@ import {
   isDefaultAdjustments,
   resolveAdjustmentForIndex,
 } from "../../utils/adjustments";
+import { computeHistogram, type HistogramData } from "../../utils/histogram";
 import type {
   ConversionFailure,
   ConversionResult,
@@ -42,6 +43,7 @@ import { ProgressBar } from "../convert/components/ProgressBar";
 import { AdjustmentPanel } from "./components/AdjustmentPanel";
 import { CompareView } from "./components/CompareView";
 import { EditToolbar } from "./components/EditToolbar";
+import { HistogramPanel } from "./components/HistogramPanel";
 import { LutPicker } from "./components/LutPicker";
 import styles from "./edit.module.css";
 
@@ -58,6 +60,15 @@ export default function EditPage() {
   const [progressTotal, setProgressTotal] = useState(0);
   const [editResults, setEditResults] = useState<ConversionResult[]>([]);
   const [editFailures, setEditFailures] = useState<ConversionFailure[]>([]);
+
+  // 調整・LUT 適用後のプレビューから算出したヒストグラム（CompareView からフレームを受け取る）
+  const [histogram, setHistogram] = useState<HistogramData | null>(null);
+
+  // CompareView へ渡すコールバックは安定参照にし、無関係な再レンダーで
+  // 編集後描画（GPU 再描画・再サンプリング）を誘発しない
+  const handleEditedFrame = useCallback((frame: ImageData) => {
+    setHistogram(computeHistogram(frame.data));
+  }, []);
 
   // 出力設定
   const [preserveExif, setPreserveExif] = useState(false);
@@ -228,6 +239,7 @@ export default function EditPage() {
     setEditResults([]);
     setEditFailures([]);
     setPreviewSource(null);
+    setHistogram(null);
     resetAdjustments();
     setCustomLutName(null);
   }, [resetAdjustments, revokeResultUrls, editResults]);
@@ -380,6 +392,7 @@ export default function EditPage() {
                     totalImages={files.length}
                     onPreviousImage={handlePreviousImage}
                     onNextImage={handleNextImage}
+                    onEditedFrame={handleEditedFrame}
                   />
 
                   <EditToolbar
@@ -426,8 +439,9 @@ export default function EditPage() {
               )}
             </div>
 
-            {/* 右カラム: 調整スライダー + LUT フィルタ */}
+            {/* 右カラム: ヒストグラム + 調整スライダー + LUT フィルタ */}
             <div className={styles.column}>
+              {hasFiles && <HistogramPanel histogram={histogram} />}
               <h4 className={styles.columnTitle}>{t("edit.adjustments")}</h4>
               {hasFiles ? (
                 <>
