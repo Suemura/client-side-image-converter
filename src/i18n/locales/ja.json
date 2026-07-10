@@ -165,6 +165,13 @@
       "rgb": "RGB",
       "luminance": "輝度"
     },
+    "toneCurve": {
+      "title": "トーンカーブ",
+      "rgb": "RGB",
+      "luminance": "輝度",
+      "hint": "クリックで点を追加、ドラッグで移動、ダブルクリックで削除できます。",
+      "reset": "カーブをリセット"
+    },
     "lut": {
       "title": "フィルター (LUT)",
       "none": "なし",

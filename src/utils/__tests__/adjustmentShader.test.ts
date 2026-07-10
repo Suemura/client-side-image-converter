@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ADJUSTMENT_UNIFORMS,
   buildAdjustmentShader,
+  CURVE_SAMPLER,
+  CURVE_UNIFORMS,
   IMAGE_UNIFORM,
   LUT_SAMPLER,
   LUT_UNIFORMS,
@@ -75,5 +77,38 @@ describe("buildAdjustmentShader", () => {
     expect(shader).toContain(`if (${LUT_UNIFORMS.enabled} > 0.5)`);
     expect(shader).toContain(`texture(${LUT_SAMPLER}, lutCoord)`);
     expect(shader).toContain(`mix(c, graded, ${LUT_UNIFORMS.strength})`);
+  });
+
+  it("トーンカーブの sampler2D と uniform が宣言・参照されている（配線漏れガード）", () => {
+    expect(shader).toContain(`uniform sampler2D ${CURVE_SAMPLER};`);
+    for (const uniformName of Object.values(CURVE_UNIFORMS)) {
+      expect(shader).toContain(`uniform float ${uniformName};`);
+      const occurrences = shader.split(uniformName).length - 1;
+      expect(occurrences).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it("トーンカーブは enabled ガード付きで RGB → 輝度（.a の加算シフト）の順に適用する", () => {
+    expect(shader).toContain(`if (${CURVE_UNIFORMS.enabled} > 0.5)`);
+    // 各チャンネルの lookup（.r / .g / .b）と輝度カーブ（.a）の加算シフト
+    expect(shader).toContain(
+      `texture(${CURVE_SAMPLER}, vec2(curvePos.r, 0.5)).r`,
+    );
+    expect(shader).toContain(
+      `texture(${CURVE_SAMPLER}, vec2(curvePos.g, 0.5)).g`,
+    );
+    expect(shader).toContain(
+      `texture(${CURVE_SAMPLER}, vec2(curvePos.b, 0.5)).b`,
+    );
+    expect(shader).toContain(").a - curveLuma");
+    expect(shader).toContain("clamp(c + curveShift, 0.0, 1.0)");
+  });
+
+  it("適用順は 調整 → トーンカーブ → LUT（カーブブロックが LUT ブロックより前にある）", () => {
+    const curveIndex = shader.indexOf(`if (${CURVE_UNIFORMS.enabled} > 0.5)`);
+    const lutIndex = shader.indexOf(`if (${LUT_UNIFORMS.enabled} > 0.5)`);
+    expect(curveIndex).toBeGreaterThan(-1);
+    expect(lutIndex).toBeGreaterThan(-1);
+    expect(curveIndex).toBeLessThan(lutIndex);
   });
 });

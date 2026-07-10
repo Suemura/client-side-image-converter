@@ -134,7 +134,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ### 9. E2E テスト（`e2e/` + Playwright）
 
-- 実ブラウザ（Chromium）で「アップロード → 変換/トリミング/編集（ライト/カラー調整 + LUT フィルタ + ヒストグラム表示）/EXIF 削除 → ダウンロード」を検証する
+- 実ブラウザ（Chromium）で「アップロード → 変換/トリミング/編集（ライト/カラー調整 + トーンカーブ + LUT フィルタ + ヒストグラム表示）/EXIF 削除 → ダウンロード」を検証する
 - **ダウンロード物の中身まで検証する**: マジックナンバー（JPEG/PNG/WebP/AVIF）、piexifjs / PNG・WebP チャンク解析によるバイナリ検証（GPS の削除・丸めの確認、JPEG→PNG / →WebP 変換時の EXIF 保持の確認）
 - **一括変換は ZIP の全エントリ（件数・ファイル名・マジックナンバー）を検証**し、変換時に本アプリの画像処理 Web Worker（`/_next/static/` の静的チャンク）が生成されることも確認する（バッチ並列化 Issue #32・#47）
 - フィクスチャ（EXIF 入り JPEG 等）はバイナリを置かず `e2e/helpers/fixtures.ts` で実行時生成
@@ -153,6 +153,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-10: 画像編集ページ `/edit` にトーンカーブ（RGB / 輝度チャンネル、Issue #68 の第 2 項目）を追加したことに伴い、E2E `e2e/edit.spec.ts` にトーンカーブのケース（点追加でプレビューと出力が明るくなり一致する WYSIWYG とリセット復帰・輝度チャンネルが色味（R>G>B の序列）を保ったまま明るくすること・WebGL2 無効化時の CPU パス適用）を追加
 - 2026-07-10: 画像編集ページ `/edit` にヒストグラム表示（RGB / 輝度、Issue #68 の第 1 項目）を追加したことに伴い、E2E `e2e/edit.spec.ts` にヒストグラムのケース（SVG パス `d` のパースによる輝度スパイク位置の検証・露光量調整への追従・RGB/輝度チップ切替・WebGL2 無効化時の表示）を追加
 - 2026-07-09: 画像編集ページ `/edit` に LUT フィルタ（Phase 2、Issue #67）を追加したことに伴い、E2E `e2e/edit.spec.ts` に LUT ケース（既知 LUT の GPU/CPU 出力ピクセル一致・強度 0 での無効化・プリセット適用・不正ファイル通知）を追加し、`e2e/helpers/fixtures.ts` に `.cube` 生成ヘルパー（`cubeLutFile` / `invalidCubeFile` / `SWAP_RB_CUBE_TEXT`）を追加。あわせて同梱プリセット LUT の生成スクリプト `scripts/generate-luts.ts`（`.ts` のため `scripts/tsconfig.json` の typecheck 対象）を追加
 - 2026-07-08: 画像編集ページ `/edit`（Phase 1 MVP、Issue #66）の追加に伴い、E2E に `e2e/edit.spec.ts`（WebGL/CPU の実描画検証）を追加し、`e2e/seo-metadata.spec.ts` / `e2e/pwa.spec.ts` の対象ルートに `/edit/` を追加。フィクスチャ（`e2e/helpers/fixtures.ts`）に描画パイプラインの上下反転検証用 `twoToneVerticalPngFile` を追加（共通土台 `buildRgbPng` を抽出）

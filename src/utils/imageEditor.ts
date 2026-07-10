@@ -43,6 +43,8 @@ export interface EditJob {
   adjustments: AdjustmentState;
   /** 適用する LUT（未指定 / null は LUT なし） */
   lut?: LutApplication | null;
+  /** 適用するトーンカーブの焼成テーブル（`buildToneCurveTable`。未指定 / null は恒等スキップ） */
+  curve?: Float32Array | null;
 }
 
 /** 編集の出力オプション */
@@ -112,13 +114,14 @@ const canvasToBlob = (
   });
 
 /**
- * 1 ファイルへ調整（+ 任意で LUT）を適用してエンコードし `ConversionResult` を返す。
+ * 1 ファイルへ調整（+ 任意でトーンカーブ / LUT）を適用してエンコードし `ConversionResult` を返す。
  * renderer（WebGL）を渡すと GPU 描画、null のとき CPU フォールバックを使う。
  */
 export const renderEdited = async (
   file: File,
   adjustments: AdjustmentState,
   lut: LutApplication | null = null,
+  curve: Float32Array | null = null,
   options: EditOptions = {},
   renderer: AdjustmentRenderer | null = null,
 ): Promise<ConversionResult> => {
@@ -133,7 +136,7 @@ export const renderEdited = async (
     throw new Error("Invalid image dimensions");
   }
 
-  // 調整（+ LUT）を適用（GPU / CPU）した canvas を、エンコード用の 2D canvas へ転写する。
+  // 調整（+ トーンカーブ / LUT）を適用（GPU / CPU）した canvas を、エンコード用の 2D canvas へ転写する。
   // GL canvas は getImageData / toBlob の取り回しのため必ず 2D canvas へコピーしてから扱う。
   const normalized = normalizeAdjustments(clampAdjustments(adjustments));
   const adjustedCanvas = applyAdjustmentsToCanvas(
@@ -143,6 +146,7 @@ export const renderEdited = async (
     normalized,
     renderer,
     lut,
+    curve,
   );
   const encodeCanvas = document.createElement("canvas");
   encodeCanvas.width = width;
@@ -223,9 +227,17 @@ export const editImages = async (
     for (let i = 0; i < files.length; i++) {
       const adjustments = jobs[i]?.adjustments ?? DEFAULT_ADJUSTMENTS;
       const lut = jobs[i]?.lut ?? null;
+      const curve = jobs[i]?.curve ?? null;
       try {
         results.push(
-          await renderEdited(files[i], adjustments, lut, options, renderer),
+          await renderEdited(
+            files[i],
+            adjustments,
+            lut,
+            curve,
+            options,
+            renderer,
+          ),
         );
       } catch (error) {
         console.error("Edit error:", error);

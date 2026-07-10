@@ -34,10 +34,18 @@
   --primary: #1a2531;
 }
 
-html,
-body {
+html {
   max-width: 100vw;
   overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* overflow-x: hidden は body をスクロールコンテナにし、配下の position: sticky を
+   無効化する（html 側の hidden はビューポートへ伝播するため無害）。
+   clip は横はみ出しのクリップのみでスクロールコンテナを作らないため sticky と両立する */
+body {
+  max-width: 100vw;
+  overflow-x: clip;
   min-height: 100vh;
 }
 
