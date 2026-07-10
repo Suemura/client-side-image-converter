@@ -15,6 +15,10 @@ import {
   resolveAdjustmentForIndex,
 } from "../../utils/adjustments";
 import {
+  computeAutoLevels,
+  computeAutoWhiteBalance,
+} from "../../utils/autoAdjust";
+import {
   computeHistogram,
   type HistogramData,
   resolveHistogramSampleSize,
@@ -285,6 +289,23 @@ export default function EditPage() {
       cancelled = true;
     };
   }, [files, currentPreviewIndex]);
+
+  // 自動補正（ワンショット）: 編集前ヒストグラムの統計から該当スライダー値を算出して
+  // 上書きする。書き込みは setCurrentAdjustments 経由のため一括 / 画像ごとの挙動は
+  // 手動スライダー操作と同一。編集前統計基準なので同じ画像で再押下しても値は変わらない（冪等）。
+  const handleAutoLevels = useCallback(() => {
+    if (!sourceHistogram) return;
+    const result = computeAutoLevels(sourceHistogram);
+    if (!result) return;
+    setCurrentAdjustments({ ...currentAdjustments, ...result });
+  }, [sourceHistogram, currentAdjustments, setCurrentAdjustments]);
+
+  const handleAutoWhiteBalance = useCallback(() => {
+    if (!sourceHistogram) return;
+    const result = computeAutoWhiteBalance(sourceHistogram);
+    if (!result) return;
+    setCurrentAdjustments({ ...currentAdjustments, ...result });
+  }, [sourceHistogram, currentAdjustments, setCurrentAdjustments]);
 
   const resetAdjustments = useCallback(() => {
     setSharedAdjustments(DEFAULT_ADJUSTMENTS);
@@ -574,6 +595,9 @@ export default function EditPage() {
                   <AdjustmentPanel
                     adjustments={currentAdjustments}
                     onAdjustmentsChange={setCurrentAdjustments}
+                    onAutoLevels={handleAutoLevels}
+                    onAutoWhiteBalance={handleAutoWhiteBalance}
+                    autoDisabled={!sourceHistogram}
                   />
                   <ToneCurvePanel
                     curve={currentToneCurve}

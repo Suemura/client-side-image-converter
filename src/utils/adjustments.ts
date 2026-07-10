@@ -139,6 +139,25 @@ const fract = (x: number): number => x - Math.floor(x);
 const luma = (r: number, g: number, b: number): number =>
   r * LUMA_WEIGHTS[0] + g * LUMA_WEIGHTS[1] + b * LUMA_WEIGHTS[2];
 
+// --- パイプライン係数の輸出（自動補正の逆算用） ---
+// `applyAdjustmentToPixel` の手順 4（黒/白レベル）・手順 6（色温度/色合い）と同一の式・係数。
+// 自動補正（autoAdjust.ts）が「目標の画素シフト量 → スライダー値」の逆算に使うため輸出する。
+// GLSL 側（adjustmentShader.ts）は同じ式をリテラルでミラーしているため、変更時は両方を揃えること。
+
+/** 黒レベルのトーンマスク重み。blacksAmt = n.blacks * blacksToneWeight(toneLuma) */
+export const blacksToneWeight = (toneLuma: number): number =>
+  0.5 * (1 - smoothstep(0, 0.5, toneLuma));
+
+/** 白レベルのトーンマスク重み。whitesAmt = n.whites * whitesToneWeight(toneLuma) */
+export const whitesToneWeight = (toneLuma: number): number =>
+  0.5 * smoothstep(0.5, 1, toneLuma);
+
+/** 色温度のチャンネルシフト係数（R へ加算・B から減算） */
+export const TEMPERATURE_SHIFT = 0.2;
+
+/** 色合いのチャンネルシフト係数（G へ加算） */
+export const TINT_SHIFT = 0.2;
+
 /** RGB([0,1]) → HSV([0,1]^3)。GLSL 側の分岐なし変換と同じ結果を返す */
 const rgbToHsv = (
   r: number,
@@ -234,8 +253,8 @@ export const applyAdjustmentToPixel = (
   const toneLuma = luma(cr, cg, cb);
 
   // 4. 黒レベル / 白レベル
-  const blacksAmt = n.blacks * 0.5 * (1 - smoothstep(0, 0.5, toneLuma));
-  const whitesAmt = n.whites * 0.5 * smoothstep(0.5, 1, toneLuma);
+  const blacksAmt = n.blacks * blacksToneWeight(toneLuma);
+  const whitesAmt = n.whites * whitesToneWeight(toneLuma);
   // 5. シャドウ / ハイライト（黒/白より広いマスク域で差別化。+ を「明るく」に統一）
   const shadowsAmt = n.shadows * 0.5 * (1 - smoothstep(0, 0.6, toneLuma));
   const highlightsAmt = n.highlights * 0.5 * smoothstep(0.4, 1, toneLuma);
@@ -245,9 +264,9 @@ export const applyAdjustmentToPixel = (
   cb += toneAdd;
 
   // 6. 色温度（青-橙軸。+ = 暖色）/ 色合い（+ = 緑寄り）
-  cr += n.temperature * 0.2;
-  cb -= n.temperature * 0.2;
-  cg += n.tint * 0.2;
+  cr += n.temperature * TEMPERATURE_SHIFT;
+  cb -= n.temperature * TEMPERATURE_SHIFT;
+  cg += n.tint * TINT_SHIFT;
 
   // 色操作の前に一度クランプ（彩度/色相変換は [0,1] の妥当な色を前提とする。
   // GLSL 側の temperature 直後のクランプと対応）
