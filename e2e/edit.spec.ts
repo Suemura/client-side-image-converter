@@ -8,6 +8,7 @@ import {
   rectPngFile,
   twoToneVerticalPngFile,
 } from "./helpers/fixtures";
+import { disableWebGL } from "./helpers/webgl";
 
 /** レンジスライダー（aria-label で特定）へ React 経由で値を設定する */
 const setSlider = async (page: Page, label: string, value: number) => {
@@ -271,19 +272,7 @@ test.describe("画像編集 /edit", () => {
   test("WebGL2 非対応時に Canvas2D フォールバックで動作する", async ({
     page,
   }) => {
-    // WebGL コンテキストを無効化して CPU パスへフォールバックさせる
-    await page.addInitScript(() => {
-      const proto = HTMLCanvasElement.prototype as unknown as {
-        getContext: (type: string, ...args: unknown[]) => unknown;
-      };
-      const original = proto.getContext;
-      proto.getContext = function (type: string, ...args: unknown[]) {
-        if (type === "webgl2" || type === "webgl") {
-          return null;
-        }
-        return original.call(this, type, ...args);
-      };
-    });
+    await disableWebGL(page);
 
     await page.goto("/edit/");
     await page
@@ -446,19 +435,7 @@ test.describe("画像編集 /edit", () => {
   test("WebGL2 非対応時も自動補正が Canvas2D フォールバックで機能する", async ({
     page,
   }) => {
-    // WebGL コンテキストを無効化して CPU パスへフォールバックさせる
-    await page.addInitScript(() => {
-      const proto = HTMLCanvasElement.prototype as unknown as {
-        getContext: (type: string, ...args: unknown[]) => unknown;
-      };
-      const original = proto.getContext;
-      proto.getContext = function (type: string, ...args: unknown[]) {
-        if (type === "webgl2" || type === "webgl") {
-          return null;
-        }
-        return original.call(this, type, ...args);
-      };
-    });
+    await disableWebGL(page);
 
     await page.goto("/edit/");
     await page
@@ -684,18 +661,7 @@ test.describe("画像編集 /edit", () => {
   });
 
   test("WebGL2 非対応時もヒストグラムが表示される", async ({ page }) => {
-    await page.addInitScript(() => {
-      const proto = HTMLCanvasElement.prototype as unknown as {
-        getContext: (type: string, ...args: unknown[]) => unknown;
-      };
-      const original = proto.getContext;
-      proto.getContext = function (type: string, ...args: unknown[]) {
-        if (type === "webgl2" || type === "webgl") {
-          return null;
-        }
-        return original.call(this, type, ...args);
-      };
-    });
+    await disableWebGL(page);
 
     await page.goto("/edit/");
     await page
@@ -720,18 +686,7 @@ test.describe("画像編集 /edit", () => {
   });
 
   test("WebGL2 非対応時も LUT が CPU パスで適用される", async ({ page }) => {
-    await page.addInitScript(() => {
-      const proto = HTMLCanvasElement.prototype as unknown as {
-        getContext: (type: string, ...args: unknown[]) => unknown;
-      };
-      const original = proto.getContext;
-      proto.getContext = function (type: string, ...args: unknown[]) {
-        if (type === "webgl2" || type === "webgl") {
-          return null;
-        }
-        return original.call(this, type, ...args);
-      };
-    });
+    await disableWebGL(page);
 
     await page.goto("/edit/");
     await page
@@ -881,18 +836,7 @@ test.describe("画像編集 /edit", () => {
   test("WebGL2 非対応時もトーンカーブが CPU パスで適用される", async ({
     page,
   }) => {
-    await page.addInitScript(() => {
-      const proto = HTMLCanvasElement.prototype as unknown as {
-        getContext: (type: string, ...args: unknown[]) => unknown;
-      };
-      const original = proto.getContext;
-      proto.getContext = function (type: string, ...args: unknown[]) {
-        if (type === "webgl2" || type === "webgl") {
-          return null;
-        }
-        return original.call(this, type, ...args);
-      };
-    });
+    await disableWebGL(page);
 
     await page.goto("/edit/");
     await page

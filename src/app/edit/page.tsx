@@ -272,6 +272,11 @@ export default function EditPage() {
     if (!file) {
       return;
     }
+    // 新しい画像の読み込み開始時点で編集前ヒストグラムを破棄する。
+    // currentPreviewIndex は同期的に切り替わる一方 sourceHistogram はデコード完了後に
+    // しか更新されないため、破棄しないとデコード中に前の画像の統計で自動補正が押せて
+    // しまう（stale 統計の適用）。null の間は autoDisabled が自動補正ボタンを無効化する。
+    setSourceHistogram(null);
     let cancelled = false;
     renderOrientedImage(file)
       .then((canvas) => {
