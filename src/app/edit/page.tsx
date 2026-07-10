@@ -118,6 +118,9 @@ export default function EditPage() {
     null,
   );
 
+  // WB スポイトモード（モード中はプレビューのクリックで中性点を指定する）
+  const [wbEyedropperActive, setWbEyedropperActive] = useState(false);
+
   // CompareView へ渡すコールバックは安定参照にし、無関係な再レンダーで
   // 編集後描画（GPU 再描画・再サンプリング）を誘発しない
   const handleEditedFrame = useCallback((frame: ImageData) => {
@@ -318,9 +321,6 @@ export default function EditPage() {
     setCurrentAdjustments({ ...currentAdjustments, ...result });
   }, [sourceHistogram, currentAdjustments, setCurrentAdjustments]);
 
-  // WB スポイトモード（モード中はプレビューのクリックで中性点を指定する）
-  const [wbEyedropperActive, setWbEyedropperActive] = useState(false);
-
   const handleToggleEyedropper = useCallback(() => {
     setWbEyedropperActive((active) => !active);
   }, []);
@@ -333,18 +333,23 @@ export default function EditPage() {
   const handleEyedropperPick = useCallback(
     (x: number, y: number) => {
       if (!previewSource) return;
-      const window = clampSampleWindow(
+      const sampleWindow = clampSampleWindow(
         x,
         y,
         WB_SAMPLE_RADIUS,
         previewSource.width,
         previewSource.height,
       );
-      if (!window) return;
+      if (!sampleWindow) return;
       const ctx = previewSource.getContext("2d");
       if (!ctx) return;
       const rgb = averageRgb(
-        ctx.getImageData(window.x, window.y, window.width, window.height).data,
+        ctx.getImageData(
+          sampleWindow.x,
+          sampleWindow.y,
+          sampleWindow.width,
+          sampleWindow.height,
+        ).data,
       );
       if (!rgb) return;
       setCurrentAdjustments({
