@@ -704,6 +704,31 @@ test.describe("画像編集 /edit", () => {
     expect(g).toBeGreaterThan(b);
   });
 
+  test("下部の調整領域までスクロールしてもプレビューが追従して見える（スティッキー）", async ({
+    page,
+  }) => {
+    // 3 カラムレイアウト（>1200px）かつ縦に短いビューポートで検証する
+    await page.setViewportSize({ width: 1280, height: 600 });
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("sticky.png", 16, 16, [128, 128, 128]));
+    await expect(page.getByTestId("tone-curve-stage")).toBeVisible();
+
+    // 右カラム下部（LUT ピッカーの終端）までスクロールする
+    await page.mouse.wheel(0, 6000);
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(300);
+
+    // プレビュー canvas がビューポート内に見えている（boundingBox はビューポート座標）
+    const box = await page.getByTestId("edit-preview-canvas").boundingBox();
+    expect(box).not.toBeNull();
+    if (!box) return;
+    expect(box.y + box.height).toBeGreaterThan(0);
+    expect(box.y).toBeLessThan(600);
+  });
+
   test("WebGL2 非対応時もトーンカーブが CPU パスで適用される", async ({
     page,
   }) => {
