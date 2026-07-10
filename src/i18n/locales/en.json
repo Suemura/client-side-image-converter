@@ -160,6 +160,11 @@
     "compareHint": "Drag the divider in the middle to compare before and after.",
     "applyModeHelp": "\"All images\" applies the current adjustments to every image. \"Per image\" lets you set adjustments individually while switching images with ←/→.",
     "editFailures": "The following files could not be edited (unsupported format or possibly corrupted)",
+    "histogram": {
+      "title": "Histogram",
+      "rgb": "RGB",
+      "luminance": "Luminance"
+    },
     "lut": {
       "title": "Filter (LUT)",
       "none": "None",

@@ -6,6 +6,7 @@ import {
   clampAdjustments,
   normalizeAdjustments,
 } from "../../../utils/adjustments";
+import { resolveHistogramSampleSize } from "../../../utils/histogram";
 import {
   type AdjustmentRenderer,
   applyAdjustmentsToCanvas,
@@ -30,6 +31,11 @@ interface CompareViewProps {
   totalImages: number;
   onPreviousImage: () => void;
   onNextImage: () => void;
+  /**
+   * 編集後プレビューの描画完了ごとに、縮小サンプリングした ImageData を渡すコールバック
+   * （ヒストグラム算出用）。連続する再描画は rAF で 1 フレーム 1 回に間引かれる。
+   */
+  onEditedFrame?: (frame: ImageData) => void;
 }
 
 /**
@@ -49,6 +55,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
   totalImages,
   onPreviousImage,
   onNextImage,
+  onEditedFrame,
 }) => {
   const { t } = useTranslation();
   const editedCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -58,6 +65,56 @@ export const CompareView: React.FC<CompareViewProps> = ({
   const draggingRef = useRef(false);
   // 分割位置（%）。左が編集前、右が編集後
   const [divider, setDivider] = useState(50);
+
+  // onEditedFrame は ref 経由で最新を参照し、コールバックの identity 変化が
+  // 編集後描画 effect（GPU 再描画）を誘発しないようにする
+  const onEditedFrameRef = useRef(onEditedFrame);
+  useEffect(() => {
+    onEditedFrameRef.current = onEditedFrame;
+  }, [onEditedFrame]);
+  // サンプリング用の小キャンバスは使い回す（getImageData 前提の設定で生成）
+  const sampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sampleRafRef = useRef(0);
+
+  // 編集後キャンバスを縮小サンプリングして ImageData をコールバックへ渡す。
+  // スライダー操作による連続再描画を rAF で 1 フレーム 1 回に間引く（coalesce）。
+  const scheduleEditedFrameSample = useCallback((canvas: HTMLCanvasElement) => {
+    cancelAnimationFrame(sampleRafRef.current);
+    sampleRafRef.current = requestAnimationFrame(() => {
+      const callback = onEditedFrameRef.current;
+      if (!callback) {
+        return;
+      }
+      const { width: sw, height: sh } = resolveHistogramSampleSize(
+        canvas.width,
+        canvas.height,
+      );
+      if (sw <= 0 || sh <= 0) {
+        return;
+      }
+      let sample = sampleCanvasRef.current;
+      if (!sample) {
+        sample = document.createElement("canvas");
+        sampleCanvasRef.current = sample;
+      }
+      sample.width = sw;
+      sample.height = sh;
+      const sctx = sample.getContext("2d", { willReadFrequently: true });
+      if (!sctx) {
+        return;
+      }
+      // point sampling（nearest-neighbor の等間隔サブサンプリング）で縮小する。
+      // 既定の smoothing（バイリニア平均）は分布を中間調へ収縮させ、黒/白クリッピングの
+      // 裾や孤立ハイライトを鈍らせるため無効化する（ブラウザ非依存で決定的）。
+      // 寸法代入でコンテキスト状態がリセットされるため drawImage の直前で毎回設定する
+      sctx.imageSmoothingEnabled = false;
+      sctx.drawImage(canvas, 0, 0, sw, sh);
+      callback(sctx.getImageData(0, 0, sw, sh));
+    });
+  }, []);
+
+  // アンマウント時に未実行のサンプリングを破棄する
+  useEffect(() => () => cancelAnimationFrame(sampleRafRef.current), []);
 
   // WebGL レンダラは 1 個だけ生成して再利用し、アンマウントで破棄する（先に生成しておく）。
   // createAdjustmentRenderer は WebGL2 非対応時に null を返すため、事前の可用性チェックは不要
@@ -110,10 +167,11 @@ export const CompareView: React.FC<CompareViewProps> = ({
       );
       ctx.clearRect(0, 0, width, height);
       ctx.drawImage(out, 0, 0);
+      scheduleEditedFrameSample(canvas);
     } catch (error) {
       console.error("Preview render failed:", error);
     }
-  }, [source, adjustments, lut, width, height]);
+  }, [source, adjustments, lut, width, height, scheduleEditedFrameSample]);
 
   const updateDivider = useCallback((clientX: number) => {
     const el = stageRef.current;
