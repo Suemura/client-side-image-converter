@@ -148,27 +148,77 @@ export interface HandoffPayload {
   sentAt: number;
 }
 
-/** consume-once のペイロード置き場（HandoffContext が 1 つだけ保持する） */
+/** ペイロード置き場（HandoffContext がモジュールスコープに 1 つだけ保持する） */
 export interface HandoffStore {
-  send: (payload: HandoffPayload) => void;
-  consume: () => HandoffPayload | null;
+  /** ペイロードを送出する。fromPathname は送出元ページのパス名（自己配送の防止に使う） */
+  send: (payload: HandoffPayload, fromPathname: string) => void;
+  /**
+   * 現在のパス名でペイロードを受け取る。
+   * 最初に受け取ったパス名（到着ページ）の間は同じペイロードを何度でも返し、
+   * 送出元ページには配送せず、到着後に別のパス名から呼ばれた時点で破棄する。
+   */
+  consume: (pathname: string) => HandoffPayload | null;
+  /** ナビゲーションのたびに呼び、到着ページ以外へ移動していたらペイロードを破棄する */
+  onNavigate: (pathname: string) => void;
 }
 
 /**
- * consume-once ストアを生成する。
- * consume は同期的にペイロードを取り出して即座に空にするため、
- * React StrictMode の effect 二重実行でも二重取り込みにならない。
+ * 「1 回のナビゲーションだけ生存する」ペイロードストアを生成する。
+ * 即時クリアの consume-once にしないのは、Next.js App Router のクライアント遷移では
+ * タイミングにより遷移先ページ（またはルートレイアウトごと）が二重マウントされることが
+ * あり、破棄される側のマウントが先に consume するとペイロードを取りこぼすため。
+ * - 到着ページ（最初に consume したパス名）の間は冪等に同じペイロードを返す
+ * - 送出元ページからの consume には配送しない（送出直後に送出元が再マウントされても
+ *   誤って到着扱いにしない）
+ * - 到着後に別パス名から consume / onNavigate された時点で破棄する
+ *   （戻る操作などでの二重取り込みは起きない）
  */
 export const createHandoffStore = (): HandoffStore => {
   let payload: HandoffPayload | null = null;
+  // 送出元ページのパス名（このパス名からの consume には配送しない）
+  let sentFromPathname: string | null = null;
+  // ペイロードを最初に consume したパス名（= 到着ページ）。未到着は null
+  let arrivedPathname: string | null = null;
+
+  const clear = (): void => {
+    payload = null;
+    sentFromPathname = null;
+    arrivedPathname = null;
+  };
+
   return {
-    send: (next: HandoffPayload): void => {
+    send: (next: HandoffPayload, fromPathname: string): void => {
       payload = next;
+      sentFromPathname = fromPathname;
+      arrivedPathname = null;
     },
-    consume: (): HandoffPayload | null => {
-      const current = payload;
-      payload = null;
-      return current;
+    consume: (pathname: string): HandoffPayload | null => {
+      if (!payload) {
+        return null;
+      }
+      if (arrivedPathname !== null) {
+        if (arrivedPathname === pathname) {
+          // 到着ページ内の再取得（二重マウント）には同じペイロードを返す
+          return payload;
+        }
+        // 到着ページとは別のページからの取得要求 = 2 度目以降のナビゲーション。
+        // 二重取り込みを防ぐためここで破棄する
+        clear();
+        return null;
+      }
+      if (pathname === sentFromPathname) {
+        // 送出元ページ（遷移中に再マウントされた場合など）には配送しない
+        return null;
+      }
+      arrivedPathname = pathname;
+      return payload;
+    },
+    onNavigate: (pathname: string): void => {
+      // 到着済みペイロードを残したまま受け取り側のないページへ移動した場合の破棄。
+      // 未到着（送出直後の遷移中）は消さない
+      if (payload && arrivedPathname !== null && arrivedPathname !== pathname) {
+        clear();
+      }
     },
   };
 };

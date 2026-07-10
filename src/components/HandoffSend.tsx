@@ -1,6 +1,6 @@
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type React from "react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useHandoff } from "../contexts/HandoffContext";
 import {
@@ -34,12 +34,23 @@ export const HandoffSend: React.FC<HandoffSendProps> = ({
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname();
   const { send } = useHandoff();
 
   const targets = useMemo(
     () => resolveHandoffTargets(origin, mimeTypes),
     [origin, mimeTypes],
   );
+
+  // 送り先ルートを事前にプリフェッチしてクライアントサイド遷移を確実にする。
+  // App Router はルートが未プリフェッチだと push 時にオンデマンド取得し、
+  // 取得に失敗するとフル（MPA）ナビゲーションへフォールバックするため、
+  // in-memory のペイロード（File[]）がドキュメントリロードで失われてしまう
+  useEffect(() => {
+    for (const target of targets) {
+      router.prefetch(target.path);
+    }
+  }, [router, targets]);
 
   if (targets.length === 0) {
     return null;
@@ -48,7 +59,7 @@ export const HandoffSend: React.FC<HandoffSendProps> = ({
   const handleSend = (target: HandoffTool): void => {
     // File 実体をストアへ置いてから結果をクリアし（ObjectURL の revoke）、
     // 送り先ページへクライアントサイド遷移する（mount 時に consume される）
-    send({ files: getFiles(), origin, sentAt: Date.now() });
+    send({ files: getFiles(), origin, sentAt: Date.now() }, pathname);
     onSent?.();
     router.push(target.path);
   };

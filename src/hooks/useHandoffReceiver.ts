@@ -1,3 +1,4 @@
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useHandoff } from "../contexts/HandoffContext";
 import { MAX_INPUT_FILES } from "../utils/constants";
@@ -16,9 +17,10 @@ export interface HandoffNoticeInfo {
 
 /**
  * ハンドオフの受け取り側フック。
- * mount 時に共有ストアからペイロードを 1 回だけ取り出し（consume-once）、
- * 新規アップロードと同じフィルタ（MIME・重複除外・MAX_INPUT_FILES 上限）を
- * 通してからページの投入経路（onFilesReceived）へ流し込む。
+ * mount 時に共有ストアからペイロードを取り出し（到着ページの間は冪等・
+ * 別ページへ移動した時点で破棄）、新規アップロードと同じフィルタ
+ * （MIME・重複除外・MAX_INPUT_FILES 上限）を通してからページの投入経路
+ * （onFilesReceived）へ流し込む。
  * @param acceptedTypes - ページの受理形式（FileUploadArea に渡すものと同じ定数）
  * @param onFilesReceived - フィルタ済み File[] を受け取るページ側の投入関数
  */
@@ -27,17 +29,18 @@ export const useHandoffReceiver = (
   onFilesReceived: (files: File[]) => void,
 ): { notice: HandoffNoticeInfo | null; clearNotice: () => void } => {
   const { consume } = useHandoff();
+  const pathname = usePathname();
   const [notice, setNotice] = useState<HandoffNoticeInfo | null>(null);
 
   // 最新のコールバック・受理形式を ref に保持し、mount 時の消費は 1 回だけにする
-  // （usePasteImages と同じパターン。consume-once はストア側でも保証される）
+  // （usePasteImages と同じパターン。二重取り込み防止はストア側でも保証される）
   const onFilesReceivedRef = useRef(onFilesReceived);
   onFilesReceivedRef.current = onFilesReceived;
   const acceptedTypesRef = useRef(acceptedTypes);
   acceptedTypesRef.current = acceptedTypes;
 
   useEffect(() => {
-    const payload = consume();
+    const payload = consume(pathname);
     if (!payload || payload.files.length === 0) {
       return;
     }
@@ -55,7 +58,7 @@ export const useHandoffReceiver = (
       receivedCount: files.length,
       skippedCount: payload.files.length - files.length,
     });
-  }, [consume]);
+  }, [consume, pathname]);
 
   const clearNotice = useCallback(() => {
     setNotice(null);

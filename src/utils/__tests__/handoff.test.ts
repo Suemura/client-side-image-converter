@@ -193,26 +193,69 @@ describe("createHandoffStore", () => {
     sentAt: 1234567890,
   });
 
-  it("consume は送出済みペイロードを 1 回だけ返す（consume-once）", () => {
+  it("未送出時の consume は null を返す", () => {
+    expect(createHandoffStore().consume("/crop")).toBeNull();
+  });
+
+  it("到着ページの間は同じペイロードを何度でも返す（二重マウント耐性）", () => {
     const store = createHandoffStore();
     const payload = createPayload();
-    store.send(payload);
-    expect(store.consume()).toBe(payload);
-    // 2 回目は取り出し済みのため null（StrictMode の effect 二重実行対策）
-    expect(store.consume()).toBeNull();
+    store.send(payload, "/convert");
+    // Next.js のクライアント遷移では遷移先ページが二重マウントされることがあり、
+    // 破棄される側のマウントが先に consume しても取りこぼさないよう冪等に読める
+    expect(store.consume("/crop")).toBe(payload);
+    expect(store.consume("/crop")).toBe(payload);
   });
 
-  it("未送出時の consume は null を返す", () => {
-    expect(createHandoffStore().consume()).toBeNull();
+  it("送出元ページには配送しない（送出直後の再マウントで誤到着させない）", () => {
+    const store = createHandoffStore();
+    const payload = createPayload();
+    store.send(payload, "/convert");
+    // ルートレイアウトごと再マウントされると送出元ページの receiver が
+    // 再実行されることがあるが、送出元への配送・到着扱いはしない
+    expect(store.consume("/convert")).toBeNull();
+    // その後の実到着では受け取れる
+    expect(store.consume("/crop")).toBe(payload);
   });
 
-  it("連続 send は最後のペイロードで上書きする", () => {
+  it("別ページからの consume で破棄される（戻る操作での二重取り込み防止）", () => {
+    const store = createHandoffStore();
+    store.send(createPayload(), "/convert");
+    expect(store.consume("/crop")).not.toBeNull();
+    // 到着ページ（/crop）から離れて別ページで consume → 破棄
+    expect(store.consume("/convert")).toBeNull();
+    // 再び到着ページへ戻っても復活しない
+    expect(store.consume("/crop")).toBeNull();
+  });
+
+  it("onNavigate: 到着ページ以外への移動でペイロードを破棄する", () => {
+    const store = createHandoffStore();
+    store.send(createPayload(), "/convert");
+    expect(store.consume("/crop")).not.toBeNull();
+    // 受け取り側のないページ（例: トップ）へ移動 → 破棄
+    store.onNavigate("/");
+    expect(store.consume("/crop")).toBeNull();
+  });
+
+  it("onNavigate: 同一パス名の再通知・未到着時は破棄しない", () => {
+    const store = createHandoffStore();
+    store.send(createPayload(), "/convert");
+    // 未到着（送出直後の遷移中）の onNavigate では消えない
+    store.onNavigate("/crop");
+    expect(store.consume("/crop")).not.toBeNull();
+    // 到着ページと同じパス名の再通知でも消えない
+    store.onNavigate("/crop");
+    expect(store.consume("/crop")).not.toBeNull();
+  });
+
+  it("連続 send は最後のペイロードで上書きし到着状態もリセットする", () => {
     const store = createHandoffStore();
     const first = createPayload();
     const second = { ...createPayload(), origin: "crop" as const };
-    store.send(first);
-    store.send(second);
-    expect(store.consume()).toBe(second);
-    expect(store.consume()).toBeNull();
+    store.send(first, "/convert");
+    expect(store.consume("/crop")).toBe(first);
+    store.send(second, "/crop");
+    // 再送出で到着状態がリセットされ、新しい到着ページで受け取れる
+    expect(store.consume("/convert")).toBe(second);
   });
 });
