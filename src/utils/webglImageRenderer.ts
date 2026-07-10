@@ -13,6 +13,8 @@
 import {
   ADJUSTMENT_UNIFORMS,
   buildAdjustmentShader,
+  CURVE_SAMPLER,
+  CURVE_UNIFORMS,
   IMAGE_UNIFORM,
   LUT_SAMPLER,
   LUT_UNIFORMS,
@@ -23,6 +25,12 @@ import {
   type NormalizedAdjustments,
 } from "./adjustments";
 import { applyLutToPixel, createIdentityLut, type LutData } from "./lutParser";
+import {
+  applyToneCurveToPixel,
+  buildToneCurveTable,
+  CURVE_LUT_SIZE,
+  DEFAULT_TONE_CURVE,
+} from "./toneCurve";
 
 /** テクスチャ / drawImage の双方に渡せる描画ソース */
 export type EditableSource = HTMLCanvasElement | HTMLImageElement | ImageBitmap;
@@ -37,13 +45,17 @@ export interface LutApplication {
 
 /** 調整を適用して自身の canvas へ描画する永続レンダラ */
 export interface AdjustmentRenderer {
-  /** ソースを width×height の canvas へ調整（+ 任意で LUT）適用して描画する */
+  /**
+   * ソースを width×height の canvas へ調整（+ 任意でトーンカーブ / LUT）適用して描画する。
+   * curve は `buildToneCurveTable` の焼成テーブル（null は恒等スキップ）。
+   */
   render(
     source: EditableSource,
     width: number,
     height: number,
     normalized: NormalizedAdjustments,
     lut?: LutApplication | null,
+    curve?: Float32Array | null,
   ): void;
   /** 描画先の canvas（呼び出し側はこれを drawImage で別 canvas / 画面へ転写する） */
   readonly canvas: HTMLCanvasElement;
@@ -56,6 +68,16 @@ const lutDataToRgb8 = (lut: LutData): Uint8Array => {
   const bytes = new Uint8Array(lut.size ** 3 * 3);
   for (let i = 0; i < bytes.length; i++) {
     const v = lut.data[i];
+    bytes[i] = Math.round((v < 0 ? 0 : v > 1 ? 1 : v) * 255);
+  }
+  return bytes;
+};
+
+/** トーンカーブの焼成テーブル（Float32 RGBA）を 256×1 テクスチャ用の RGBA8 バイト列へ変換する */
+const curveTableToRgba8 = (table: Float32Array): Uint8Array => {
+  const bytes = new Uint8Array(table.length);
+  for (let i = 0; i < bytes.length; i++) {
+    const v = table[i];
     bytes[i] = Math.round((v < 0 ? 0 : v > 1 ? 1 : v) * 255);
   }
   return bytes;
@@ -159,6 +181,12 @@ export const createAdjustmentRenderer = (): AdjustmentRenderer | null => {
       program,
       LUT_UNIFORMS.domainMax,
     );
+    // トーンカーブの uniform ロケーション
+    const curveSamplerLocation = gl.getUniformLocation(program, CURVE_SAMPLER);
+    const curveEnabledLocation = gl.getUniformLocation(
+      program,
+      CURVE_UNIFORMS.enabled,
+    );
 
     // RGB 行が 4 バイト境界に揃わない 3D LUT のアップロードに備えてアラインメントを 1 に固定する
     // （RGBA 画像テクスチャのアップロードにも安全）
@@ -209,6 +237,32 @@ export const createAdjustmentRenderer = (): AdjustmentRenderer | null => {
     // （強度のみ変更時はテクスチャ転送を省く）。
     let lastLutData: LutData | null = null;
 
+    // トーンカーブ用の 256×1 テクスチャ（TEXTURE2）。既定は恒等テーブルを入れて常に complete に保つ
+    // （カーブ未編集時も sampler2D のサンプリングが安全。LUT の恒等既定と同方針）。
+    const curveTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, curveTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA8,
+      CURVE_LUT_SIZE,
+      1,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      curveTableToRgba8(buildToneCurveTable(DEFAULT_TONE_CURVE)),
+    );
+    if (curveSamplerLocation) {
+      gl.uniform1i(curveSamplerLocation, 2);
+    }
+    // 直前にアップロードしたカーブテーブル。参照比較で不要な再アップロードを避ける
+    let lastCurveTable: Float32Array | null = null;
+
     // 直前にアップロードしたソース。同一ソースでの調整値のみ変更時（プレビューの
     // スライダー操作など）にフル解像度テクスチャの再アップロードを避けるために保持する。
     // 呼び出し側はソースの内容を変えるときは必ず別のオブジェクトを渡す前提
@@ -221,6 +275,7 @@ export const createAdjustmentRenderer = (): AdjustmentRenderer | null => {
       height,
       normalized,
       lut = null,
+      curve = null,
     ) => {
       // canvas のサイズ代入はドローバッファをリセットするため、変化時のみ行う
       if (canvas.width !== width) {
@@ -282,6 +337,30 @@ export const createAdjustmentRenderer = (): AdjustmentRenderer | null => {
         lastLutData = lut.data;
       }
 
+      // トーンカーブテクスチャ（テーブル参照が変わったときだけ再アップロード）
+      if (curve && curve !== lastCurveTable) {
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, curveTexture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.RGBA8,
+          CURVE_LUT_SIZE,
+          1,
+          0,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          curveTableToRgba8(curve),
+        );
+        lastCurveTable = curve;
+      }
+
+      // トーンカーブ uniform（未指定時は enabled=0 でサンプリングをスキップ）
+      if (curveEnabledLocation) {
+        gl.uniform1f(curveEnabledLocation, curve ? 1 : 0);
+      }
+
       // LUT uniform をアップロード（未指定時は enabled=0 でサンプリングをスキップ）
       if (lutEnabledLocation) {
         gl.uniform1f(lutEnabledLocation, lut ? 1 : 0);
@@ -307,6 +386,7 @@ export const createAdjustmentRenderer = (): AdjustmentRenderer | null => {
     const dispose = () => {
       gl.deleteTexture(texture);
       gl.deleteTexture(lutTexture);
+      gl.deleteTexture(curveTexture);
       gl.deleteVertexArray(vao);
       gl.deleteProgram(program);
       gl.getExtension("WEBGL_lose_context")?.loseContext();
@@ -329,6 +409,7 @@ const renderWithCanvas2D = (
   height: number,
   normalized: NormalizedAdjustments,
   lut: LutApplication | null,
+  curve: Float32Array | null,
 ): HTMLCanvasElement => {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -341,13 +422,16 @@ const renderWithCanvas2D = (
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
   for (let i = 0; i < data.length; i += 4) {
-    // GPU パスと同順: 調整 → LUT（applyLutToPixel）の後段適用
+    // GPU パスと同順: 調整 → トーンカーブ（applyToneCurveToPixel）→ LUT（applyLutToPixel）
     let [r, g, b] = applyAdjustmentToPixel(
       data[i] / 255,
       data[i + 1] / 255,
       data[i + 2] / 255,
       normalized,
     );
+    if (curve) {
+      [r, g, b] = applyToneCurveToPixel(r, g, b, curve);
+    }
     if (lut) {
       [r, g, b] = applyLutToPixel(r, g, b, lut.data, lut.strength);
     }
@@ -373,10 +457,11 @@ export const applyAdjustmentsToCanvas = (
   normalized: NormalizedAdjustments,
   renderer: AdjustmentRenderer | null,
   lut: LutApplication | null = null,
+  curve: Float32Array | null = null,
 ): HTMLCanvasElement => {
   if (renderer) {
-    renderer.render(source, width, height, normalized, lut);
+    renderer.render(source, width, height, normalized, lut, curve);
     return renderer.canvas;
   }
-  return renderWithCanvas2D(source, width, height, normalized, lut);
+  return renderWithCanvas2D(source, width, height, normalized, lut, curve);
 };

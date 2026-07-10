@@ -26,6 +26,8 @@ interface CompareViewProps {
   adjustments: AdjustmentState;
   /** 現在表示中の画像へ適用する LUT（未選択は null） */
   lut: LutApplication | null;
+  /** 現在表示中の画像へ適用するトーンカーブの焼成テーブル（恒等は null でスキップ） */
+  curve: Float32Array | null;
   /** 複数画像ナビ */
   currentIndex: number;
   totalImages: number;
@@ -51,6 +53,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
   height,
   adjustments,
   lut,
+  curve,
   currentIndex,
   totalImages,
   onPreviousImage,
@@ -164,6 +167,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
         normalized,
         glRendererRef.current,
         lut,
+        curve,
       );
       ctx.clearRect(0, 0, width, height);
       ctx.drawImage(out, 0, 0);
@@ -171,7 +175,15 @@ export const CompareView: React.FC<CompareViewProps> = ({
     } catch (error) {
       console.error("Preview render failed:", error);
     }
-  }, [source, adjustments, lut, width, height, scheduleEditedFrameSample]);
+  }, [
+    source,
+    adjustments,
+    lut,
+    curve,
+    width,
+    height,
+    scheduleEditedFrameSample,
+  ]);
 
   const updateDivider = useCallback((clientX: number) => {
     const el = stageRef.current;

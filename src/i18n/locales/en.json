@@ -165,6 +165,13 @@
       "rgb": "RGB",
       "luminance": "Luminance"
     },
+    "toneCurve": {
+      "title": "Tone curve",
+      "rgb": "RGB",
+      "luminance": "Luminance",
+      "hint": "Click to add a point, drag to move, double-click to remove.",
+      "reset": "Reset curve"
+    },
     "lut": {
       "title": "Filter (LUT)",
       "none": "None",

@@ -33,6 +33,14 @@ import {
   type LutSelectionState,
   resolveLutForIndex,
 } from "../../utils/lutState";
+import {
+  buildToneCurveTable,
+  DEFAULT_TONE_CURVE,
+  isDefaultToneCurve,
+  resolveToneCurveForIndex,
+  type ToneCurveEditState,
+  type ToneCurveState,
+} from "../../utils/toneCurve";
 import type {
   EditableSource,
   LutApplication,
@@ -45,6 +53,7 @@ import { CompareView } from "./components/CompareView";
 import { EditToolbar } from "./components/EditToolbar";
 import { HistogramPanel } from "./components/HistogramPanel";
 import { LutPicker } from "./components/LutPicker";
+import { ToneCurvePanel } from "./components/ToneCurvePanel";
 import styles from "./edit.module.css";
 
 export default function EditPage() {
@@ -90,6 +99,13 @@ export default function EditPage() {
   const [perImageLut, setPerImageLut] = useState<Record<number, LutSelection>>(
     {},
   );
+
+  // トーンカーブ（調整・LUT と同じ applyToAll トグルを共有する dual-store）
+  const [sharedToneCurve, setSharedToneCurve] =
+    useState<ToneCurveState>(DEFAULT_TONE_CURVE);
+  const [perImageToneCurve, setPerImageToneCurve] = useState<
+    Record<number, ToneCurveState>
+  >({});
   // 選択された LUT データの実体を保持するレジストリ（lutId → LutData）。
   // 状態には軽量な選択（lutId + strength）だけを持ち、重いデータ本体は ref で参照する。
   const lutRegistryRef = useRef<Map<string, LutData>>(new Map());
@@ -107,6 +123,22 @@ export default function EditPage() {
   const currentLutSelection = applyToAll
     ? sharedLut
     : (perImageLut[currentPreviewIndex] ?? DEFAULT_LUT_SELECTION);
+
+  // 現在表示中の画像へ適用するトーンカーブ（一括 / 画像ごとで解決）
+  const currentToneCurve = applyToAll
+    ? sharedToneCurve
+    : (perImageToneCurve[currentPreviewIndex] ?? DEFAULT_TONE_CURVE);
+
+  // プレビューへ渡す焼成済みテーブル。恒等は null（GPU/CPU ともサンプリングをスキップ）。
+  // カーブ state が変わったときだけ再焼成し、無関係な再レンダーでの GPU 再アップロードを防ぐ
+  // （currentLut のメモ化と同方針）。
+  const currentCurveTable = useMemo(
+    () =>
+      isDefaultToneCurve(currentToneCurve)
+        ? null
+        : buildToneCurveTable(currentToneCurve),
+    [currentToneCurve],
+  );
 
   // 選択を LUT データ + 強度へ解決する（レジストリ未登録時は null）
   const resolveLutApplication = useCallback(
@@ -162,6 +194,21 @@ export default function EditPage() {
     [applyToAll, currentPreviewIndex],
   );
 
+  // トーンカーブを一括 / 画像ごとの適切なストアへ書き込む
+  const setCurrentToneCurve = useCallback(
+    (next: ToneCurveState) => {
+      if (applyToAll) {
+        setSharedToneCurve(next);
+      } else {
+        setPerImageToneCurve((prev) => ({
+          ...prev,
+          [currentPreviewIndex]: next,
+        }));
+      }
+    },
+    [applyToAll, currentPreviewIndex],
+  );
+
   // 読み込んだ LUT データをレジストリへ登録する（LutPicker から呼ばれる）。
   // カスタム LUT の再アップロードは同一スロット（CUSTOM_LUT_ID）を上書きするため、
   // データが実際に変わった場合のみバージョンを進めてプレビューの再解決を促す。
@@ -205,6 +252,8 @@ export default function EditPage() {
     setPerImageAdjustments({});
     setSharedLut(DEFAULT_LUT_SELECTION);
     setPerImageLut({});
+    setSharedToneCurve(DEFAULT_TONE_CURVE);
+    setPerImageToneCurve({});
   }, []);
 
   // 結果の object URL（buildEditResult の createObjectURL 由来）を解放する。
@@ -255,13 +304,14 @@ export default function EditPage() {
   }, [files.length]);
 
   // 一括 / 画像ごとの切替時、表示が飛ばないよう現在値を移行先へ引き継ぐ（crop の handleApplyModeChange 踏襲）。
-  // 調整と LUT 選択は同じ applyToAll を共有するため両方を移行する。
+  // 調整・LUT 選択・トーンカーブは同じ applyToAll を共有するためすべて移行する。
   const handleApplyModeChange = useCallback(
     (nextApplyToAll: boolean) => {
       if (nextApplyToAll === applyToAll) return;
       if (nextApplyToAll) {
         setSharedAdjustments(currentAdjustments);
         setSharedLut(currentLutSelection);
+        setSharedToneCurve(currentToneCurve);
       } else {
         setPerImageAdjustments((prev) => ({
           ...prev,
@@ -271,10 +321,20 @@ export default function EditPage() {
           ...prev,
           [currentPreviewIndex]: currentLutSelection,
         }));
+        setPerImageToneCurve((prev) => ({
+          ...prev,
+          [currentPreviewIndex]: currentToneCurve,
+        }));
       }
       setApplyToAll(nextApplyToAll);
     },
-    [applyToAll, currentAdjustments, currentLutSelection, currentPreviewIndex],
+    [
+      applyToAll,
+      currentAdjustments,
+      currentLutSelection,
+      currentToneCurve,
+      currentPreviewIndex,
+    ],
   );
 
   const handleStartEditing = useCallback(async () => {
@@ -299,9 +359,28 @@ export default function EditPage() {
         sharedLut,
         perImageLut,
       };
+      const curveState: ToneCurveEditState = {
+        applyToAll,
+        sharedToneCurve,
+        perImageToneCurve,
+      };
+      // 同じ ToneCurveState（一括モードでは全画像で共有）のテーブルを重複焼成しない
+      const curveTableCache = new Map<ToneCurveState, Float32Array | null>();
+      const curveTableFor = (index: number): Float32Array | null => {
+        const resolved = resolveToneCurveForIndex(index, curveState);
+        let table = curveTableCache.get(resolved);
+        if (table === undefined) {
+          table = isDefaultToneCurve(resolved)
+            ? null
+            : buildToneCurveTable(resolved);
+          curveTableCache.set(resolved, table);
+        }
+        return table;
+      };
       const jobs: EditJob[] = files.map((_, index) => ({
         adjustments: resolveAdjustmentForIndex(index, state),
         lut: resolveLutApplication(resolveLutForIndex(index, lutState)),
+        curve: curveTableFor(index),
       }));
 
       const { results, failures } = await editImages(
@@ -328,6 +407,8 @@ export default function EditPage() {
     perImageAdjustments,
     sharedLut,
     perImageLut,
+    sharedToneCurve,
+    perImageToneCurve,
     resolveLutApplication,
     preserveExif,
     outputFormat,
@@ -343,15 +424,19 @@ export default function EditPage() {
 
   const hasFiles = files.length > 0;
   const hasResults = editResults.length > 0;
-  // 一括モードは共有値、画像ごとモードはいずれかの画像に調整 or LUT があれば全体リセットを有効化
+  // 一括モードは共有値、画像ごとモードはいずれかの画像に調整 / LUT / カーブがあれば全体リセットを有効化
   const hasAdjustments = applyToAll
     ? !isDefaultAdjustments(sharedAdjustments) ||
-      !isDefaultLutSelection(sharedLut)
+      !isDefaultLutSelection(sharedLut) ||
+      !isDefaultToneCurve(sharedToneCurve)
     : Object.values(perImageAdjustments).some(
         (adjustments) => !isDefaultAdjustments(adjustments),
       ) ||
       Object.values(perImageLut).some(
         (selection) => !isDefaultLutSelection(selection),
+      ) ||
+      Object.values(perImageToneCurve).some(
+        (toneCurve) => !isDefaultToneCurve(toneCurve),
       );
 
   return (
@@ -388,6 +473,7 @@ export default function EditPage() {
                     height={previewSize.height}
                     adjustments={currentAdjustments}
                     lut={currentLut}
+                    curve={currentCurveTable}
                     currentIndex={currentPreviewIndex}
                     totalImages={files.length}
                     onPreviousImage={handlePreviousImage}
@@ -448,6 +534,11 @@ export default function EditPage() {
                   <AdjustmentPanel
                     adjustments={currentAdjustments}
                     onAdjustmentsChange={setCurrentAdjustments}
+                  />
+                  <ToneCurvePanel
+                    curve={currentToneCurve}
+                    onCurveChange={setCurrentToneCurve}
+                    histogram={histogram}
                   />
                   <LutPicker
                     selection={currentLutSelection}

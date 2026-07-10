@@ -615,4 +615,137 @@ test.describe("画像編集 /edit", () => {
     expect(r).toBeLessThan(70);
     expect(b).toBeGreaterThan(180);
   });
+
+  // --- トーンカーブ（Issue #68） ---
+
+  /**
+   * カーブステージの相対座標 (fx, fy) をクリックして制御点を追加する
+   * （fx: 入力 0..1 / fy: SVG の上からの割合。fy=0.25 は出力 0.75 に相当）
+   */
+  const clickCurveStage = async (page: Page, fx: number, fy: number) => {
+    const stage = page.getByTestId("tone-curve-stage");
+    const box = await stage.boundingBox();
+    if (!box) {
+      throw new Error("tone-curve-stage is not visible");
+    }
+    await stage.click({ position: { x: box.width * fx, y: box.height * fy } });
+  };
+
+  test("トーンカーブでプレビューと出力が明るくなり、リセットで戻る（WYSIWYG）", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("curve.png", 16, 16, [128, 128, 128]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(100);
+
+    // 中央を持ち上げる制御点 (0.5, 0.75) を追加 → グレー 128 が約 191 へ
+    await clickCurveStage(page, 0.5, 0.25);
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(170);
+
+    await applyButton(page).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 出力もプレビューと同じく明るい（WYSIWYG）
+    const result = page.locator('img[alt="curve_edited.png"]');
+    await expect(result).toBeVisible();
+    expect((await readImagePixel(result, 0.5, 0.5))[0]).toBeGreaterThan(170);
+
+    // チャンネルリセットで恒等へ戻る
+    await page.getByTestId("tone-curve-reset").click();
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 10_000,
+      })
+      .toBeLessThan(150);
+  });
+
+  test("輝度チャンネルのカーブが色味を保ったまま明るくする", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    // 色味のある画像（R > G > B）で輝度カーブのチャンネル間差の維持を見る
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("curve-luma.png", 16, 16, [150, 120, 90]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(120);
+
+    // 輝度チャンネルへ切り替えて中央を持ち上げる
+    await page.getByTestId("tone-curve-mode-luminance").click();
+    await clickCurveStage(page, 0.5, 0.25);
+
+    // 全チャンネルが明るくなり（加算シフト）、R > G > B の色味の序列は保たれる
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(180);
+    const [r, g, b] = await readPreviewPixel(page, 0.5, 0.5);
+    expect(g).toBeGreaterThan(150);
+    expect(b).toBeGreaterThan(120);
+    expect(r).toBeGreaterThan(g);
+    expect(g).toBeGreaterThan(b);
+  });
+
+  test("WebGL2 非対応時もトーンカーブが CPU パスで適用される", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const proto = HTMLCanvasElement.prototype as unknown as {
+        getContext: (type: string, ...args: unknown[]) => unknown;
+      };
+      const original = proto.getContext;
+      proto.getContext = function (type: string, ...args: unknown[]) {
+        if (type === "webgl2" || type === "webgl") {
+          return null;
+        }
+        return original.call(this, type, ...args);
+      };
+    });
+
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("curve-cpu.png", 16, 16, [128, 128, 128]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(100);
+
+    await clickCurveStage(page, 0.5, 0.25);
+
+    // CPU パス（applyToneCurveToPixel）でも同様に明るくなる
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(170);
+
+    await applyButton(page).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+    const result = page.locator('img[alt="curve-cpu_edited.png"]');
+    await expect(result).toBeVisible();
+    expect((await readImagePixel(result, 0.5, 0.5))[0]).toBeGreaterThan(170);
+  });
 });

@@ -8,6 +8,7 @@
  */
 
 import { ADJUSTMENT_KEYS, type AdjustmentKey } from "./adjustments";
+import { CURVE_LUT_SIZE } from "./toneCurve";
 
 /** 各調整キー → GLSL の uniform 名（例: exposure → u_exposure） */
 export const ADJUSTMENT_UNIFORMS: Record<AdjustmentKey, string> =
@@ -21,6 +22,18 @@ export const IMAGE_UNIFORM = "u_image";
 
 /** LUT の 3D テクスチャサンプラー uniform 名 */
 export const LUT_SAMPLER = "u_lut";
+
+/** トーンカーブの 256×1 テクスチャサンプラー uniform 名（.rgb=各チャンネル / .a=輝度） */
+export const CURVE_SAMPLER = "u_curve";
+
+/**
+ * トーンカーブ適用の uniform 名（配線の単一の真実）。
+ * `webglImageRenderer.ts` のアップロードと本モジュールのシェーダ生成、単体テストの配線ガードが共有する。
+ */
+export const CURVE_UNIFORMS = {
+  /** トーンカーブを適用するか（0 / 1）。0 のときはサンプリングをスキップする */
+  enabled: "u_curveEnabled",
+} as const;
 
 /**
  * LUT 適用の uniform 名（配線の単一の真実）。
@@ -77,6 +90,10 @@ out vec4 fragColor;
 
 uniform sampler2D ${IMAGE_UNIFORM};
 ${uniformDeclarations}
+
+// トーンカーブ（256×1。.rgb=各チャンネルカーブ / .a=輝度カーブ）— 調整の後・LUT の前に適用
+uniform sampler2D ${CURVE_SAMPLER};
+uniform float ${CURVE_UNIFORMS.enabled};
 
 // LUT（色変換フィルタ）— 調整の後段に適用
 uniform sampler3D ${LUT_SAMPLER};
@@ -150,10 +167,28 @@ void main() {
     c = hsv2rgb(hsv);
   }
 
-  // 10. 調整のクランプ（LUT 入力を [0,1] の妥当な色にそろえる）
+  // 10. 調整のクランプ（トーンカーブ / LUT の入力を [0,1] の妥当な色にそろえる）
   c = clamp(c, 0.0, 1.0);
 
-  // 11. LUT 色変換フィルタ（applyLutToPixel と同順: ドメイン正規化 → トライリニア lookup → 強度ブレンド）。
+  // 11. トーンカーブ（applyToneCurveToPixel と同順: RGB マスターカーブ → 輝度カーブの加算シフト）。
+  //     256×1 テクスチャの LINEAR サンプリング + テクセル中心補正 (v*255+0.5)/256 で
+  //     CPU の floor+lerp 補間（sampleCurveTable）に一致させる。
+  if (${CURVE_UNIFORMS.enabled} > 0.5) {
+    vec3 curvePos = (c * ${CURVE_LUT_SIZE - 1}.0 + 0.5) / ${CURVE_LUT_SIZE}.0;
+    c = vec3(
+      texture(${CURVE_SAMPLER}, vec2(curvePos.r, 0.5)).r,
+      texture(${CURVE_SAMPLER}, vec2(curvePos.g, 0.5)).g,
+      texture(${CURVE_SAMPLER}, vec2(curvePos.b, 0.5)).b
+    );
+    float curveLuma = dot(c, W);
+    float curveShift = texture(
+      ${CURVE_SAMPLER},
+      vec2((curveLuma * ${CURVE_LUT_SIZE - 1}.0 + 0.5) / ${CURVE_LUT_SIZE}.0, 0.5)
+    ).a - curveLuma;
+    c = clamp(c + curveShift, 0.0, 1.0);
+  }
+
+  // 12. LUT 色変換フィルタ（applyLutToPixel と同順: ドメイン正規化 → トライリニア lookup → 強度ブレンド）。
   //     3D テクスチャの LINEAR サンプリングがトライリニア補間を担い、テクセル中心補正
   //     (v*(N-1)+0.5)/N で節点ベースの補間に一致させる。
   if (${LUT_UNIFORMS.enabled} > 0.5) {
@@ -167,7 +202,7 @@ void main() {
     c = mix(c, graded, ${LUT_UNIFORMS.strength});
   }
 
-  // 12. 最終クランプ
+  // 13. 最終クランプ
   fragColor = vec4(clamp(c, 0.0, 1.0), texel.a);
 }
 `;
