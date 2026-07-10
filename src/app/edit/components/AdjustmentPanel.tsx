@@ -19,6 +19,10 @@ interface AdjustmentPanelProps {
   onAutoLevels: () => void;
   /** 自動補正: 自動ホワイトバランス（temperature / tint を統計から算出してセット） */
   onAutoWhiteBalance: () => void;
+  /** WB スポイトモードのトグル（モード中はプレビューのクリックで中性点を指定） */
+  onToggleEyedropper: () => void;
+  /** WB スポイトモード中か（トグルボタンの押下状態表示に使う） */
+  eyedropperActive: boolean;
   /** 統計（編集前ヒストグラム）が未算出の間は自動補正ボタンを無効化する */
   autoDisabled?: boolean;
 }
@@ -33,6 +37,8 @@ export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
   onAdjustmentsChange,
   onAutoLevels,
   onAutoWhiteBalance,
+  onToggleEyedropper,
+  eyedropperActive,
   autoDisabled = false,
 }) => {
   const { t } = useTranslation();
@@ -78,6 +84,15 @@ export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
             disabled={autoDisabled}
           >
             {t("edit.auto.whiteBalance")}
+          </button>
+          <button
+            type="button"
+            className={styles.autoButton}
+            onClick={onToggleEyedropper}
+            disabled={autoDisabled}
+            aria-pressed={eyedropperActive}
+          >
+            {t("edit.auto.eyedropper")}
           </button>
         </div>
       </div>

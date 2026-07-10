@@ -1,8 +1,10 @@
 /**
- * 自動補正（オートレベル / 自動ホワイトバランス）の Canvas / WebGL / DOM 非依存な純粋ロジック。
+ * 自動補正（オートレベル / 自動ホワイトバランス / WB スポイト）の
+ * Canvas / WebGL / DOM 非依存な純粋ロジック。
  *
- * 編集前ヒストグラム（`histogram.ts` の `HistogramData`）だけを入力とし、既存の調整スライダー値
- * （blacks / whites / temperature / tint、UI 単位 [-100, 100]）を逆算して返す。
+ * 編集前の統計（`histogram.ts` の `HistogramData`、または WB スポイトのサンプリング点）だけを
+ * 入力とし、既存の調整スライダー値（blacks / whites / temperature / tint、UI 単位 [-100, 100]）を
+ * 逆算して返す。
  * 新しい描画パイプライン段は追加せず「統計 → 既存スライダー値」の変換に徹することで、
  * 結果がスライダーに可視化されユーザーがそのまま手動微調整できる（Lightroom の Auto と同方針）。
  *
@@ -171,13 +173,38 @@ export const channelMeansFromHistogram = (
 };
 
 /**
- * 自動ホワイトバランス（gray-world）: 編集前のチャンネル平均が等しくなるような
- * temperature / tint スライダー値を逆算する。
+ * WB スポイト: 「無彩色にしたい色」(r, g, b)（各 [0, 1] 正規化）が中性
+ * （R = B・G = (R+B)/2）になる temperature / tint スライダー値を逆算する。
  *
  * パイプライン（`applyAdjustmentToPixel` 手順 6）のシフトは
  * `R += t·TEMPERATURE_SHIFT, B -= t·TEMPERATURE_SHIFT, G += tint·TINT_SHIFT` のため、
- * R と B の平均の等化は `t = (avgB - avgR) / (2·TEMPERATURE_SHIFT)`、
- * G を RB 平均（温度補正で不変）へ揃えるのは `tint = ((avgR + avgB)/2 - avgG) / TINT_SHIFT`。
+ * R と B の等化は `t = (b - r) / (2·TEMPERATURE_SHIFT)`、
+ * G を RB 平均（温度補正で不変）へ揃えるのは `tint = ((r + b)/2 - g) / TINT_SHIFT`。
+ *
+ * WB の逆算式の単一の真実はこの関数に集約され、gray-world の `computeAutoWhiteBalance` は
+ * チャンネル平均をこの関数へ渡す特殊形にあたる。
+ *
+ * 厳密性の注記: temperature / tint はパイプライン手順 6 で適用されるため、露光量等の
+ * 他調整が非 0 のとき対象点は厳密には中性にならない（手順 1〜5 がチャンネル一様変換の
+ * ため近似は良好）。他スライダー値に依存させると同じ点の再指定で値が変わり冪等性が
+ * 壊れるため、編集前の色だけから逆算する方針を採る（自動補正と同一の設計判断）。
+ */
+export const computeWhiteBalanceForNeutralPoint = (rgb: {
+  r: number;
+  g: number;
+  b: number;
+}): AutoWhiteBalanceResult => {
+  const temperature = toUiValue(
+    (100 * (rgb.b - rgb.r)) / (2 * TEMPERATURE_SHIFT),
+  );
+  const tint = toUiValue((100 * ((rgb.r + rgb.b) / 2 - rgb.g)) / TINT_SHIFT);
+  return { temperature, tint };
+};
+
+/**
+ * 自動ホワイトバランス（gray-world）: 編集前のチャンネル平均が等しくなるような
+ * temperature / tint スライダー値を逆算する
+ * （= チャンネル平均色への `computeWhiteBalanceForNeutralPoint`）。
  *
  * gray-world は支配色のある被写体（森・夕焼け等）で過補正し得る古典的限界があるが、
  * 結果はスライダーに可視化されるためユーザーが即座に戻せる（補正の出発点の提供）。
@@ -190,11 +217,112 @@ export const computeAutoWhiteBalance = (
   if (!means) {
     return null;
   }
-  const temperature = toUiValue(
-    (100 * (means.b - means.r)) / (2 * TEMPERATURE_SHIFT),
+  return computeWhiteBalanceForNeutralPoint(means);
+};
+
+// --- WB スポイトのサンプリング / 座標変換ヘルパー ---
+
+/** WB スポイトの近傍サンプリング半径（2 = 5×5 窓）。1 画素ではノイズに弱いため平均する */
+export const WB_SAMPLE_RADIUS = 2;
+
+/**
+ * サンプリング窓（中心 (x, y) ± radius の正方形）を画像境界内へクランプした矩形を返す。
+ * 画像端では窓が縮む（角では (radius+1)² まで）。中心が画像外・寸法が不正のときは null。
+ * 呼び出し側はこの矩形だけを getImageData で読むことで、読み出しを最大 (2·radius+1)² 画素に抑える。
+ */
+export const clampSampleWindow = (
+  x: number,
+  y: number,
+  radius: number,
+  width: number,
+  height: number,
+): { x: number; y: number; width: number; height: number } | null => {
+  if (
+    !Number.isFinite(x) ||
+    !Number.isFinite(y) ||
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    return null;
+  }
+  const centerX = Math.floor(x);
+  const centerY = Math.floor(y);
+  if (centerX < 0 || centerY < 0 || centerX >= width || centerY >= height) {
+    return null;
+  }
+  const left = Math.max(0, centerX - radius);
+  const top = Math.max(0, centerY - radius);
+  const right = Math.min(width - 1, centerX + radius);
+  const bottom = Math.min(height - 1, centerY + radius);
+  return {
+    x: left,
+    y: top,
+    width: right - left + 1,
+    height: bottom - top + 1,
+  };
+};
+
+/**
+ * RGBA バイト列（ImageData.data 互換）の平均色を [0, 1] 正規化で返す。
+ * alpha = 0 の完全透明ピクセルは除外する（`computeHistogram` と同基準）。
+ * 有効ピクセルが無いときは null。
+ */
+export const averageRgb = (
+  data: Uint8ClampedArray | Uint8Array,
+): { r: number; g: number; b: number } | null => {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let count = 0;
+  for (let i = 0; i + 3 < data.length; i += 4) {
+    if (data[i + 3] === 0) {
+      continue;
+    }
+    r += data[i];
+    g += data[i + 1];
+    b += data[i + 2];
+    count += 1;
+  }
+  if (count === 0) {
+    return null;
+  }
+  return { r: r / count / 255, g: g / count / 255, b: b / count / 255 };
+};
+
+/**
+ * プレビュー表示上のクリック位置（表示要素内オフセット px）をソース自然座標の画素位置へ写像する。
+ * 結果は [0, 寸法-1] にクランプする（表示要素の右端・下端クリックを有効画素に丸める）。
+ * 表示・ソースの寸法が 0 以下や非有限のときは null。
+ */
+export const displayPointToSourcePixel = (
+  offsetX: number,
+  offsetY: number,
+  displayWidth: number,
+  displayHeight: number,
+  sourceWidth: number,
+  sourceHeight: number,
+): { x: number; y: number } | null => {
+  if (
+    !Number.isFinite(offsetX) ||
+    !Number.isFinite(offsetY) ||
+    !Number.isFinite(displayWidth) ||
+    !Number.isFinite(displayHeight) ||
+    displayWidth <= 0 ||
+    displayHeight <= 0 ||
+    sourceWidth <= 0 ||
+    sourceHeight <= 0
+  ) {
+    return null;
+  }
+  const x = Math.min(
+    sourceWidth - 1,
+    Math.max(0, Math.floor((offsetX / displayWidth) * sourceWidth)),
   );
-  const tint = toUiValue(
-    (100 * ((means.r + means.b) / 2 - means.g)) / TINT_SHIFT,
+  const y = Math.min(
+    sourceHeight - 1,
+    Math.max(0, Math.floor((offsetY / displayHeight) * sourceHeight)),
   );
-  return { temperature, tint };
+  return { x, y };
 };

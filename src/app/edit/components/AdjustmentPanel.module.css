@@ -46,3 +46,9 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* WB スポイトのトグル中（HistogramPanel の chipActive を踏襲） */
+.autoButton[aria-pressed="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+}

@@ -468,6 +468,177 @@ test.describe("画像編集 /edit", () => {
     expect((await readPreviewPixel(page, 0.5, 0.75))[0]).toBeLessThan(15);
   });
 
+  // --- WB スポイト（Issue #68 第 4 項目） ---
+
+  const eyedropperButton = (page: Page) =>
+    page.getByRole("button", { name: "WB スポイト", exact: true });
+
+  /** プレビュー canvas の相対座標 (fx, fy) をマウスクリックする（overlay 越しでも stage へ届く） */
+  const clickPreviewAt = async (page: Page, fx: number, fy: number) => {
+    const box = await page.getByTestId("edit-preview-canvas").boundingBox();
+    if (!box) throw new Error("preview canvas not visible");
+    await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+  };
+
+  /** 分割ハンドルの現在位置（style.left）を読む */
+  const dividerLeft = (page: Page) =>
+    page
+      .getByText("⇔", { exact: true })
+      .evaluate((el) => (el.parentElement as HTMLElement).style.left);
+
+  test("WB スポイトでクリック点基準の色被り補正がされる（点基準・冪等・自動解除）", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    // 上半分 = 青被りグレー / 下半分 = 赤。gray-world（平均基準）なら赤に引かれて
+    // temperature が負になるため、正値（+55）の検証が「クリック点基準」の決定的証明になる
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(
+        twoToneVerticalPngFile(
+          "wbtone.png",
+          16,
+          16,
+          [100, 128, 156],
+          [200, 60, 40],
+        ),
+      );
+
+    // プレビュー生成を待つ（上半分は青被り: B が R より十分大きい）
+    await expect
+      .poll(
+        async () => {
+          const [r, , b] = await readPreviewPixel(page, 0.5, 0.25);
+          return b - r;
+        },
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(40);
+
+    await eyedropperButton(page).click();
+    await expect(eyedropperButton(page)).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    // Before（左）側の上半分をクリック（両側同写像の検証を兼ねる。5×5 窓は上半分に収まる）
+    await clickPreviewAt(page, 0.25, 0.25);
+
+    // クリック点（青被りグレー）基準の逆算値がスライダーへ反映される
+    await expect(page.getByLabel("色温度", { exact: true })).toHaveValue("55");
+    await expect(page.getByLabel("色合い", { exact: true })).toHaveValue("0");
+    // 上半分が中性化される
+    await expect
+      .poll(
+        async () => {
+          const [r, , b] = await readPreviewPixel(page, 0.5, 0.25);
+          return Math.abs(r - b);
+        },
+        { timeout: 10_000 },
+      )
+      .toBeLessThan(6);
+
+    // 分割スライダーはモード中のクリックで動かない（既定の 50% のまま）
+    expect(await dividerLeft(page)).toBe("50%");
+    // ワンショット: 適用後にモードが自動解除される
+    await expect(eyedropperButton(page)).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    // 冪等: 同じ点を再指定しても値が変わらない（編集前ソース基準）
+    await eyedropperButton(page).click();
+    await clickPreviewAt(page, 0.25, 0.25);
+    await expect(page.getByLabel("色温度", { exact: true })).toHaveValue("55");
+    await expect(page.getByLabel("色合い", { exact: true })).toHaveValue("0");
+  });
+
+  test("WB スポイトのモードは Esc・再クリックで解除できヒントが切り替わる", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(
+        rectPngFile("gray-eyedropper.png", 16, 16, [128, 128, 128]),
+      );
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(100);
+
+    // モード ON でヒントがスポイト用に切り替わる
+    await eyedropperButton(page).click();
+    await expect(eyedropperButton(page)).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(
+      page.getByText("無彩色（グレー）にしたい点をプレビューでクリック", {
+        exact: false,
+      }),
+    ).toBeVisible();
+
+    // Esc で解除されヒントが元に戻る
+    await page.keyboard.press("Escape");
+    await expect(eyedropperButton(page)).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await expect(
+      page.getByText("中央の境界をドラッグして編集前後を比較できます。", {
+        exact: true,
+      }),
+    ).toBeVisible();
+
+    // トグル再クリックでも解除できる
+    await eyedropperButton(page).click();
+    await expect(eyedropperButton(page)).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await eyedropperButton(page).click();
+    await expect(eyedropperButton(page)).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  test("WebGL2 非対応時も WB スポイトが Canvas2D フォールバックで機能する", async ({
+    page,
+  }) => {
+    await disableWebGL(page);
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("cpu-wb.png", 16, 16, [100, 128, 156]));
+
+    await expect
+      .poll(
+        async () => {
+          const [r, , b] = await readPreviewPixel(page, 0.5, 0.5);
+          return b - r;
+        },
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(40);
+
+    await eyedropperButton(page).click();
+    await clickPreviewAt(page, 0.5, 0.5);
+
+    await expect
+      .poll(
+        async () => {
+          const [r, , b] = await readPreviewPixel(page, 0.5, 0.5);
+          return Math.abs(r - b);
+        },
+        { timeout: 10_000 },
+      )
+      .toBeLessThan(6);
+  });
+
   // --- LUT フィルタ（Issue #67） ---
 
   /** LUT のアップロード input（accept に cube を含むもの）を特定する */
