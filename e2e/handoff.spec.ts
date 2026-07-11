@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import JSZip from "jszip";
 import {
   jpegFileWithExif,
@@ -7,6 +7,21 @@ import {
   pngFile,
   rectPngFile,
 } from "./helpers/fixtures";
+
+/** 調整スライダーへ値を設定する（e2e/edit.spec.ts の setSlider と同一実装） */
+const setSlider = async (page: Page, label: string, value: number) => {
+  await page.getByLabel(label, { exact: true }).evaluate((el, v) => {
+    const input = el as HTMLInputElement;
+    // React の value トラッカーを更新するためネイティブ setter 経由で設定する
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )?.set;
+    setter?.call(input, String(v));
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }, value);
+};
 
 /**
  * ツール連携（ハンドオフ）の連鎖フロー検証。
@@ -264,6 +279,12 @@ test.describe("ツール連携（ハンドオフ）", () => {
       exact: true,
     });
     await expect(applyButton).toBeEnabled({ timeout: 15_000 });
+
+    // 露光量を動かし「実際に編集された結果」が次のツールへ渡ることを担保する
+    // （編集自体の忠実性検証は e2e/edit.spec.ts でカバー済み）
+    await setSlider(page, "露光量", 70);
+    await expect(page.getByLabel("露光量", { exact: true })).toHaveValue("70");
+
     await applyButton.click();
     await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
       timeout: 15_000,
