@@ -116,7 +116,10 @@ export default function MetadataPage() {
     setSelectedFileForModal(null);
   }, []);
 
-  // ハンドオフ送出用: 選択中ファイルの MIME タイプ一覧（クリーニングは形式を変えない）
+  // ハンドオフ送出用: 選択中ファイルの MIME タイプ一覧（クリーニングは形式を変えない）。
+  // 既知の制約: BMP のみ Canvas フォールバック（removeAllMetadataWithCanvas）の
+  // toBlob がブラウザ非対応のため実バイトが PNG になり、type ラベルだけ image/bmp の
+  // まま残る（受け側のデコードはバイトスニッフィングで動くため実害はない）
   const handoffMimeTypes = useMemo(
     () => [...new Set(selectedFiles.map((file) => file.type))],
     [selectedFiles],
