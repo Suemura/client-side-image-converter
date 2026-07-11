@@ -145,6 +145,21 @@ describe("conversionResultsToFiles", () => {
       "photo_3.webp",
     ]);
   });
+
+  it("連番候補が既出の実ファイル名と衝突する場合は一意になるまで進める", () => {
+    // photo.png / photo_2.png / photo.webp を JPEG 変換したバッチ:
+    // 3 件目の連番候補 photo_2.jpeg は 2 件目の実名と衝突するため photo_3.jpeg になる
+    const files = conversionResultsToFiles([
+      createConversionResult("photo.jpeg", "image/jpeg"),
+      createConversionResult("photo_2.jpeg", "image/jpeg"),
+      createConversionResult("photo.jpeg", "image/jpeg"),
+    ]);
+    expect(files.map((file) => file.name)).toEqual([
+      "photo.jpeg",
+      "photo_2.jpeg",
+      "photo_3.jpeg",
+    ]);
+  });
 });
 
 describe("cropResultsToFiles", () => {

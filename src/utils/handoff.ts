@@ -7,6 +7,7 @@
 
 import { SUPPORTED_IMAGE_FORMATS } from "./constants";
 import type { ConversionResult } from "./conversionCore";
+import { createFileNameUniquifier } from "./fileName";
 import type { CropResult } from "./imageCropper";
 
 /** ツール識別子（ハンドオフの送り元・送り先） */
@@ -94,25 +95,14 @@ export const resolveHandoffTargets = (
 };
 
 /**
- * ファイル名の同名衝突を ZIP ダウンロード（downloadAsZip）と同じ規則で一意化する。
- * 初出はそのまま、2 件目以降は拡張子の前に `_2`, `_3`, ... を付ける。
+ * ファイル名の同名衝突を ZIP ダウンロード（downloadAsZip）と同じ規則で一意化する
+ * （連番規則は fileName.ts の createFileNameUniquifier を共有）。
  */
 const uniquifyFileNames = (entries: { name: string; blob: Blob }[]): File[] => {
-  const nameCounts = new Map<string, number>();
-  return entries.map(({ name, blob }) => {
-    let filename = name;
-    if (nameCounts.has(filename)) {
-      const count = (nameCounts.get(filename) || 0) + 1;
-      nameCounts.set(filename, count);
-      const nameWithoutExt =
-        filename.substring(0, filename.lastIndexOf(".")) || filename;
-      const extension = filename.substring(filename.lastIndexOf(".")) || "";
-      filename = `${nameWithoutExt}_${count}${extension}`;
-    } else {
-      nameCounts.set(filename, 1);
-    }
-    return new File([blob], filename, { type: blob.type });
-  });
+  const uniquify = createFileNameUniquifier();
+  return entries.map(
+    ({ name, blob }) => new File([blob], uniquify(name), { type: blob.type }),
+  );
 };
 
 /**
@@ -144,7 +134,11 @@ export interface HandoffPayload {
   files: File[];
   /** 送り元ツール（到着バナーの文言に使う） */
   origin: ToolId;
-  /** 送出時刻（遷移の同一性判定用） */
+  /**
+   * 送出時刻。Issue #70 が定めるペイロード形状 { files, origin, sentAt } の一部。
+   * 現状のストアロジックはパス名（sentFromPathname / arrivedPathname）だけで
+   * 同一性を判定しており未参照（デバッグ・将来の TTL 破棄などの拡張用に保持）
+   */
   sentAt: number;
 }
 
