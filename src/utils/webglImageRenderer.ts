@@ -58,6 +58,13 @@ export interface AdjustmentRenderer {
   /**
    * ソースを width×height の canvas へ調整（+ 任意でトーンカーブ / LUT）適用して描画する。
    * curve は `buildToneCurveTable` の焼成テーブル（null は恒等スキップ）。
+   *
+   * 契約: **width / height はソースのピクセルサイズと一致させること（1:1 描画）**。
+   * ディテール（`texelFetch` の近傍タップ）・ビネット（`textureSize` 基準の正規化距離）・
+   * グレイン（画素座標ハッシュ）は「レンダ座標 == ソース画素座標」を前提とするため、
+   * 縮小 / 拡大描画（例: 軽量プレビュー）を渡すと GPU と CPU フォールバックの結果が
+   * 静かに乖離し WYSIWYG が破れる。サイズ変更が必要な場合は先にソース側を
+   * リサンプルした canvas を渡すこと。
    */
   render(
     source: EditableSource,
@@ -511,6 +518,11 @@ const renderWithCanvas2D = (
  * renderer（WebGL）があれば GPU で描画してその canvas を返し、無ければ CPU フォールバックで
  * 新しい 2D canvas を返す。プレビュー（画面転写）と出力（Blob 化）の両方で同一経路を通すことで
  * WYSIWYG を構造的に保証する。
+ *
+ * 契約: **width / height はソースのピクセルサイズと一致させること（1:1 描画）**。
+ * ディテール / ビネット / グレインが「レンダ座標 == ソース画素座標」を前提とするため、
+ * 縮小 / 拡大指定では GPU（ソーステクスチャ基準）と CPU（縮小後データ基準）の結果が乖離する
+ * （詳細は `AdjustmentRenderer.render` の契約を参照）。
  */
 export const applyAdjustmentsToCanvas = (
   source: EditableSource,

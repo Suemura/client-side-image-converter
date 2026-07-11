@@ -99,6 +99,12 @@ const glslFloat = (value: number): string =>
  * uniform 宣言は `ADJUSTMENT_UNIFORMS` から組み立て、項目追加時の配線漏れを防ぐ。
  * ディテールのガウスタップは `GAUSS3_TAPS`、係数は `effects.ts` の定数から埋め込み、
  * カーネル・係数・ハッシュ乗数の単一の真実を CPU パスと共有する。
+ *
+ * 契約: 本シェーダは **描画サイズ == ソーステクスチャサイズ（1:1）** を前提とする。
+ * ディテールの近傍タップ（`gl_FragCoord` 由来の `texelFetch`）・ビネットの正規化距離
+ * （`textureSize` 基準）・グレインのハッシュ座標がいずれもレンダ座標 = ソース画素座標の
+ * 一致に依存するため、縮小 / 拡大描画すると CPU パスと結果が乖離する
+ * （`webglImageRenderer.ts` の `render()` の契約を参照）。
  */
 export const buildAdjustmentShader = (): string => {
   const uniformDeclarations = ADJUSTMENT_KEYS.map(
@@ -108,11 +114,18 @@ export const buildAdjustmentShader = (): string => {
   const u = ADJUSTMENT_UNIFORMS;
 
   // ディテール（輝度 unsharp mask）のタップ行を GAUSS3_TAPS から生成する。
-  // texelFetch はフィルタを経由しない厳密なテクセル読みのため CPU の整数座標タップと一致する
-  const detailTapLines = GAUSS3_TAPS.map(
+  // texelFetch はフィルタを経由しない厳密なテクセル読みのため CPU の整数座標タップと一致する。
+  // near（シャープネス）と wide（明瞭度）は uniform 分岐（dynamically uniform で分岐コストは実質なし）で
+  // 独立にガードし、片方のみ有効な典型ケースでテクスチャ読みを半減する
+  // （CPU の detailDeltaAt が項目ごとに blurLumaAt をスキップする構造と同じ。
+  //   deltaS / deltaC はそれぞれ無効時に係数 0 で消えるため未計算側の blur 値は結果に影響しない）
+  const nearTapLines = GAUSS3_TAPS.map(
     (tap) =>
-      `    blurNear += ${glslFloat(tap.w)} * dot(texelFetch(${IMAGE_UNIFORM}, clamp(baseTexel + ivec2(${tap.dx}, ${tap.dy}), ivec2(0), sizePx - 1), 0).rgb, W);
-    blurWide += ${glslFloat(tap.w)} * dot(texelFetch(${IMAGE_UNIFORM}, clamp(baseTexel + ivec2(${tap.dx}, ${tap.dy}) * ${EFFECT_UNIFORMS.clarityStride}, ivec2(0), sizePx - 1), 0).rgb, W);`,
+      `      blurNear += ${glslFloat(tap.w)} * dot(texelFetch(${IMAGE_UNIFORM}, clamp(baseTexel + ivec2(${tap.dx}, ${tap.dy}), ivec2(0), sizePx - 1), 0).rgb, W);`,
+  ).join("\n");
+  const wideTapLines = GAUSS3_TAPS.map(
+    (tap) =>
+      `      blurWide += ${glslFloat(tap.w)} * dot(texelFetch(${IMAGE_UNIFORM}, clamp(baseTexel + ivec2(${tap.dx}, ${tap.dy}) * ${EFFECT_UNIFORMS.clarityStride}, ivec2(0), sizePx - 1), 0).rgb, W);`,
   ).join("\n");
 
   return `#version 300 es
@@ -183,7 +196,12 @@ void main() {
     float baseLuma = dot(c, W);
     float blurNear = 0.0;
     float blurWide = 0.0;
-${detailTapLines}
+    if (${u.sharpness} > 0.0) {
+${nearTapLines}
+    }
+    if (${u.clarity} != 0.0) {
+${wideTapLines}
+    }
     float deltaS = max(${u.sharpness}, 0.0) * ${glslFloat(SHARPNESS_GAIN)} * (baseLuma - blurNear);
     float midtone = clamp(1.0 - abs(2.0 * baseLuma - 1.0), 0.0, 1.0);
     float deltaC = ${u.clarity} * ${glslFloat(CLARITY_GAIN)} * midtone * (baseLuma - blurWide);
