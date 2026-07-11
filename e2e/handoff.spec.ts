@@ -252,4 +252,72 @@ test.describe("ツール連携（ハンドオフ）", () => {
     const buf = readFileSync(await download.path());
     expect(magicNumber.isPng(buf)).toBe(true);
   });
+
+  test("edit の編集結果をダウンロードせず convert へ引き継いで変換できる（編集 → 変換の中核フロー）", async ({
+    page,
+  }) => {
+    // 1. edit で PNG を編集する（既定の元形式維持で書き出し）
+    await page.goto("/edit/");
+    await page.locator('input[type="file"]').setInputFiles(pngFile());
+    const applyButton = page.getByRole("button", {
+      name: "編集を適用",
+      exact: true,
+    });
+    await expect(applyButton).toBeEnabled({ timeout: 15_000 });
+    await applyButton.click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 2. 編集結果を変換へ送る
+    await page.getByRole("button", { name: "変換へ送る", exact: true }).click();
+    await expect(page).toHaveURL(/\/convert\/?$/);
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "編集の結果 1 件を引き継ぎました" }),
+    ).toBeVisible();
+
+    // 3. WebP へ変換してダウンロード検証（sample.png → sample_edited.png → sample_edited.webp）
+    await page.getByText("WebP", { exact: true }).click();
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+    expect(download.suggestedFilename()).toBe("sample_edited.webp");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isWebp(buf)).toBe(true);
+  });
+
+  test("convert の結果をダウンロードせず edit へ引き継げる", async ({
+    page,
+  }) => {
+    // 1. convert で PNG を JPEG に変換する
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(pngFile());
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 2. 結果を編集へ送る
+    await page.getByRole("button", { name: "編集へ送る", exact: true }).click();
+    await expect(page).toHaveURL(/\/edit\/?$/);
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "変換の結果 1 件を引き継ぎました" }),
+    ).toBeVisible();
+
+    // 3. 引き継いだ画像がプレビューまで読み込まれ、編集を適用できる状態になる
+    await expect(
+      page.getByRole("button", { name: "編集を適用", exact: true }),
+    ).toBeEnabled({ timeout: 15_000 });
+  });
 });
