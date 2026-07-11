@@ -8,6 +8,16 @@
  */
 
 import { ADJUSTMENT_KEYS, type AdjustmentKey } from "./adjustments";
+import {
+  CLARITY_GAIN,
+  GAUSS3_TAPS,
+  GRAIN_STRENGTH,
+  LOWBIAS32_M1,
+  LOWBIAS32_M2,
+  SHARPNESS_GAIN,
+  VIGNETTE_INNER,
+  VIGNETTE_STRENGTH,
+} from "./effects";
 import { CURVE_LUT_SIZE } from "./toneCurve";
 
 /** 各調整キー → GLSL の uniform 名（例: exposure → u_exposure） */
@@ -33,6 +43,16 @@ export const CURVE_SAMPLER = "u_curve";
 export const CURVE_UNIFORMS = {
   /** トーンカーブを適用するか（0 / 1）。0 のときはサンプリングをスキップする */
   enabled: "u_curveEnabled",
+} as const;
+
+/**
+ * ディテール / 効果の uniform 名（配線の単一の真実）。
+ * 調整キー由来の uniform（ADJUSTMENT_UNIFORMS）以外に必要な補助 uniform を置く。
+ * `webglImageRenderer.ts` のアップロードと本モジュールのシェーダ生成、単体テストの配線ガードが共有する。
+ */
+export const EFFECT_UNIFORMS = {
+  /** 明瞭度の大半径ぼかしの整数ストライド（effects.ts の clarityStride(width, height) をアップロード） */
+  clarityStride: "u_clarityStride",
 } as const;
 
 /**
@@ -70,9 +90,15 @@ void main() {
 }
 `;
 
+/** 数値を GLSL の float リテラルへ整形する（整数値は 2 → "2.0" のように小数点を付ける） */
+const glslFloat = (value: number): string =>
+  Number.isInteger(value) ? `${value}.0` : `${value}`;
+
 /**
  * ライト/カラー調整を適用するフラグメントシェーダ文字列を生成する。
  * uniform 宣言は `ADJUSTMENT_UNIFORMS` から組み立て、項目追加時の配線漏れを防ぐ。
+ * ディテールのガウスタップは `GAUSS3_TAPS`、係数は `effects.ts` の定数から埋め込み、
+ * カーネル・係数・ハッシュ乗数の単一の真実を CPU パスと共有する。
  */
 export const buildAdjustmentShader = (): string => {
   const uniformDeclarations = ADJUSTMENT_KEYS.map(
@@ -80,6 +106,14 @@ export const buildAdjustmentShader = (): string => {
   ).join("\n");
 
   const u = ADJUSTMENT_UNIFORMS;
+
+  // ディテール（輝度 unsharp mask）のタップ行を GAUSS3_TAPS から生成する。
+  // texelFetch はフィルタを経由しない厳密なテクセル読みのため CPU の整数座標タップと一致する
+  const detailTapLines = GAUSS3_TAPS.map(
+    (tap) =>
+      `    blurNear += ${glslFloat(tap.w)} * dot(texelFetch(${IMAGE_UNIFORM}, clamp(baseTexel + ivec2(${tap.dx}, ${tap.dy}), ivec2(0), sizePx - 1), 0).rgb, W);
+    blurWide += ${glslFloat(tap.w)} * dot(texelFetch(${IMAGE_UNIFORM}, clamp(baseTexel + ivec2(${tap.dx}, ${tap.dy}) * ${EFFECT_UNIFORMS.clarityStride}, ivec2(0), sizePx - 1), 0).rgb, W);`,
+  ).join("\n");
 
   return `#version 300 es
 precision highp float;
@@ -90,6 +124,9 @@ out vec4 fragColor;
 
 uniform sampler2D ${IMAGE_UNIFORM};
 ${uniformDeclarations}
+
+// 明瞭度の大半径ぼかしの整数ストライド（effects.ts の clarityStride と同じ値をアップロード）
+uniform int ${EFFECT_UNIFORMS.clarityStride};
 
 // トーンカーブ（256×1。.rgb=各チャンネルカーブ / .a=輝度カーブ）— 調整の後・LUT の前に適用
 uniform sampler2D ${CURVE_SAMPLER};
@@ -122,12 +159,43 @@ vec3 hsv2rgb(vec3 c) {
   return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
+// lowbias32 整数ハッシュ（effects.ts の lowbias32 と乗算定数までビット同一。グレインの粒の一致の根拠）
+uint lowbias32(uint x) {
+  x ^= x >> 16u;
+  x *= ${LOWBIAS32_M1}u;
+  x ^= x >> 15u;
+  x *= ${LOWBIAS32_M2}u;
+  x ^= x >> 16u;
+  return x;
+}
+
 void main() {
   vec4 texel = texture(${IMAGE_UNIFORM}, v_texCoord);
   vec3 c = texel.rgb;
 
+  // 0. ディテール（シャープネス / 明瞭度）: ソース輝度の unsharp mask（effects.ts の detailDeltaAt をミラー）。
+  //    調整の前段（ソース直後）に置くことで近傍参照がソーステクスチャだけで完結し、
+  //    マルチパス / 中間 FBO なしの単一シェーダで実装できる。
+  //    テクスチャは Y 反転済みだがカーネルが y 対称なためぼかし値は CPU（画像座標）と一致する
+  if (${u.sharpness} > 0.0 || ${u.clarity} != 0.0) {
+    ivec2 sizePx = textureSize(${IMAGE_UNIFORM}, 0);
+    ivec2 baseTexel = ivec2(gl_FragCoord.xy);
+    float baseLuma = dot(c, W);
+    float blurNear = 0.0;
+    float blurWide = 0.0;
+${detailTapLines}
+    float deltaS = max(${u.sharpness}, 0.0) * ${glslFloat(SHARPNESS_GAIN)} * (baseLuma - blurNear);
+    float midtone = clamp(1.0 - abs(2.0 * baseLuma - 1.0), 0.0, 1.0);
+    float deltaC = ${u.clarity} * ${glslFloat(CLARITY_GAIN)} * midtone * (baseLuma - blurWide);
+    c = clamp(c + deltaS + deltaC, 0.0, 1.0);
+  }
+
   // 1. 露光量（±1 stop）
   c *= exp2(${u.exposure});
+  // 1b. ガンマ（γ = 2^(-n) で + が明るく。露光直後は c ≥ 0 のため pow が安全）
+  if (${u.gamma} != 0.0) {
+    c = pow(max(c, vec3(0.0)), vec3(exp2(-${u.gamma})));
+  }
   // 2. 輝度（加算リフト）
   c += ${u.brightness} * 0.5;
   // 3. コントラスト（0.5 ピボット）
@@ -167,6 +235,11 @@ void main() {
     c = hsv2rgb(hsv);
   }
 
+  // 9b. モノクロ変換（0/1 トグル。色相の後 = 調整の最後で luma 化。applyAdjustmentToPixel と同位置）
+  if (${u.monochrome} >= 0.5) {
+    c = vec3(dot(c, W));
+  }
+
   // 10. 調整のクランプ（トーンカーブ / LUT の入力を [0,1] の妥当な色にそろえる）
   c = clamp(c, 0.0, 1.0);
 
@@ -202,7 +275,32 @@ void main() {
     c = mix(c, graded, ${LUT_UNIFORMS.strength});
   }
 
-  // 13. 最終クランプ
+  // 13. ビネット / グレイン（画素位置依存の仕上げ効果。LUT の後段 = パイプラインの最後）。
+  //     テクスチャ / ドローバッファは Y 反転しているため gl_FragCoord から画像座標へ変換して
+  //     CPU（vignetteFactorAt / grainNoiseAt の画像座標）と揃える
+  if (${u.vignette} != 0.0 || ${u.grain} > 0.0) {
+    ivec2 fxSize = textureSize(${IMAGE_UNIFORM}, 0);
+    int imgX = int(gl_FragCoord.x);
+    int imgY = fxSize.y - 1 - int(gl_FragCoord.y);
+    // ビネット（画素中心の対角正規化距離による周辺減光 / 増光。vignetteFactorAt をミラー）
+    if (${u.vignette} != 0.0) {
+      vec2 pos = vec2(
+        (float(imgX) + 0.5) / float(fxSize.x),
+        (float(imgY) + 0.5) / float(fxSize.y)
+      ) * 2.0 - 1.0;
+      float dist = length(pos) / ${Math.SQRT2};
+      float fall = smoothstep(${glslFloat(VIGNETTE_INNER)}, 1.0, dist);
+      c *= max(1.0 - ${u.vignette} * ${glslFloat(VIGNETTE_STRENGTH)} * fall, 0.0);
+    }
+    // グレイン（決定的な整数ハッシュノイズ。grainNoiseAt をミラー。上位 24bit のみ float 化）
+    if (${u.grain} > 0.0) {
+      uint hashed = lowbias32(uint(imgX) + lowbias32(uint(imgY)));
+      float noise = float(hashed >> 8u) * (1.0 / 16777216.0) * 2.0 - 1.0;
+      c += noise * ${u.grain} * ${glslFloat(GRAIN_STRENGTH)};
+    }
+  }
+
+  // 14. 最終クランプ
   fragColor = vec4(clamp(c, 0.0, 1.0), texel.a);
 }
 `;

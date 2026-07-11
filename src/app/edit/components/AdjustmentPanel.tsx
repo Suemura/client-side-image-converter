@@ -4,9 +4,12 @@ import { Slider } from "../../../components/Slider";
 import {
   ADJUSTMENT_MAX,
   ADJUSTMENT_MIN,
+  ADJUSTMENT_UI_MIN,
   type AdjustmentKey,
   type AdjustmentState,
   COLOR_ADJUSTMENT_KEYS,
+  DETAIL_ADJUSTMENT_KEYS,
+  EFFECT_ADJUSTMENT_KEYS,
   LIGHT_ADJUSTMENT_KEYS,
 } from "../../../utils/adjustments";
 import styles from "./AdjustmentPanel.module.css";
@@ -46,21 +49,38 @@ export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
   const renderGroup = (title: string, keys: readonly AdjustmentKey[]) => (
     <div className={styles.group}>
       <h4 className={styles.groupTitle}>{title}</h4>
-      {keys.map((key) => (
-        <Slider
-          key={key}
-          label={t(`edit.${key}`)}
-          value={adjustments[key]}
-          min={ADJUSTMENT_MIN}
-          max={ADJUSTMENT_MAX}
-          defaultValue={0}
-          resetLabel={t("edit.reset")}
-          onChange={(value) =>
-            onAdjustmentsChange({ ...adjustments, [key]: value })
-          }
-          onReset={() => onAdjustmentsChange({ ...adjustments, [key]: 0 })}
-        />
-      ))}
+      {keys.map((key) =>
+        key === "monochrome" ? (
+          // モノクロは 0/100 のトグル（AdjustmentState の number のままチェックボックスで表現）
+          <label key={key} className={styles.toggleRow}>
+            <input
+              type="checkbox"
+              checked={adjustments.monochrome >= 50}
+              onChange={(e) =>
+                onAdjustmentsChange({
+                  ...adjustments,
+                  monochrome: e.target.checked ? 100 : 0,
+                })
+              }
+            />
+            {t("edit.monochrome")}
+          </label>
+        ) : (
+          <Slider
+            key={key}
+            label={t(`edit.${key}`)}
+            value={adjustments[key]}
+            min={ADJUSTMENT_UI_MIN[key] ?? ADJUSTMENT_MIN}
+            max={ADJUSTMENT_MAX}
+            defaultValue={0}
+            resetLabel={t("edit.reset")}
+            onChange={(value) =>
+              onAdjustmentsChange({ ...adjustments, [key]: value })
+            }
+            onReset={() => onAdjustmentsChange({ ...adjustments, [key]: 0 })}
+          />
+        ),
+      )}
     </div>
   );
 
@@ -98,6 +118,8 @@ export const AdjustmentPanel: React.FC<AdjustmentPanelProps> = ({
       </div>
       {renderGroup(t("edit.light"), LIGHT_ADJUSTMENT_KEYS)}
       {renderGroup(t("edit.color"), COLOR_ADJUSTMENT_KEYS)}
+      {renderGroup(t("edit.detail"), DETAIL_ADJUSTMENT_KEYS)}
+      {renderGroup(t("edit.effects"), EFFECT_ADJUSTMENT_KEYS)}
     </div>
   );
 };
