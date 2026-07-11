@@ -19,6 +19,11 @@
   user-select: none;
 }
 
+/* WB スポイトモード中は分割ドラッグではなく点の指定であることをカーソルで示す */
+.stageEyedropper {
+  cursor: crosshair;
+}
+
 .baseCanvas {
   display: block;
   width: 100%;

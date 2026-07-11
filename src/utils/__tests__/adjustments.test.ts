@@ -3,6 +3,7 @@ import {
   ADJUSTMENT_KEYS,
   type AdjustmentState,
   applyAdjustmentToPixel,
+  blacksToneWeight,
   clampAdjustments,
   DEFAULT_ADJUSTMENTS,
   type EditState,
@@ -10,6 +11,9 @@ import {
   LUMA_WEIGHTS,
   normalizeAdjustments,
   resolveAdjustmentForIndex,
+  TEMPERATURE_SHIFT,
+  TINT_SHIFT,
+  whitesToneWeight,
 } from "../adjustments";
 
 /** UI 状態から正規化して 1 ピクセルへ適用するテストヘルパー */
@@ -164,6 +168,80 @@ describe("applyAdjustmentToPixel", () => {
     expect(after[0]).toBeCloseTo(0.5, 4);
     expect(after[1]).toBeCloseTo(0.5, 4);
     expect(after[2]).toBeCloseTo(0.5, 4);
+  });
+
+  it("ガンマ + で中間調が明るく、− で暗くなる。端点 0 / 1 は不変", () => {
+    const mid: [number, number, number] = [0.25, 0.25, 0.25];
+    // γ = 2^(-0.5) ≈ 0.707 → 0.25^0.707 ≈ 0.375
+    expect(apply(mid, { gamma: 50 })[0]).toBeCloseTo(0.25 ** (2 ** -0.5), 5);
+    expect(apply(mid, { gamma: 50 })[0]).toBeGreaterThan(0.25);
+    expect(apply(mid, { gamma: -50 })[0]).toBeLessThan(0.25);
+    // 冪変換なので黒と白は動かない
+    expect(apply([0, 0, 0], { gamma: 60 })[0]).toBe(0);
+    expect(apply([1, 1, 1], { gamma: 60 })[0]).toBe(1);
+  });
+
+  it("モノクロで R=G=B（luma 保存）になる", () => {
+    const before: [number, number, number] = [0.8, 0.2, 0.4];
+    const [r, g, b] = apply(before, { monochrome: 100 });
+    expect(r).toBe(g);
+    expect(g).toBe(b);
+    expect(r).toBeCloseTo(lumaOf(before), 5);
+  });
+
+  it("モノクロは彩度スライダーと独立に機能する", () => {
+    const [r, g, b] = apply([0.8, 0.2, 0.4], {
+      saturation: 50,
+      monochrome: 100,
+    });
+    expect(r).toBe(g);
+    expect(g).toBe(b);
+  });
+
+  it("色温度はモノクロ化前に効く（B&W カラーフィルタとして機能）", () => {
+    const gray: [number, number, number] = [0.5, 0.5, 0.5];
+    const plain = apply(gray, { monochrome: 100 })[0];
+    const filtered = apply(gray, { temperature: 100, monochrome: 100 })[0];
+    // 温度シフト後の luma は R 重み分だけ増える（0.2·(W_r − W_b) > 0）
+    expect(filtered).not.toBeCloseTo(plain, 3);
+    expect(filtered).toBeGreaterThan(plain);
+  });
+});
+
+describe("パイプライン係数の輸出（自動補正の逆算用）", () => {
+  it("blacksToneWeight は暗部 0.5・中点 0 の smoothstep マスク", () => {
+    expect(blacksToneWeight(0)).toBeCloseTo(0.5, 10);
+    expect(blacksToneWeight(0.25)).toBeCloseTo(0.25, 10);
+    expect(blacksToneWeight(0.5)).toBeCloseTo(0, 10);
+    expect(blacksToneWeight(1)).toBeCloseTo(0, 10);
+  });
+
+  it("whitesToneWeight は明部 0.5・中点 0 の smoothstep マスク", () => {
+    expect(whitesToneWeight(1)).toBeCloseTo(0.5, 10);
+    expect(whitesToneWeight(0.75)).toBeCloseTo(0.25, 10);
+    expect(whitesToneWeight(0.5)).toBeCloseTo(0, 10);
+    expect(whitesToneWeight(0)).toBeCloseTo(0, 10);
+  });
+
+  it("シフト係数は GLSL 側のリテラル（0.2）と一致する", () => {
+    expect(TEMPERATURE_SHIFT).toBe(0.2);
+    expect(TINT_SHIFT).toBe(0.2);
+  });
+
+  it("整合ガード: applyAdjustmentToPixel の黒/白レベルは輸出した重みと同じシフト量になる", () => {
+    // グレー 0.25 に blacks=-100（n=-1）→ 0.25 - blacksToneWeight(0.25) = 0
+    const black = apply([0.25, 0.25, 0.25], { blacks: -100 });
+    expect(black[0]).toBeCloseTo(0.25 - blacksToneWeight(0.25), 5);
+    // グレー 0.75 に whites=100（n=1）→ 0.75 + whitesToneWeight(0.75) = 1
+    const white = apply([0.75, 0.75, 0.75], { whites: 100 });
+    expect(white[0]).toBeCloseTo(0.75 + whitesToneWeight(0.75), 5);
+  });
+
+  it("整合ガード: applyAdjustmentToPixel の色温度/色合いは輸出した係数と同じシフト量になる", () => {
+    const [r, g, b] = apply([0.5, 0.5, 0.5], { temperature: 50, tint: 50 });
+    expect(r).toBeCloseTo(0.5 + 0.5 * TEMPERATURE_SHIFT, 5);
+    expect(b).toBeCloseTo(0.5 - 0.5 * TEMPERATURE_SHIFT, 5);
+    expect(g).toBeCloseTo(0.5 + 0.5 * TINT_SHIFT, 5);
   });
 });
 

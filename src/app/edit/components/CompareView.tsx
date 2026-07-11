@@ -6,6 +6,7 @@ import {
   clampAdjustments,
   normalizeAdjustments,
 } from "../../../utils/adjustments";
+import { displayPointToSourcePixel } from "../../../utils/autoAdjust";
 import { resolveHistogramSampleSize } from "../../../utils/histogram";
 import {
   type AdjustmentRenderer,
@@ -38,6 +39,10 @@ interface CompareViewProps {
    * （ヒストグラム算出用）。連続する再描画は rAF で 1 フレーム 1 回に間引かれる。
    */
   onEditedFrame?: (frame: ImageData) => void;
+  /** WB スポイトモード中か（true の間は分割ドラッグの代わりにクリック点を拾う） */
+  eyedropperActive?: boolean;
+  /** スポイトのクリック点（ソース自然座標の画素位置）を親へ渡すコールバック */
+  onEyedropperPick?: (x: number, y: number) => void;
 }
 
 /**
@@ -59,6 +64,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
   onPreviousImage,
   onNextImage,
   onEditedFrame,
+  eyedropperActive = false,
+  onEyedropperPick,
 }) => {
   const { t } = useTranslation();
   const editedCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -200,11 +207,39 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
+      // スポイトモード中は分割ドラッグを開始せず、クリック点をソース自然座標へ写像して
+      // 親へ渡す。座標の基準は編集後キャンバスの矩形（stage の border の影響を受けない）。
+      // Before/After の両キャンバスは同寸で完全重畳しているため、分割位置に関わらず
+      // どちら側をクリックしても同じソース画素に写像される。
+      if (eyedropperActive) {
+        // ピックは調整値の書き換え + モード解除を伴うため、ToneCurvePanel の点操作と
+        // 同様にプライマリポインタの左ボタンのみ受け付ける（右クリック・多点タッチを無視）
+        if (!e.isPrimary || e.button !== 0) {
+          return;
+        }
+        const canvas = editedCanvasRef.current;
+        if (!canvas || !onEyedropperPick) {
+          return;
+        }
+        const rect = canvas.getBoundingClientRect();
+        const point = displayPointToSourcePixel(
+          e.clientX - rect.left,
+          e.clientY - rect.top,
+          rect.width,
+          rect.height,
+          width,
+          height,
+        );
+        if (point) {
+          onEyedropperPick(point.x, point.y);
+        }
+        return;
+      }
       draggingRef.current = true;
       e.currentTarget.setPointerCapture(e.pointerId);
       updateDivider(e.clientX);
     },
-    [updateDivider],
+    [updateDivider, eyedropperActive, onEyedropperPick, width, height],
   );
 
   const handlePointerMove = useCallback(
@@ -224,7 +259,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
     <div className={styles.container}>
       <div
         ref={stageRef}
-        className={styles.stage}
+        className={`${styles.stage}${eyedropperActive ? ` ${styles.stageEyedropper}` : ""}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={stopDragging}
@@ -281,7 +316,11 @@ export const CompareView: React.FC<CompareViewProps> = ({
         </div>
       )}
 
-      <p className={styles.hint}>{t("edit.compareHint")}</p>
+      <p className={styles.hint}>
+        {eyedropperActive
+          ? t("edit.auto.eyedropperHint")
+          : t("edit.compareHint")}
+      </p>
     </div>
   );
 };
