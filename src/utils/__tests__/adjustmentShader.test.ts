@@ -4,12 +4,14 @@ import {
   buildAdjustmentShader,
   CURVE_SAMPLER,
   CURVE_UNIFORMS,
+  EFFECT_UNIFORMS,
   IMAGE_UNIFORM,
   LUT_SAMPLER,
   LUT_UNIFORMS,
   VERTEX_SHADER_SOURCE,
 } from "../adjustmentShader";
 import { ADJUSTMENT_KEYS } from "../adjustments";
+import { GAUSS3_TAPS, LOWBIAS32_M1, LOWBIAS32_M2 } from "../effects";
 
 describe("ADJUSTMENT_UNIFORMS", () => {
   it("全調整キーに uniform 名を対応させる", () => {
@@ -110,5 +112,61 @@ describe("buildAdjustmentShader", () => {
     expect(curveIndex).toBeGreaterThan(-1);
     expect(lutIndex).toBeGreaterThan(-1);
     expect(curveIndex).toBeLessThan(lutIndex);
+  });
+
+  it("ディテールの uniform（clarityStride）が宣言・参照され texelFetch でタップする（配線漏れガード）", () => {
+    expect(shader).toContain(`uniform int ${EFFECT_UNIFORMS.clarityStride};`);
+    const occurrences = shader.split(EFFECT_UNIFORMS.clarityStride).length - 1;
+    expect(occurrences).toBeGreaterThanOrEqual(2);
+    // フィルタ非経由の厳密テクセル読み（CPU の整数座標タップとの一致の根拠）
+    expect(shader).toContain(`texelFetch(${IMAGE_UNIFORM},`);
+    expect(shader).toContain(`textureSize(${IMAGE_UNIFORM}, 0)`);
+    // タップ数はカーネル定義と一致（near / wide の 2 系統）
+    const tapCount = shader.split("texelFetch").length - 1;
+    expect(tapCount).toBe(GAUSS3_TAPS.length * 2);
+  });
+
+  it("グレインのハッシュ乗数が effects.ts の lowbias32 とビット同一（GPU/CPU の粒一致ガード）", () => {
+    expect(shader).toContain(`x *= ${LOWBIAS32_M1}u;`);
+    expect(shader).toContain(`x *= ${LOWBIAS32_M2}u;`);
+    expect(shader).toContain("float(hashed >> 8u) * (1.0 / 16777216.0)");
+  });
+
+  it("ガンマは露光の後・輝度の前、モノクロは色相の後にある（CPU パイプラインと同位置）", () => {
+    const exposureIndex = shader.indexOf(
+      `exp2(${ADJUSTMENT_UNIFORMS.exposure})`,
+    );
+    const gammaIndex = shader.indexOf(`exp2(-${ADJUSTMENT_UNIFORMS.gamma})`);
+    const brightnessIndex = shader.indexOf(
+      `${ADJUSTMENT_UNIFORMS.brightness} * 0.5`,
+    );
+    const hueIndex = shader.indexOf(`fract(hsv.x + ${ADJUSTMENT_UNIFORMS.hue}`);
+    const monoIndex = shader.indexOf(
+      `if (${ADJUSTMENT_UNIFORMS.monochrome} >= 0.5)`,
+    );
+    expect(exposureIndex).toBeGreaterThan(-1);
+    expect(gammaIndex).toBeGreaterThan(exposureIndex);
+    expect(brightnessIndex).toBeGreaterThan(gammaIndex);
+    expect(monoIndex).toBeGreaterThan(hueIndex);
+  });
+
+  it("適用順は ディテール → 調整、LUT → ビネット → グレイン → 最終クランプ", () => {
+    const detailIndex = shader.indexOf("texelFetch");
+    const exposureIndex = shader.indexOf(
+      `exp2(${ADJUSTMENT_UNIFORMS.exposure})`,
+    );
+    const lutIndex = shader.indexOf(`if (${LUT_UNIFORMS.enabled} > 0.5)`);
+    const vignetteIndex = shader.indexOf(
+      `if (${ADJUSTMENT_UNIFORMS.vignette} != 0.0) {`,
+    );
+    const grainIndex = shader.indexOf(
+      `if (${ADJUSTMENT_UNIFORMS.grain} > 0.0) {`,
+    );
+    const finalClampIndex = shader.lastIndexOf("fragColor = vec4(clamp(");
+    expect(detailIndex).toBeGreaterThan(-1);
+    expect(detailIndex).toBeLessThan(exposureIndex);
+    expect(lutIndex).toBeLessThan(vignetteIndex);
+    expect(vignetteIndex).toBeLessThan(grainIndex);
+    expect(grainIndex).toBeLessThan(finalClampIndex);
   });
 });

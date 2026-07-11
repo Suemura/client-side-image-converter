@@ -15,6 +15,7 @@ import {
   buildAdjustmentShader,
   CURVE_SAMPLER,
   CURVE_UNIFORMS,
+  EFFECT_UNIFORMS,
   IMAGE_UNIFORM,
   LUT_SAMPLER,
   LUT_UNIFORMS,
@@ -22,8 +23,17 @@ import {
 } from "./adjustmentShader";
 import {
   applyAdjustmentToPixel,
+  clamp01,
   type NormalizedAdjustments,
 } from "./adjustments";
+import {
+  clarityStride,
+  computeLumaPlane,
+  detailDeltaAt,
+  GRAIN_STRENGTH,
+  grainNoiseAt,
+  vignetteFactorAt,
+} from "./effects";
 import { applyLutToPixel, createIdentityLut, type LutData } from "./lutParser";
 import {
   applyToneCurveToPixel,
@@ -48,6 +58,13 @@ export interface AdjustmentRenderer {
   /**
    * ソースを width×height の canvas へ調整（+ 任意でトーンカーブ / LUT）適用して描画する。
    * curve は `buildToneCurveTable` の焼成テーブル（null は恒等スキップ）。
+   *
+   * 契約: **width / height はソースのピクセルサイズと一致させること（1:1 描画）**。
+   * ディテール（`texelFetch` の近傍タップ）・ビネット（`textureSize` 基準の正規化距離）・
+   * グレイン（画素座標ハッシュ）は「レンダ座標 == ソース画素座標」を前提とするため、
+   * 縮小 / 拡大描画（例: 軽量プレビュー）を渡すと GPU と CPU フォールバックの結果が
+   * 静かに乖離し WYSIWYG が破れる。サイズ変更が必要な場合は先にソース側を
+   * リサンプルした canvas を渡すこと。
    */
   render(
     source: EditableSource,
@@ -187,6 +204,11 @@ export const createAdjustmentRenderer = (): AdjustmentRenderer | null => {
       program,
       CURVE_UNIFORMS.enabled,
     );
+    // ディテール（明瞭度ストライド）の uniform ロケーション
+    const clarityStrideLocation = gl.getUniformLocation(
+      program,
+      EFFECT_UNIFORMS.clarityStride,
+    );
 
     // RGB 行が 4 バイト境界に揃わない 3D LUT のアップロードに備えてアラインメントを 1 に固定する
     // （RGBA 画像テクスチャのアップロードにも安全）
@@ -317,6 +339,11 @@ export const createAdjustmentRenderer = (): AdjustmentRenderer | null => {
         }
       }
 
+      // 明瞭度の大半径ぼかしストライド（CPU パスの clarityStride と同じ解像度適応値）
+      if (clarityStrideLocation) {
+        gl.uniform1i(clarityStrideLocation, clarityStride(width, height));
+      }
+
       // LUT テクスチャ（データ参照が変わったときだけ再アップロード。強度のみ変更時は転送を省く）
       if (lut && lut.data !== lastLutData) {
         gl.activeTexture(gl.TEXTURE1);
@@ -421,24 +448,66 @@ const renderWithCanvas2D = (
   ctx.drawImage(source, 0, 0, width, height);
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
-  for (let i = 0; i < data.length; i += 4) {
-    // GPU パスと同順: 調整 → トーンカーブ（applyToneCurveToPixel）→ LUT（applyLutToPixel）
-    let [r, g, b] = applyAdjustmentToPixel(
-      data[i] / 255,
-      data[i + 1] / 255,
-      data[i + 2] / 255,
-      normalized,
-    );
-    if (curve) {
-      [r, g, b] = applyToneCurveToPixel(r, g, b, curve);
+  // ディテール（シャープネス / 明瞭度）は近傍参照が必要なため、使用時のみソースの
+  // 輝度平面を前処理で 1 回構築する（値 0 なら構築もタップも完全スキップ = 既存性能不変）
+  const hasDetail = normalized.sharpness > 0 || normalized.clarity !== 0;
+  const lumaPlane = hasDetail ? computeLumaPlane(data, width, height) : null;
+  const stride = clarityStride(width, height);
+  const hasVignette = normalized.vignette !== 0;
+  const hasGrain = normalized.grain > 0;
+  let i = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1, i += 4) {
+      let r = data[i] / 255;
+      let g = data[i + 1] / 255;
+      let b = data[i + 2] / 255;
+      // GPU パスと同順: ディテール → 調整 → トーンカーブ → LUT → ビネット → グレイン → 最終クランプ
+      if (lumaPlane) {
+        const delta = detailDeltaAt(
+          lumaPlane,
+          width,
+          height,
+          x,
+          y,
+          stride,
+          normalized.sharpness,
+          normalized.clarity,
+        );
+        r = clamp01(r + delta);
+        g = clamp01(g + delta);
+        b = clamp01(b + delta);
+      }
+      [r, g, b] = applyAdjustmentToPixel(r, g, b, normalized);
+      if (curve) {
+        [r, g, b] = applyToneCurveToPixel(r, g, b, curve);
+      }
+      if (lut) {
+        [r, g, b] = applyLutToPixel(r, g, b, lut.data, lut.strength);
+      }
+      if (hasVignette) {
+        const factor = vignetteFactorAt(
+          x,
+          y,
+          width,
+          height,
+          normalized.vignette,
+        );
+        r *= factor;
+        g *= factor;
+        b *= factor;
+      }
+      if (hasGrain) {
+        const noise = grainNoiseAt(x, y) * normalized.grain * GRAIN_STRENGTH;
+        r += noise;
+        g += noise;
+        b += noise;
+      }
+      // 最終クランプ（GPU の手順 14 と対応。ビネット負値 / グレインで [0,1] を超え得る）
+      data[i] = Math.round(clamp01(r) * 255);
+      data[i + 1] = Math.round(clamp01(g) * 255);
+      data[i + 2] = Math.round(clamp01(b) * 255);
+      // アルファは維持
     }
-    if (lut) {
-      [r, g, b] = applyLutToPixel(r, g, b, lut.data, lut.strength);
-    }
-    data[i] = Math.round(r * 255);
-    data[i + 1] = Math.round(g * 255);
-    data[i + 2] = Math.round(b * 255);
-    // アルファは維持
   }
   ctx.putImageData(imageData, 0, 0);
   return canvas;
@@ -449,6 +518,11 @@ const renderWithCanvas2D = (
  * renderer（WebGL）があれば GPU で描画してその canvas を返し、無ければ CPU フォールバックで
  * 新しい 2D canvas を返す。プレビュー（画面転写）と出力（Blob 化）の両方で同一経路を通すことで
  * WYSIWYG を構造的に保証する。
+ *
+ * 契約: **width / height はソースのピクセルサイズと一致させること（1:1 描画）**。
+ * ディテール / ビネット / グレインが「レンダ座標 == ソース画素座標」を前提とするため、
+ * 縮小 / 拡大指定では GPU（ソーステクスチャ基準）と CPU（縮小後データ基準）の結果が乖離する
+ * （詳細は `AdjustmentRenderer.render` の契約を参照）。
  */
 export const applyAdjustmentsToCanvas = (
   source: EditableSource,

@@ -18,3 +18,58 @@
   padding-bottom: 0.375rem;
   border-bottom: 1px solid var(--border-dashed);
 }
+
+/* 自動補正のワンショットボタン行（HistogramPanel のチップスタイルを踏襲） */
+.autoButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.autoButton {
+  padding: 0.25rem 0.625rem;
+  background: transparent;
+  border: 1px solid var(--border-dashed);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.autoButton:hover:not(:disabled) {
+  border-color: var(--muted-foreground);
+}
+
+.autoButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* WB スポイトのトグル中（HistogramPanel の chipActive を踏襲） */
+.autoButton[aria-pressed="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+/* モノクロ変換のトグル行（スライダーのラベルと同じ文字サイズ・行間） */
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  padding: 0.375rem 0;
+  cursor: pointer;
+}
+
+.toggleRow input[type="checkbox"] {
+  cursor: pointer;
+}
+
+/* トグル中のホバーで .autoButton:hover の border-color に負けないよう再固定
+   （HistogramPanel の .chipActive:hover と同趣旨） */
+.autoButton[aria-pressed="true"]:hover:not(:disabled) {
+  border-color: var(--primary);
+}
