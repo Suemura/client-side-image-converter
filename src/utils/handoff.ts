@@ -24,7 +24,7 @@ export interface HandoffTool {
   acceptedTypes: readonly string[];
   /**
    * ハンドオフの送り先（受け取り側の配線済みページ）として有効か。
-   * Phase 1（Issue #70）は convert / crop のみ。metadata は Phase 2（#71）、
+   * Phase 1（Issue #70）で convert / crop、Phase 2（#71）で metadata を有効化済み。
    * edit は Phase 3（#72）で受け取り配線とともに有効化する。
    */
   canReceiveHandoff: boolean;
@@ -62,7 +62,7 @@ export const HANDOFF_TOOLS: readonly HandoffTool[] = [
     path: "/metadata",
     labelKey: "navigation.metadata",
     acceptedTypes: SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
-    canReceiveHandoff: false,
+    canReceiveHandoff: true,
   },
 ];
 

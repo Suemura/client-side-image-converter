@@ -1,17 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { FileDetailModal } from "../../components/FileDetailModal";
+import { HandoffNotice } from "../../components/HandoffNotice";
+import { HandoffSend } from "../../components/HandoffSend";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { RadioButtonGroup } from "../../components/RadioButtonGroup";
+import { useHandoffReceiver } from "../../hooks/useHandoffReceiver";
 import {
   type GpsMode,
   useMetadataManager,
 } from "../../hooks/useMetadataManager";
+import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import {
   downloadFile,
   downloadMultipleFiles,
@@ -86,6 +90,12 @@ export default function MetadataPage() {
     [analyzeFiles, imageUrls],
   );
 
+  // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
+  const { notice: handoffNotice, clearNotice: clearHandoffNotice } =
+    useHandoffReceiver(SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS, (files) => {
+      void handleFilesSelected(files);
+    });
+
   const handleClearFiles = useCallback(() => {
     setSelectedFiles([]);
     // URLをクリーンアップ
@@ -93,7 +103,8 @@ export default function MetadataPage() {
       URL.revokeObjectURL(url);
     }
     setImageUrls(new Map());
-  }, [imageUrls]);
+    clearHandoffNotice();
+  }, [imageUrls, clearHandoffNotice]);
 
   const handleImageClick = useCallback((file: File) => {
     setSelectedFileForModal(file);
@@ -104,6 +115,20 @@ export default function MetadataPage() {
     setIsModalOpen(false);
     setSelectedFileForModal(null);
   }, []);
+
+  // ハンドオフ送出用: 選択中ファイルの MIME タイプ一覧（クリーニングは形式を変えない）
+  const handoffMimeTypes = useMemo(
+    () => [...new Set(selectedFiles.map((file) => file.type))],
+    [selectedFiles],
+  );
+
+  // ハンドオフ送出用: クリーニングを実行して結果 File[] を返す（送出クリック時にのみ実行）
+  const handleCleanForHandoff = useCallback(async (): Promise<File[]> => {
+    if (!analysis || selectedTags.size === 0) {
+      return [];
+    }
+    return await removeSelectedMetadata();
+  }, [analysis, selectedTags, removeSelectedMetadata]);
 
   // メタデータ削除とダウンロード
   const handleRemoveAndDownload = useCallback(async () => {
@@ -192,6 +217,10 @@ export default function MetadataPage() {
           <h1 className={styles.pageTitle}>{t("metadata.title")}</h1>
           <p className={styles.pageSubtitle}>{t("metadata.subtitle")}</p>
 
+          <HandoffNotice
+            notice={handoffNotice}
+            onDismiss={clearHandoffNotice}
+          />
           <ImageUploadSection
             files={selectedFiles}
             onFilesSelected={handleFilesSelected}
@@ -382,6 +411,17 @@ export default function MetadataPage() {
                           : t("metadata.downloadCleanedImages")}
                       </Button>
                     </div>
+
+                    {/* クリーニング結果をダウンロードせず次のツールへ送る導線 */}
+                    {selectedTags.size > 0 && (
+                      <HandoffSend
+                        origin="metadata"
+                        mimeTypes={handoffMimeTypes}
+                        getFiles={handleCleanForHandoff}
+                        labelKey="handoff.cleanAndSendTo"
+                        disabled={isProcessing}
+                      />
+                    )}
                   </>
                 ) : (
                   <div className={styles.emptyState}>
