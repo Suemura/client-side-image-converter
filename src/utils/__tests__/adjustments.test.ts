@@ -169,6 +169,43 @@ describe("applyAdjustmentToPixel", () => {
     expect(after[1]).toBeCloseTo(0.5, 4);
     expect(after[2]).toBeCloseTo(0.5, 4);
   });
+
+  it("ガンマ + で中間調が明るく、− で暗くなる。端点 0 / 1 は不変", () => {
+    const mid: [number, number, number] = [0.25, 0.25, 0.25];
+    // γ = 2^(-0.5) ≈ 0.707 → 0.25^0.707 ≈ 0.375
+    expect(apply(mid, { gamma: 50 })[0]).toBeCloseTo(0.25 ** (2 ** -0.5), 5);
+    expect(apply(mid, { gamma: 50 })[0]).toBeGreaterThan(0.25);
+    expect(apply(mid, { gamma: -50 })[0]).toBeLessThan(0.25);
+    // 冪変換なので黒と白は動かない
+    expect(apply([0, 0, 0], { gamma: 60 })[0]).toBe(0);
+    expect(apply([1, 1, 1], { gamma: 60 })[0]).toBe(1);
+  });
+
+  it("モノクロで R=G=B（luma 保存）になる", () => {
+    const before: [number, number, number] = [0.8, 0.2, 0.4];
+    const [r, g, b] = apply(before, { monochrome: 100 });
+    expect(r).toBe(g);
+    expect(g).toBe(b);
+    expect(r).toBeCloseTo(lumaOf(before), 5);
+  });
+
+  it("モノクロは彩度スライダーと独立に機能する", () => {
+    const [r, g, b] = apply([0.8, 0.2, 0.4], {
+      saturation: 50,
+      monochrome: 100,
+    });
+    expect(r).toBe(g);
+    expect(g).toBe(b);
+  });
+
+  it("色温度はモノクロ化前に効く（B&W カラーフィルタとして機能）", () => {
+    const gray: [number, number, number] = [0.5, 0.5, 0.5];
+    const plain = apply(gray, { monochrome: 100 })[0];
+    const filtered = apply(gray, { temperature: 100, monochrome: 100 })[0];
+    // 温度シフト後の luma は R 重み分だけ増える（0.2·(W_r − W_b) > 0）
+    expect(filtered).not.toBeCloseTo(plain, 3);
+    expect(filtered).toBeGreaterThan(plain);
+  });
 });
 
 describe("パイプライン係数の輸出（自動補正の逆算用）", () => {

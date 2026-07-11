@@ -84,7 +84,7 @@ npm run preview
 
 各ファイルの詳細な責務・関数一覧は `docs/ARCHITECTURE.md` を参照。
 
-- `src/app/` - Next.js App Router ページ（`convert/` 変換、`crop/` トリミング、`edit/` 画像編集、`metadata/` EXIF エディター、`manifest.ts` PWA マニフェスト。各ページの UI 部品は `src/app/<page>/components/` 配下）
+- `src/app/` - Next.js App Router ページ（`convert/` 変換、`crop/` トリミング、`edit/` 画像編集、`metadata/` EXIF エディター、`manifest.ts` PWA マニフェスト。ページ固有の UI 部品は `src/app/<page>/components/` 配下）
 - `src/components/` - 再利用可能な React コンポーネント（PWA 関連・汎用スライダー等）
 - `src/utils/` - コアユーティリティ。Canvas / WebGL / WASM 依存のオーケストレーションと、Canvas 非依存の純粋ロジック（単体テスト対象）をファイル単位で分離して配置する
   - `__tests__/` - 単体テスト
@@ -109,7 +109,7 @@ npm run preview
 
 1. **画像フォーマット変換 / 最適化**（`/convert`）- JPEG / PNG / WebP / AVIF への変換（品質・目標ファイルサイズ指定）と、形式を維持した再圧縮による「最適化」モード。HEIC / TIFF は変換ページのみ入力可
 2. **画像トリミング**（`/crop`）- アスペクト比プリセット・回転 / 反転・適用範囲切替（全画像一括 / 画像ごと）。EXIF Orientation は焼き込みで補正
-3. **画像編集**（`/edit`）- ライト / カラー調整・自動補正（WB スポイト含む）・トーンカーブ・LUT フィルタ・ヒストグラム表示。WebGL2 プレビュー + Canvas2D CPU フォールバック（WYSIWYG）
+3. **画像編集**（`/edit`）- ライト / カラー / ディテール（シャープネス / 明瞭度 / ビネット / グレイン）調整・効果（モノクロ / ガンマ）・自動補正（WB スポイト含む）・トーンカーブ・LUT フィルタ・ヒストグラム表示。WebGL2 プレビュー + Canvas2D CPU フォールバック（WYSIWYG）
 4. **EXIF メタデータ管理**（`/metadata`）- 表示（JPEG / PNG / WebP）・編集・選択的削除・GPS 丸め（約 1km 精度）
 5. **バッチ処理** - 複数画像の一括処理（投入上限 `MAX_INPUT_FILES` = 200 件。変換はワーカープールで並列）
 6. **プライバシーファースト** - Canvas API / WASM / WebGL によるクライアントサイドでの全処理（サーバー送信なし）

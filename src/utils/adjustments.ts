@@ -13,6 +13,7 @@
 /** ライト（明るさ・階調）系の調整項目 */
 export const LIGHT_ADJUSTMENT_KEYS = [
   "exposure", // 露光量
+  "gamma", // ガンマ（中間調の冪変換）
   "brightness", // 輝度
   "contrast", // コントラスト
   "highlights", // ハイライト
@@ -28,12 +29,27 @@ export const COLOR_ADJUSTMENT_KEYS = [
   "temperature", // 色温度
   "tint", // 色合い
   "hue", // 色相
+  "monochrome", // モノクロ変換（0/100 のトグル）
+] as const;
+
+/** ディテール（近傍参照の畳み込み）系の調整項目 */
+export const DETAIL_ADJUSTMENT_KEYS = [
+  "sharpness", // シャープネス（小半径 unsharp mask、0 起点の片方向）
+  "clarity", // 明瞭度（大半径・中間調限定の unsharp mask）
+] as const;
+
+/** 効果（画素位置依存の仕上げ）系の調整項目 */
+export const EFFECT_ADJUSTMENT_KEYS = [
+  "vignette", // ビネット（周辺減光 / 増光）
+  "grain", // グレイン（決定的ノイズ、0 起点の片方向）
 ] as const;
 
 /** 全調整項目のキー（UI のグループ表示・シェーダ配線・リセットで共用） */
 export const ADJUSTMENT_KEYS = [
   ...LIGHT_ADJUSTMENT_KEYS,
   ...COLOR_ADJUSTMENT_KEYS,
+  ...DETAIL_ADJUSTMENT_KEYS,
+  ...EFFECT_ADJUSTMENT_KEYS,
 ] as const;
 
 export type AdjustmentKey = (typeof ADJUSTMENT_KEYS)[number];
@@ -51,9 +67,20 @@ export type NormalizedAdjustments = Record<AdjustmentKey, number>;
 export const ADJUSTMENT_MIN = -100;
 export const ADJUSTMENT_MAX = 100;
 
+/**
+ * UI スライダーの下限の例外（0 起点の片方向項目）。未指定キーは ADJUSTMENT_MIN。
+ * 状態のクランプ（clampAdjustments）は全キー [-100,100] のまま維持し、
+ * 数式側でも負値を 0 扱いに防御する（UI 以外からの値混入対策）。
+ */
+export const ADJUSTMENT_UI_MIN: Partial<Record<AdjustmentKey, number>> = {
+  sharpness: 0,
+  grain: 0,
+};
+
 /** 無調整（すべて 0） */
 export const DEFAULT_ADJUSTMENTS: AdjustmentState = {
   exposure: 0,
+  gamma: 0,
   brightness: 0,
   contrast: 0,
   highlights: 0,
@@ -65,6 +92,11 @@ export const DEFAULT_ADJUSTMENTS: AdjustmentState = {
   temperature: 0,
   tint: 0,
   hue: 0,
+  monochrome: 0,
+  sharpness: 0,
+  clarity: 0,
+  vignette: 0,
+  grain: 0,
 };
 
 /** luma 計算に使う Rec.709 の輝度重み（GLSL 側と一致させる） */
@@ -120,12 +152,13 @@ export const normalizeAdjustments = (
   return result;
 };
 
-// --- GLSL 組込みと挙動を合わせるスカラーヘルパー（CPU パス用） ---
+// --- GLSL 組込みと挙動を合わせるスカラーヘルパー（CPU パス用。effects.ts と共有） ---
 
-const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
+/** GLSL clamp(v, 0.0, 1.0) と同一 */
+export const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /** GLSL smoothstep(edge0, edge1, x) と同一 */
-const smoothstep = (edge0: number, edge1: number, x: number): number => {
+export const smoothstep = (edge0: number, edge1: number, x: number): number => {
   const t = clamp01((x - edge0) / (edge1 - edge0));
   return t * t * (3 - 2 * t);
 };
@@ -237,6 +270,16 @@ export const applyAdjustmentToPixel = (
   cg *= exposureGain;
   cb *= exposureGain;
 
+  // 1b. ガンマ（中間調の冪変換。γ = 2^(-n) で + が明るく = 他スライダーと符号の向きが揃う）。
+  // 露光直後は c ≥ 0 が保証される唯一の位置のため冪が安全（輝度リフト以降は負になり得る）。
+  // GLSL の pow は負値で未定義のため max(c, 0) の防御も両パスで揃える
+  if (n.gamma !== 0) {
+    const gammaExp = 2 ** -n.gamma;
+    cr = Math.max(cr, 0) ** gammaExp;
+    cg = Math.max(cg, 0) ** gammaExp;
+    cb = Math.max(cb, 0) ** gammaExp;
+  }
+
   // 2. 輝度（加算リフト）
   const lift = n.brightness * 0.5;
   cr += lift;
@@ -302,6 +345,16 @@ export const applyAdjustmentToPixel = (
     cr = nr;
     cg = ng;
     cb = nb;
+  }
+
+  // 9b. モノクロ変換（0/100 のトグル。luma 化）。色相の後 = 調整の最後に置くことで、
+  // 温度 / 色合い / 色相がモノクロ化前の色に効き、B&W の「カラーフィルタ」として機能する。
+  // 彩度 -100 と結果は同じだが、彩度スライダーと独立に ON/OFF できる明示トグルとして提供する
+  if (n.monochrome >= 0.5) {
+    const monoLuma = luma(cr, cg, cb);
+    cr = monoLuma;
+    cg = monoLuma;
+    cb = monoLuma;
   }
 
   // 10. 最終クランプ

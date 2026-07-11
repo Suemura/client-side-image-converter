@@ -639,6 +639,253 @@ test.describe("画像編集 /edit", () => {
       .toBeLessThan(6);
   });
 
+  // --- ディテール / 効果 / モノクロ / ガンマ（Issue #68 第 5・6 項目） ---
+
+  /** プレビュー canvas 全体の RGB 標準偏差を計算する（グレインの分散検証用） */
+  const previewStddev = (page: Page): Promise<number> =>
+    page.getByTestId("edit-preview-canvas").evaluate((canvas) => {
+      const c = canvas as HTMLCanvasElement;
+      const ctx = c.getContext("2d");
+      if (!ctx) return 0;
+      const data = ctx.getImageData(0, 0, c.width, c.height).data;
+      let sum = 0;
+      let sumSq = 0;
+      let count = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        for (let ch = 0; ch < 3; ch += 1) {
+          const v = data[i + ch];
+          sum += v;
+          sumSq += v * v;
+          count += 1;
+        }
+      }
+      const mean = sum / count;
+      return Math.sqrt(sumSq / count - mean * mean);
+    });
+
+  test("シャープネスでエッジコントラストが増し、平坦部は変わらない", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(
+        twoToneVerticalPngFile(
+          "sharp.png",
+          16,
+          16,
+          [180, 180, 180],
+          [80, 80, 80],
+        ),
+      );
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.25))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(150);
+
+    await setSlider(page, "シャープネス", 100);
+
+    // 境界のすぐ上（明側 y=7）はオーバーシュートで明るく、すぐ下（暗側 y=8）は暗くなる
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.45))[0], {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(200);
+    expect((await readPreviewPixel(page, 0.5, 0.53))[0]).toBeLessThan(60);
+    // 境界から離れた平坦部（y=1）は変わらない
+    const [flat] = await readPreviewPixel(page, 0.5, 0.1);
+    expect(Math.abs(flat - 180)).toBeLessThanOrEqual(3);
+  });
+
+  test("ガンマ + で中間調が明るくなり、白は不変", async ({ page }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(
+        twoToneVerticalPngFile(
+          "gamma.png",
+          16,
+          16,
+          [255, 255, 255],
+          [64, 64, 64],
+        ),
+      );
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.75))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(40);
+
+    await setSlider(page, "ガンマ", 60);
+
+    // 中間調 64 → (64/255)^(2^-0.6) ≈ 0.40 → ~102 に持ち上がる
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.75))[0], {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(85);
+    expect((await readPreviewPixel(page, 0.5, 0.75))[0]).toBeLessThan(120);
+    // 白（冪変換の不動点）は変わらない
+    expect((await readPreviewPixel(page, 0.5, 0.25))[0]).toBeGreaterThan(250);
+  });
+
+  test("モノクロでプレビューと出力が無彩色になる（WYSIWYG）", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("mono.png", 16, 16, [200, 30, 30]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(150);
+
+    await page.getByRole("checkbox", { name: "モノクロ" }).check();
+
+    // R=G=B（luma ≈ 66）になる
+    await expect
+      .poll(
+        async () => {
+          const [r, g, b] = await readPreviewPixel(page, 0.5, 0.5);
+          return Math.abs(r - g) + Math.abs(g - b);
+        },
+        { timeout: 10_000 },
+      )
+      .toBeLessThan(4);
+
+    await applyButton(page).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+    const result = page.locator('img[alt="mono_edited.png"]');
+    await expect(result).toBeVisible();
+    const [r, g, b] = await readImagePixel(result, 0.5, 0.5);
+    expect(Math.abs(r - g)).toBeLessThanOrEqual(2);
+    expect(Math.abs(g - b)).toBeLessThanOrEqual(2);
+  });
+
+  test("ビネットで四隅が減光し、負値で増光する。中心は不変", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("vig.png", 16, 16, [128, 128, 128]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(100);
+
+    await setSlider(page, "ビネット", 100);
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.03, 0.03))[0], {
+        timeout: 10_000,
+      })
+      .toBeLessThan(60);
+    // 中心（減光開始半径の内側）は不変
+    const [center] = await readPreviewPixel(page, 0.5, 0.5);
+    expect(Math.abs(center - 128)).toBeLessThanOrEqual(3);
+
+    await setSlider(page, "ビネット", -100);
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.03, 0.03))[0], {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(200);
+  });
+
+  test("グレインは決定的で GPU/CPU の粒が一致する（±2 許容）", async ({
+    page,
+  }) => {
+    // 既存の「カスタム LUT の GPU/CPU 出力ピクセル一致」は決定的 lookup のため厳密比較だが、
+    // グレインは fp32/fp64 の丸め差（~2^-24）が理論上残るため ±2/チャンネルの許容で検証する
+    const positions: Array<[number, number]> = [
+      [0.1, 0.2],
+      [0.6, 0.3],
+      [0.3, 0.8],
+      [0.9, 0.9],
+    ];
+    const setup = async () => {
+      await page.goto("/edit/");
+      await page
+        .locator('input[type="file"]')
+        .setInputFiles(rectPngFile("grain.png", 16, 16, [128, 128, 128]));
+      await expect
+        .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+          timeout: 15_000,
+        })
+        .toBeGreaterThan(100);
+      await setSlider(page, "グレイン", 100);
+      // ノイズ付与で分散が増えるまで待つ（均一グレーの stddev はほぼ 0）
+      await expect
+        .poll(() => previewStddev(page), { timeout: 10_000 })
+        .toBeGreaterThan(8);
+    };
+
+    // GPU パス
+    await setup();
+    const gpuPixels: Array<[number, number, number]> = [];
+    for (const [fx, fy] of positions) {
+      gpuPixels.push(await readPreviewPixel(page, fx, fy));
+    }
+
+    // CPU パス（WebGL 無効化はナビゲーション前に注入されるため再セットアップする）
+    await disableWebGL(page);
+    await setup();
+    for (let p = 0; p < positions.length; p += 1) {
+      const [fx, fy] = positions[p];
+      const cpuPixel = await readPreviewPixel(page, fx, fy);
+      for (let ch = 0; ch < 3; ch += 1) {
+        expect(Math.abs(cpuPixel[ch] - gpuPixels[p][ch])).toBeLessThanOrEqual(
+          2,
+        );
+      }
+    }
+  });
+
+  test("WebGL2 非対応時もモノクロ・ビネット・明瞭度が Canvas2D フォールバックで機能する", async ({
+    page,
+  }) => {
+    await disableWebGL(page);
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("cpu-fx.png", 16, 16, [200, 30, 30]));
+
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(150);
+
+    await page.getByRole("checkbox", { name: "モノクロ" }).check();
+    await setSlider(page, "ビネット", 100);
+    await setSlider(page, "明瞭度", 50);
+
+    // モノクロ（中心が無彩色）
+    await expect
+      .poll(
+        async () => {
+          const [r, g, b] = await readPreviewPixel(page, 0.5, 0.5);
+          return Math.abs(r - g) + Math.abs(g - b);
+        },
+        { timeout: 10_000 },
+      )
+      .toBeLessThan(4);
+    // ビネット（四隅が中心より暗い）
+    const [corner] = await readPreviewPixel(page, 0.03, 0.03);
+    const [center] = await readPreviewPixel(page, 0.5, 0.5);
+    expect(corner).toBeLessThan(center - 20);
+  });
+
   // --- LUT フィルタ（Issue #67） ---
 
   /** LUT のアップロード input（accept に cube を含むもの）を特定する */
