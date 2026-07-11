@@ -53,6 +53,21 @@
   border-color: var(--primary);
 }
 
+/* モノクロ変換のトグル行（スライダーのラベルと同じ文字サイズ・行間） */
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  padding: 0.375rem 0;
+  cursor: pointer;
+}
+
+.toggleRow input[type="checkbox"] {
+  cursor: pointer;
+}
+
 /* トグル中のホバーで .autoButton:hover の border-color に負けないよう再固定
    （HistogramPanel の .chipActive:hover と同趣旨） */
 .autoButton[aria-pressed="true"]:hover:not(:disabled) {
