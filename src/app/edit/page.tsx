@@ -16,7 +16,6 @@ import {
   isDefaultAdjustments,
   resolveAdjustmentForIndex,
 } from "../../utils/adjustments";
-import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import {
   averageRgb,
   clampSampleWindow,
@@ -25,6 +24,7 @@ import {
   computeWhiteBalanceForNeutralPoint,
   WB_SAMPLE_RADIUS,
 } from "../../utils/autoAdjust";
+import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import {
   computeHistogram,
   type HistogramData,
