@@ -73,11 +73,12 @@ describe("HANDOFF_TOOLS", () => {
     );
   });
 
-  it("受け取り可能なのは convert / crop / metadata（edit は Phase 3 で有効化）", () => {
+  it("全 4 ツールが受け取り可能（Phase 3 で edit まで有効化済み）", () => {
     const receivable = HANDOFF_TOOLS.filter((tool) => tool.canReceiveHandoff);
     expect(receivable.map((tool) => tool.id).sort()).toEqual([
       "convert",
       "crop",
+      "edit",
       "metadata",
     ]);
   });
@@ -88,19 +89,40 @@ describe("HANDOFF_TOOLS", () => {
 });
 
 describe("resolveHandoffTargets", () => {
-  it("convert の結果（PNG）は crop / metadata へ送れる（未配線の edit は出ない）", () => {
+  it("convert の結果（PNG）は crop / edit / metadata へ送れる", () => {
     const targets = resolveHandoffTargets("convert", ["image/png"]);
-    expect(targets.map((tool) => tool.id)).toEqual(["crop", "metadata"]);
+    expect(targets.map((tool) => tool.id)).toEqual([
+      "crop",
+      "edit",
+      "metadata",
+    ]);
   });
 
-  it("crop の結果（JPEG）は convert / metadata へ送れる", () => {
+  it("crop の結果（JPEG）は convert / edit / metadata へ送れる", () => {
     const targets = resolveHandoffTargets("crop", ["image/jpeg"]);
-    expect(targets.map((tool) => tool.id)).toEqual(["convert", "metadata"]);
+    expect(targets.map((tool) => tool.id)).toEqual([
+      "convert",
+      "edit",
+      "metadata",
+    ]);
   });
 
-  it("metadata の結果（WebP）は crop / convert へ送れる", () => {
+  it("metadata の結果（WebP）は crop / convert / edit へ送れる", () => {
     const targets = resolveHandoffTargets("metadata", ["image/webp"]);
-    expect(targets.map((tool) => tool.id)).toEqual(["crop", "convert"]);
+    expect(targets.map((tool) => tool.id)).toEqual(["crop", "convert", "edit"]);
+  });
+
+  it("edit の結果（PNG）は crop / convert / metadata へ送れる（編集 → 変換の中核フロー）", () => {
+    const targets = resolveHandoffTargets("edit", ["image/png"]);
+    expect(targets.map((tool) => tool.id)).toEqual([
+      "crop",
+      "convert",
+      "metadata",
+    ]);
+  });
+
+  it("edit の AVIF 出力はどのツールも受理できないため候補なし", () => {
+    expect(resolveHandoffTargets("edit", ["image/avif"])).toEqual([]);
   });
 
   it("送り元自身は候補に含まれない", () => {
