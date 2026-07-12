@@ -28,9 +28,11 @@
   z-index: 10;
 }
 
+/* DESIGN.md「モーダル」: ヘッダーのタイトルはセクション見出し規定（20px / 700 / letter-spacing -0.01em） */
 .modalTitle {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--foreground);
   margin: 0;
 }

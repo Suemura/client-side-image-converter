@@ -77,6 +77,11 @@
   color: var(--foreground);
 }
 
+.link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .bottomSection {
   padding-top: 24px;
   border-top: 1px solid var(--border);
