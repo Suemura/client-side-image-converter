@@ -2,10 +2,12 @@
 
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
+import { useHandoffReceiver } from "../../hooks/useHandoffReceiver";
 import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import {
   type ConversionFailure,
@@ -48,10 +50,18 @@ export default function Home() {
     console.log("Selected files:", files);
   };
 
+  // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
+  const { notice: handoffNotice, clearNotice: clearHandoffNotice } =
+    useHandoffReceiver(
+      SUPPORTED_IMAGE_FORMATS.CONVERT_UPLOAD_FORMATS,
+      handleFilesSelected,
+    );
+
   const handleClearFiles = () => {
     setSelectedFiles([]);
     // ファイルを選び直す際は前回の失敗通知も不要になるためリセットする
     setConversionFailures([]);
+    clearHandoffNotice();
     console.log("Files cleared");
   };
 
@@ -112,6 +122,7 @@ export default function Home() {
     <LayoutContainer>
       <Header />
       <MainContent>
+        <HandoffNotice notice={handoffNotice} onDismiss={clearHandoffNotice} />
         <ImageUploadSection
           files={selectedFiles}
           onFilesSelected={handleFilesSelected}
@@ -135,6 +146,7 @@ export default function Home() {
           results={conversionResults}
           originalFiles={selectedFiles}
           onClear={handleClearResults}
+          handoffOrigin="convert"
         />
       </MainContent>
     </LayoutContainer>

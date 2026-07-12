@@ -3,6 +3,7 @@ import { Manrope, Noto_Sans } from "next/font/google";
 import { I18nProvider } from "../components/I18nProvider";
 import { InstallPrompt } from "../components/InstallPrompt";
 import { ServiceWorkerRegister } from "../components/ServiceWorkerRegister";
+import { HandoffProvider } from "../contexts/HandoffContext";
 import { ThemeProvider } from "../contexts/ThemeContext";
 import { SITE_LOCALE, SITE_NAME, SITE_URL } from "../utils/pageMetadata";
 import "./globals.css";
@@ -103,9 +104,11 @@ export default function RootLayout({
         />
         <ThemeProvider>
           <I18nProvider>
-            <ServiceWorkerRegister />
-            {children}
-            <InstallPrompt />
+            <HandoffProvider>
+              <ServiceWorkerRegister />
+              {children}
+              <InstallPrompt />
+            </HandoffProvider>
           </I18nProvider>
         </ThemeProvider>
       </body>

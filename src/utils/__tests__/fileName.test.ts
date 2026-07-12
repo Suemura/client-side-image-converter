@@ -1,5 +1,60 @@
 import { describe, expect, it } from "vitest";
-import { formatFileSize, truncateFileName } from "../fileName";
+import {
+  createFileNameUniquifier,
+  formatFileSize,
+  truncateFileName,
+} from "../fileName";
+
+describe("createFileNameUniquifier", () => {
+  it("初出のファイル名はそのまま返す", () => {
+    const uniquify = createFileNameUniquifier();
+    expect(uniquify("photo.jpg")).toBe("photo.jpg");
+    expect(uniquify("logo.png")).toBe("logo.png");
+  });
+
+  it("同名衝突は拡張子の前に _2, _3, ... を付けて一意化する", () => {
+    const uniquify = createFileNameUniquifier();
+    expect(uniquify("photo.webp")).toBe("photo.webp");
+    expect(uniquify("photo.webp")).toBe("photo_2.webp");
+    expect(uniquify("photo.webp")).toBe("photo_3.webp");
+  });
+
+  it("連番候補が既出の実ファイル名と衝突する場合は一意になるまで進める", () => {
+    // photo.png / photo_2.png / photo.webp を JPEG 変換したバッチを想定:
+    // 3 件目の photo.jpeg の連番候補 photo_2.jpeg は 2 件目の実名と衝突する
+    const uniquify = createFileNameUniquifier();
+    expect(uniquify("photo.jpeg")).toBe("photo.jpeg");
+    expect(uniquify("photo_2.jpeg")).toBe("photo_2.jpeg");
+    expect(uniquify("photo.jpeg")).toBe("photo_3.jpeg");
+  });
+
+  it("採番後に同じ元名が来たら前回の連番の続きから探索する", () => {
+    const uniquify = createFileNameUniquifier();
+    expect(uniquify("a.png")).toBe("a.png");
+    expect(uniquify("a.png")).toBe("a_2.png");
+    expect(uniquify("a_3.png")).toBe("a_3.png");
+    expect(uniquify("a.png")).toBe("a_4.png");
+  });
+
+  it("拡張子なしのファイル名は末尾に連番を付ける", () => {
+    const uniquify = createFileNameUniquifier();
+    expect(uniquify("README")).toBe("README");
+    expect(uniquify("README")).toBe("README_2");
+  });
+
+  it("先頭ドットの隠しファイル名は全体を名前として扱う", () => {
+    const uniquify = createFileNameUniquifier();
+    expect(uniquify(".hidden")).toBe(".hidden");
+    expect(uniquify(".hidden")).toBe(".hidden_2");
+  });
+
+  it("生成した関数ごとに採番状態は独立している", () => {
+    const first = createFileNameUniquifier();
+    const second = createFileNameUniquifier();
+    expect(first("photo.jpg")).toBe("photo.jpg");
+    expect(second("photo.jpg")).toBe("photo.jpg");
+  });
+});
 
 describe("truncateFileName", () => {
   it("最大長以下のファイル名はそのまま返す", () => {

@@ -1,0 +1,42 @@
+.container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 16px;
+  margin-bottom: 12px;
+  background-color: var(--background);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+}
+
+.textContainer {
+  flex: 1;
+}
+
+.text {
+  font-size: 14px;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.skippedText {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 4px 0 0 0;
+}
+
+.dismissButton {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0 4px;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.dismissButton:hover {
+  color: var(--foreground);
+}

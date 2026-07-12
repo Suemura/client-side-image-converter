@@ -64,7 +64,7 @@ npm run preview
 このファイルは「毎セッション必要な横断規約 + ポインタ」に絞っている。領域別の詳細は、必要になったときに以下を読むこと：
 
 - `docs/ARCHITECTURE.md` — ディレクトリ / ファイル別の詳細な責務・関数一覧と、コア機能の詳細仕様
-- `docs/PATTERNS.md` — 重要な実装パターンの詳細（Worker 構成・最適化エンジン・EXIF バイナリ・編集パイプライン・ファイル投入・PWA キャッシュ戦略等）
+- `docs/PATTERNS.md` — 重要な実装パターンの詳細（Worker 構成・最適化エンジン・EXIF バイナリ・編集パイプライン・ツール連携・ファイル投入・PWA キャッシュ戦略等）
 - `docs/TESTING.md` — テスト方針の詳細（機能別の単体テスト / E2E 対象一覧）
 - `docs/HISTORY.md` — 実装履歴（Issue / PR ごとの詳細な変更ログ）
 - `docs/HARNESS.md` — Claude Code ハーネスの全体像・設計意図・運用上の注意
@@ -85,7 +85,8 @@ npm run preview
 各ファイルの詳細な責務・関数一覧は `docs/ARCHITECTURE.md` を参照。
 
 - `src/app/` - Next.js App Router ページ（`convert/` 変換、`crop/` トリミング、`edit/` 画像編集、`metadata/` EXIF エディター、`manifest.ts` PWA マニフェスト。ページ固有の UI 部品は `src/app/<page>/components/` 配下）
-- `src/components/` - 再利用可能な React コンポーネント（PWA 関連・汎用スライダー等）
+- `src/components/` - 再利用可能な React コンポーネント（PWA 関連・ツール連携（ハンドオフ）の送出/到着 UI・汎用スライダー等）
+- `src/contexts/` - React Context（テーマ・ツール連携の共有ストア）
 - `src/utils/` - コアユーティリティ。Canvas / WebGL / WASM 依存のオーケストレーションと、Canvas 非依存の純粋ロジック（単体テスト対象）をファイル単位で分離して配置する
   - `__tests__/` - 単体テスト
 - `src/hooks/` - カスタム React フック
@@ -111,16 +112,17 @@ npm run preview
 2. **画像トリミング**（`/crop`）- アスペクト比プリセット・回転 / 反転・適用範囲切替（全画像一括 / 画像ごと）。EXIF Orientation は焼き込みで補正
 3. **画像編集**（`/edit`）- ライト / カラー / ディテール（シャープネス / 明瞭度 / ビネット / グレイン）調整・効果（モノクロ / ガンマ）・自動補正（WB スポイト含む）・トーンカーブ・LUT フィルタ・ヒストグラム表示。WebGL2 プレビュー + Canvas2D CPU フォールバック（WYSIWYG）
 4. **EXIF メタデータ管理**（`/metadata`）- 表示（JPEG / PNG / WebP）・編集・選択的削除・GPS 丸め（約 1km 精度）
-5. **バッチ処理** - 複数画像の一括処理（投入上限 `MAX_INPUT_FILES` = 200 件。変換はワーカープールで並列）
-6. **プライバシーファースト** - Canvas API / WASM / WebGL によるクライアントサイドでの全処理（サーバー送信なし）
-7. **PWA** - オフライン対応・ホーム画面 / デスクトップへインストール可能
+5. **ツール連携（ハンドオフ）** - 各ツールの処理結果をダウンロードせずに次のツールへ引き継いで続けて処理できる（全 4 ツールの相互連携。送り先候補は「現在のツール以外」かつ「全結果 MIME を受理できるツール」）
+6. **バッチ処理** - 複数画像の一括処理（投入上限 `MAX_INPUT_FILES` = 200 件。変換はワーカープールで並列）
+7. **プライバシーファースト** - Canvas API / WASM / WebGL によるクライアントサイドでの全処理（サーバー送信なし）
+8. **PWA** - オフライン対応・ホーム画面 / デスクトップへインストール可能
 
 ### 重要な設計原則
 
-領域別の詳細パターン（Worker 構成・最適化エンジン・EXIF バイナリ・LUT / トーンカーブ / 自動補正のミラー構造・ファイル投入・PWA キャッシュ戦略等）は `docs/PATTERNS.md` を参照。**該当領域に触れる前に必ず読むこと**。
+領域別の詳細パターン（Worker 構成・最適化エンジン・EXIF バイナリ・LUT / トーンカーブ / 自動補正のミラー構造・ツール連携・ファイル投入・PWA キャッシュ戦略等）は `docs/PATTERNS.md` を参照。**該当領域に触れる前に必ず読むこと**。
 
 - **クライアントサイド完結**: 画像処理は Canvas API / WASM / WebGL のみで行い、画像をサーバーへ送信しない
-- **純粋ロジックの分離**: Canvas / WebGL / DOM 依存のオーケストレーションから Canvas 非依存の純粋ロジックを別ファイルへ切り出し、単体テスト対象にする（例: `conversionCore.ts` / `cropGeometry.ts` / `adjustments.ts` / `precache.ts`）
+- **純粋ロジックの分離**: Canvas / WebGL / DOM 依存のオーケストレーションから Canvas 非依存の純粋ロジックを別ファイルへ切り出し、単体テスト対象にする（例: `conversionCore.ts` / `cropGeometry.ts` / `adjustments.ts` / `handoff.ts` / `precache.ts`）
 - **WYSIWYG**: プレビューと出力は同一の描画経路を通す。GPU（GLSL）と CPU（TS）で同じ処理を持つ場合は TS 側の関数を「唯一の真実」とし、GLSL は同順序・同係数でミラーする
 - **動的 import**: WASM コーデック（`@jsquash/*` / libheif / utif2 等)は使用時のみロードし、初期バンドルへ影響させない
 - **dual-store**: 適用範囲（全画像一括 / 画像ごと）は crop 起源の dual-store パターンを踏襲する（`resolveCropForIndex` / `resolveAdjustmentForIndex` 等）
