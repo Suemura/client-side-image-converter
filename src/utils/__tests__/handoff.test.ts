@@ -73,11 +73,13 @@ describe("HANDOFF_TOOLS", () => {
     );
   });
 
-  it("Phase 1 で受け取り可能なのは convert / crop のみ", () => {
+  it("全 4 ツールが受け取り可能（Phase 3 で edit まで有効化済み）", () => {
     const receivable = HANDOFF_TOOLS.filter((tool) => tool.canReceiveHandoff);
     expect(receivable.map((tool) => tool.id).sort()).toEqual([
       "convert",
       "crop",
+      "edit",
+      "metadata",
     ]);
   });
 
@@ -87,14 +89,40 @@ describe("HANDOFF_TOOLS", () => {
 });
 
 describe("resolveHandoffTargets", () => {
-  it("convert の結果（PNG）は crop へ送れる（未配線の edit / metadata は出ない）", () => {
+  it("convert の結果（PNG）は crop / edit / metadata へ送れる", () => {
     const targets = resolveHandoffTargets("convert", ["image/png"]);
-    expect(targets.map((tool) => tool.id)).toEqual(["crop"]);
+    expect(targets.map((tool) => tool.id)).toEqual([
+      "crop",
+      "edit",
+      "metadata",
+    ]);
   });
 
-  it("crop の結果（JPEG）は convert へ送れる", () => {
+  it("crop の結果（JPEG）は convert / edit / metadata へ送れる", () => {
     const targets = resolveHandoffTargets("crop", ["image/jpeg"]);
-    expect(targets.map((tool) => tool.id)).toEqual(["convert"]);
+    expect(targets.map((tool) => tool.id)).toEqual([
+      "convert",
+      "edit",
+      "metadata",
+    ]);
+  });
+
+  it("metadata の結果（WebP）は crop / convert / edit へ送れる", () => {
+    const targets = resolveHandoffTargets("metadata", ["image/webp"]);
+    expect(targets.map((tool) => tool.id)).toEqual(["crop", "convert", "edit"]);
+  });
+
+  it("edit の結果（PNG）は crop / convert / metadata へ送れる（編集 → 変換の中核フロー）", () => {
+    const targets = resolveHandoffTargets("edit", ["image/png"]);
+    expect(targets.map((tool) => tool.id)).toEqual([
+      "crop",
+      "convert",
+      "metadata",
+    ]);
+  });
+
+  it("edit の AVIF 出力はどのツールも受理できないため候補なし", () => {
+    expect(resolveHandoffTargets("edit", ["image/avif"])).toEqual([]);
   });
 
   it("送り元自身は候補に含まれない", () => {
@@ -102,8 +130,8 @@ describe("resolveHandoffTargets", () => {
     expect(targets.some((tool) => tool.id === "convert")).toBe(false);
   });
 
-  it("AVIF 結果はどのツールも受理できないため候補なし", () => {
-    // crop は UPLOAD_FORMATS（AVIF 非受理）、convert 自身は送り元のため除外
+  it("AVIF 結果はどのツールも受理できないため候補なし（metadata にも出ない）", () => {
+    // crop / metadata は UPLOAD_FORMATS（AVIF 非受理）、convert 自身は送り元のため除外
     expect(resolveHandoffTargets("convert", ["image/avif"])).toEqual([]);
   });
 
