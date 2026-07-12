@@ -31,7 +31,8 @@
   border-color: var(--border-strong);
 }
 
-/* hidden input のため、キーボードフォーカスは :focus-within でラベルに可視化する */
+/* input は不可視だがフォーカス可能（下記 .input）のため、
+   キーボードフォーカスは :focus-within でラベルに可視化する */
 .option:focus-within {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -47,7 +48,13 @@
   border-color: var(--accent);
 }
 
+/* 不可視だがフォーカス可能な hidden input パターン（visibility: hidden だと
+   Tab 順序から除外され :focus-within が発火しないため opacity で隠す） */
 .input {
   position: absolute;
-  visibility: hidden;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
 }
