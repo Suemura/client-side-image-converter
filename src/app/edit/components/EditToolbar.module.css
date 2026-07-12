@@ -1,106 +1,127 @@
 .toolbar {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
-  background-color: var(--background);
-  border: 1px solid var(--border-dashed);
-  border-radius: 8px;
+  gap: 16px;
+  padding: 16px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 .group {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: 8px;
 }
 
 .groupLabel {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--muted-foreground);
 }
 
 .buttonRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.375rem;
+  gap: 8px;
 }
 
 .help {
-  font-size: 0.7rem;
+  font-size: 12px;
   line-height: 1.4;
   color: var(--muted-foreground);
   margin: 0;
 }
 
+/* 適用範囲トグル: 直下の出力形式（共通 RadioButtonGroup）と揃えた
+   DESIGN.md「RadioButtonGroup（チップ型単一選択）」規定のピル型チップ */
 .chip {
-  padding: 0.375rem 0.75rem;
-  background: transparent;
-  border: 1px solid var(--border-dashed);
-  border-radius: 6px;
-  font-size: 0.8125rem;
+  height: 40px;
+  padding: 0 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 14px;
   font-weight: 500;
   color: var(--foreground);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .chip:hover {
-  border-color: var(--muted-foreground);
+  border-color: var(--border-strong);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .chipActive {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--foreground);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .chipActive:hover {
-  border-color: var(--primary);
+  border-color: var(--accent);
 }
 
 .checkboxLabel {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
   cursor: pointer;
   user-select: none;
 }
 
 .checkboxDisabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .checkbox {
-  width: 1rem;
-  height: 1rem;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
 .checkboxText {
-  font-size: 0.875rem;
+  font-size: 14px;
   color: var(--foreground);
 }
 
+/* DESIGN.md「Button」secondary 相当の控えめなボタン */
 .resetAll {
   align-self: flex-start;
-  padding: 0.5rem 1rem;
-  background: transparent;
-  border: 1px solid var(--border-dashed);
-  border-radius: 6px;
-  font-size: 0.8125rem;
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
   font-weight: 500;
   color: var(--foreground);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .resetAll:hover:not(:disabled) {
-  border-color: var(--muted-foreground);
+  background-color: var(--surface-muted);
+  border-color: var(--border-strong);
+}
+
+.resetAll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .resetAll:disabled {
-  opacity: 0.35;
-  cursor: default;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
