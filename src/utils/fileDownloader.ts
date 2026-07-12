@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { createFileNameUniquifier } from "./fileName";
 import type { ConversionResult } from "./imageConverter";
 import type { CropResult } from "./imageCropper";
 
@@ -59,7 +60,7 @@ export const downloadAsZip = async (
 
   try {
     const zip = new JSZip();
-    const fileNameCounts = new Map<string, number>();
+    const uniquify = createFileNameUniquifier();
 
     for (const result of results) {
       let blob: Blob;
@@ -78,21 +79,8 @@ export const downloadAsZip = async (
         continue;
       }
 
-      // 重複ファイル名の処理
-      if (fileNameCounts.has(filename)) {
-        const count = (fileNameCounts.get(filename) || 0) + 1;
-        fileNameCounts.set(filename, count);
-
-        const nameWithoutExt =
-          filename.substring(0, filename.lastIndexOf(".")) || filename;
-        const extension = filename.substring(filename.lastIndexOf(".")) || "";
-        filename = `${nameWithoutExt}_${count}${extension}`;
-      } else {
-        fileNameCounts.set(filename, 1);
-      }
-
-      // Blobをzipに追加
-      zip.file(filename, blob);
+      // 重複ファイル名を一意化して Blob を zip に追加
+      zip.file(uniquify(filename), blob);
     }
 
     // Zipファイルを生成
@@ -179,26 +167,11 @@ export const downloadMultipleFiles = async (
   } else {
     // 複数ファイルの場合はZIPファイルを作成
     const zip = new JSZip();
-    const fileNameCounts = new Map<string, number>();
+    const uniquify = createFileNameUniquifier();
 
     for (const file of files) {
-      let filename = file.name;
-
-      // 重複ファイル名の処理
-      if (fileNameCounts.has(filename)) {
-        const count = (fileNameCounts.get(filename) || 0) + 1;
-        fileNameCounts.set(filename, count);
-
-        const nameWithoutExt =
-          filename.substring(0, filename.lastIndexOf(".")) || filename;
-        const extension = filename.substring(filename.lastIndexOf(".")) || "";
-        filename = `${nameWithoutExt}_${count}${extension}`;
-      } else {
-        fileNameCounts.set(filename, 1);
-      }
-
-      // ファイルをzipに追加
-      zip.file(filename, file);
+      // 重複ファイル名を一意化してファイルを zip に追加
+      zip.file(uniquify(file.name), file);
     }
 
     // Zipファイルを生成

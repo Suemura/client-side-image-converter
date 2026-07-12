@@ -3,10 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
+import { useHandoffReceiver } from "../../hooks/useHandoffReceiver";
+import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import {
   ASPECT_RATIO_PRESETS,
   type CropArea,
@@ -163,16 +166,24 @@ export default function CropPage() {
     [resetCropSettings],
   );
 
+  // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
+  const { notice: handoffNotice, clearNotice: clearHandoffNotice } =
+    useHandoffReceiver(
+      SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
+      handleFilesSelected,
+    );
+
   const handleClearFiles = useCallback(() => {
     setFiles([]);
     setCurrentPreviewIndex(0);
     setCropResults([]);
     resetCropSettings();
+    clearHandoffNotice();
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
       setPreviewUrl("");
     }
-  }, [previewUrl, resetCropSettings]);
+  }, [previewUrl, resetCropSettings, clearHandoffNotice]);
 
   const handleCropAreaChange = useCallback(
     (newCropArea: CropArea) => {
@@ -319,6 +330,10 @@ export default function CropPage() {
           <div className={styles.cropPageContainer}>
             {/* 左カラム: ファイル選択・ファイルリスト */}
             <div className={styles.cropColumn}>
+              <HandoffNotice
+                notice={handoffNotice}
+                onDismiss={clearHandoffNotice}
+              />
               <ImageUploadSection
                 files={files}
                 onFilesSelected={handleFilesSelected}
@@ -439,6 +454,7 @@ export default function CropPage() {
                   cropResults={cropResults}
                   onClear={handleClearResults}
                   showComparison={false}
+                  handoffOrigin="crop"
                 />
               ) : (
                 <div className={styles.placeholder}>

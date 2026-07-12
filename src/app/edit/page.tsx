@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
+import { useHandoffReceiver } from "../../hooks/useHandoffReceiver";
 import {
   type AdjustmentState,
   DEFAULT_ADJUSTMENTS,
@@ -22,6 +24,7 @@ import {
   computeWhiteBalanceForNeutralPoint,
   WB_SAMPLE_RADIUS,
 } from "../../utils/autoAdjust";
+import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import {
   computeHistogram,
   type HistogramData,
@@ -407,6 +410,14 @@ export default function EditPage() {
     [revokeResultUrls, editResults],
   );
 
+  // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
+  // （受理形式は FileUploadArea の既定と同じ UPLOAD_FORMATS）
+  const { notice: handoffNotice, clearNotice: clearHandoffNotice } =
+    useHandoffReceiver(
+      SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
+      handleFilesSelected,
+    );
+
   const handleClearFiles = useCallback(() => {
     revokeResultUrls(editResults);
     setFiles([]);
@@ -419,7 +430,8 @@ export default function EditPage() {
     setWbEyedropperActive(false);
     resetAdjustments();
     setCustomLutName(null);
-  }, [resetAdjustments, revokeResultUrls, editResults]);
+    clearHandoffNotice();
+  }, [resetAdjustments, revokeResultUrls, editResults, clearHandoffNotice]);
 
   const handlePreviousImage = useCallback(() => {
     if (files.length === 0) return;
@@ -578,6 +590,10 @@ export default function EditPage() {
           <div className={styles.workspace}>
             {/* 左カラム: ファイル選択・ファイルリスト */}
             <div className={styles.column}>
+              <HandoffNotice
+                notice={handoffNotice}
+                onDismiss={clearHandoffNotice}
+              />
               <ImageUploadSection
                 files={files}
                 onFilesSelected={handleFilesSelected}
@@ -709,6 +725,7 @@ export default function EditPage() {
                 results={editResults}
                 originalFiles={files}
                 onClear={handleClearResults}
+                handoffOrigin="edit"
               />
             )}
           </div>
