@@ -68,6 +68,7 @@ npm run preview
 - `docs/TESTING.md` — テスト方針の詳細（機能別の単体テスト / E2E 対象一覧）
 - `docs/HISTORY.md` — 実装履歴（Issue / PR ごとの詳細な変更ログ）
 - `docs/HARNESS.md` — Claude Code ハーネスの全体像・設計意図・運用上の注意
+- `DESIGN.md`（リポジトリルート） — デザイン規定（トークン・タイポグラフィ・コンポーネント規定。UI・スタイルに触れる前に読む）
 
 ### 本ファイルの編集ルール（肥大化防止・厳守）
 

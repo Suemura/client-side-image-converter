@@ -129,6 +129,8 @@ Pull requests and issue reports are welcome!
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Create a Pull Request
 
+UI / style changes must follow the design guidelines in [DESIGN.md](DESIGN.md): reference the CSS design tokens defined in `src/app/globals.css` instead of hard-coding colors.
+
 ## 📞 Support
 
 For questions or support needs, please feel free to contact us at [GitHub Issues](https://github.com/Suemura/client-side-image-converter/issues).

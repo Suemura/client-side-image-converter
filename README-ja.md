@@ -127,6 +127,8 @@ npx biome format src/ --write
 4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
 5. プルリクエストを作成
 
+UI・スタイルの変更はデザイン規定 [DESIGN.md](DESIGN.md) に準拠してください（色はハードコードせず、`src/app/globals.css` のデザイントークンを参照します）。
+
 ## 📞 サポート
 
 質問やサポートが必要な場合は、[GitHub Issues](https://github.com/Suemura/client-side-image-converter/issues) にお気軽にお問い合わせください。
