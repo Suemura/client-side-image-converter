@@ -8,10 +8,10 @@
 .imageContainer {
   position: relative;
   display: inline-block;
-  border: 1px solid var(--border-dashed);
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  background-color: #f8f9fa;
+  background-color: var(--surface-muted);
 }
 
 .image {
@@ -22,6 +22,8 @@
   user-select: none;
 }
 
+/* 選択枠は任意の画像の上に重なる UI のためテーマ非依存の固定色
+   （DESIGN.md「Do's and Don'ts」の画像上オーバーレイ UI 例外） */
 .cropOverlay {
   position: absolute;
   border: 2px solid #007acc;
@@ -31,6 +33,7 @@
   cursor: move;
 }
 
+/* 選択枠の内側の破線も画像上のオーバーレイ UI のためテーマ非依存の固定色 */
 .cropOverlay::before {
   content: "";
   position: absolute;
@@ -42,12 +45,13 @@
   pointer-events: none;
 }
 
-/* リサイズハンドル */
+/* リサイズハンドル: 画像上のオーバーレイ UI のためテーマ非依存の固定色
+   （白縁 + 影でどんな画像上でも視認できる配色。DESIGN.md「Do's and Don'ts」参照） */
 .resizeHandle {
   position: absolute;
   background-color: #007acc;
-  border: 2px solid white;
-  border-radius: 50%;
+  border: 2px solid #ffffff;
+  border-radius: var(--radius-full);
   width: 12px;
   height: 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -108,63 +112,74 @@
   cursor: w-resize;
 }
 
+/* 操作説明チップ: 画像上のオーバーレイ UI のためテーマ非依存の固定色
+   （黒暗幕 + 白文字。DESIGN.md「Do's and Don'ts」参照） */
 .instructions {
   position: absolute;
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
   background-color: rgba(0, 0, 0, 0.8);
-  color: white;
+  color: #ffffff;
   padding: 0.5rem 1rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 0.875rem;
   z-index: 3;
   pointer-events: none;
 }
 
-/* ナビゲーションヘッダー */
+/* ナビゲーションヘッダー（画像の外の UI。パネル内のインセット領域として扱う） */
 .navigationHeader {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1rem;
   padding: 0.5rem;
-  background-color: var(--background-secondary);
+  background-color: var(--surface-muted);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin-bottom: 0.5rem;
 }
 
+/* DESIGN.md「Button」secondary 相当のアイコンボタン */
 .navButton {
-  background: var(--button-secondary-bg);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 0.25rem 0.5rem;
   cursor: pointer;
   font-size: 1rem;
-  font-weight: bold;
-  color: var(--text);
+  font-weight: 500;
+  color: var(--foreground);
   min-width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .navButton:hover:not(:disabled) {
-  background: var(--button-secondary-hover);
-  border-color: var(--button-secondary-border-hover);
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
+}
+
+.navButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .navButton:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .imageCounter {
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
   font-weight: 500;
   min-width: 60px;
   text-align: center;
