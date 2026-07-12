@@ -63,8 +63,8 @@ export const metadata: Metadata = {
 // globals.css の --background と一致させ、テーマ切り替え時の違和感を防ぐ。
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f9fafb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e1117" },
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
   ],
 };
 

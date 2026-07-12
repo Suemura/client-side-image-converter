@@ -16,8 +16,8 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     // ライトテーマの背景色に合わせる（globals.css の --background）
-    background_color: "#f9fafb",
-    theme_color: "#f9fafb",
+    background_color: "#fafafa",
+    theme_color: "#fafafa",
     icons: [
       {
         src: "/icons/icon-192.png",

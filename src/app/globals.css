@@ -1,37 +1,106 @@
+/* デザイントークン。用途・コントラスト基準はリポジトリルートの DESIGN.md を参照。
+   色トークンは :root（ライト）と [data-theme="dark"]（ダーク）で二重定義する。
+   --background を変更する場合はテーマカラー同期 3 点セット
+   （src/app/layout.tsx の viewport.themeColor / src/app/manifest.ts の
+   background_color / theme_color）も必ず揃えること */
 :root {
-  /* メインの背景色 - body、featureCard、Input、Footer等 */
-  --background: #f9fafb;
-  /* メインテキスト色 - タイトル、本文等 */
-  --foreground: #101518;
-  /* 境界線色 - カード、Footer等の境界 */
-  --border: #eaedf1;
-  /* 軽い境界線色 - ThemeSwitchスライダー境界等 */
-  --border-light: #e5e5e5;
-  /* 破線境界色 - 入力フィールド、ドラッグエリア等 */
-  --border-dashed: #d4dce2;
-  /* 補助テキスト色 - 説明文、ラベル等 */
-  --muted-foreground: #5c748a;
-  /* プライマリアクセント色 - プライバシーアイコン背景、警告ボックス等 */
-  --primary: #dce8f3;
+  /* ページ背景 */
+  --background: #fafafa;
+  /* 本文テキスト・見出し */
+  --foreground: #171717;
+  /* カード・パネル・入力欄の背景 */
+  --surface: #ffffff;
+  /* 一段沈んだ背景（無効状態・インセット領域・トラック） */
+  --surface-muted: #f5f5f5;
+  /* 標準の境界線（ヘアライン） */
+  --border: #e5e5e5;
+  /* 強調境界（ドロップ領域の破線・hover 時の境界） */
+  --border-strong: #cfcfcf;
+  /* 補助テキスト・ラベル */
+  --muted-foreground: #525252;
+  /* プレースホルダ・微細な注記（14px 以上の文字専用） */
+  --faint-foreground: #8f8f8f;
+  /* リンク・選択状態・プライマリボタン背景・フォーカスリング */
+  --accent: #0068d6;
+  /* アクセント背景上のテキスト */
+  --accent-foreground: #ffffff;
+  /* 選択チップ・情報ボックス等の淡い背景 */
+  --accent-soft: #e6f1fe;
+  /* 成功テキスト/アイコン */
+  --success: #047857;
+  /* 成功の淡い背景 */
+  --success-soft: #ecfdf5;
+  /* 警告テキスト/アイコン */
+  --warning: #b45309;
+  /* 警告の淡い背景 */
+  --warning-soft: #fffbeb;
+  /* エラーテキスト/アイコン */
+  --error: #d41d1d;
+  /* エラーの淡い背景 */
+  --error-soft: #fef2f2;
+  /* モーダルの背景幕 */
+  --overlay: rgba(0, 0, 0, 0.5);
+
+  /* 角丸（テーマで変えない）。用途対応は DESIGN.md「6. Shapes」参照 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* 影 3 段階（テーマで変えない。ダークの階層表現は border を主とする） */
+  --shadow-sm: 0 1px 1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md:
+    0 2px 4px rgba(0, 0, 0, 0.04), 0 8px 16px -4px rgba(0, 0, 0, 0.06);
+  --shadow-lg:
+    0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.05),
+    0 24px 32px -8px rgba(0, 0, 0, 0.08);
+
   /* フォントファミリー */
   --font-family: var(--font-manrope), var(--font-noto-sans), sans-serif;
+
+  /* 非推奨エイリアス: 参照元を Phase 2〜5 で新トークンへ置換し、Phase 5 で削除する */
+  --primary: var(--accent-soft);
+  --border-light: var(--border);
+  --border-dashed: var(--border-strong);
 }
 
 [data-theme="dark"] {
-  /* ダークモード：メインの背景色 */
-  --background: #0e1117;
-  /* ダークモード：メインテキスト色 */
-  --foreground: #f1f3f4;
-  /* ダークモード：境界線色 */
-  --border: #2a2a2a;
-  /* ダークモード：軽い境界線色 */
-  --border-light: #404040;
-  /* ダークモード：破線境界色 */
-  --border-dashed: #3a3a3a;
-  /* ダークモード：補助テキスト色 */
-  --muted-foreground: #8b9098;
-  /* ダークモード：プライマリアクセント色 */
-  --primary: #1a2531;
+  /* ダークモード：ページ背景 */
+  --background: #0a0a0a;
+  /* ダークモード：本文テキスト・見出し */
+  --foreground: #ededed;
+  /* ダークモード：カード・パネル・入力欄の背景 */
+  --surface: #141414;
+  /* ダークモード：一段沈んだ背景 */
+  --surface-muted: #1f1f1f;
+  /* ダークモード：標準の境界線 */
+  --border: #262626;
+  /* ダークモード：強調境界 */
+  --border-strong: #3d3d3d;
+  /* ダークモード：補助テキスト・ラベル */
+  --muted-foreground: #a1a1a1;
+  /* ダークモード：プレースホルダ・微細な注記 */
+  --faint-foreground: #707070;
+  /* ダークモード：アクセント */
+  --accent: #52a9ff;
+  /* ダークモード：アクセント背景上のテキスト */
+  --accent-foreground: #0a0a0a;
+  /* ダークモード：アクセントの淡い背景 */
+  --accent-soft: #0d2237;
+  /* ダークモード：成功 */
+  --success: #34d399;
+  /* ダークモード：成功の淡い背景 */
+  --success-soft: #0a2b1d;
+  /* ダークモード：警告 */
+  --warning: #fbbf24;
+  /* ダークモード：警告の淡い背景 */
+  --warning-soft: #2a2008;
+  /* ダークモード：エラー */
+  --error: #f87171;
+  /* ダークモード：エラーの淡い背景 */
+  --error-soft: #2d1215;
+  /* ダークモード：モーダルの背景幕 */
+  --overlay: rgba(0, 0, 0, 0.65);
 }
 
 html {
