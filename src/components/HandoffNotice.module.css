@@ -1,3 +1,4 @@
+/* DESIGN.md「通知ボックス」規定（情報 = --accent 系） */
 .container {
   display: flex;
   align-items: flex-start;
@@ -5,9 +6,9 @@
   gap: 8px;
   padding: 8px 16px;
   margin-bottom: 12px;
-  background-color: var(--background);
-  border: 1px solid var(--primary);
-  border-radius: 8px;
+  background-color: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
 }
 
 .textContainer {
@@ -16,7 +17,7 @@
 
 .text {
   font-size: 14px;
-  color: var(--foreground);
+  color: var(--accent);
   margin: 0;
 }
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type React from "react";
 import { useTranslation } from "react-i18next";
 import { HANDOFF_TOOLS } from "../utils/handoff";
+import styles from "./Navigation.module.css";
 
 export const Navigation: React.FC = () => {
   const { t } = useTranslation();
@@ -16,14 +17,9 @@ export const Navigation: React.FC = () => {
   ];
 
   return (
-    <nav className="flex items-center gap-9">
+    <nav className={styles.nav}>
       {navItems.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className="text-sm font-medium"
-          style={{ color: "var(--foreground)" }}
-        >
+        <Link key={item.href} href={item.href} className={styles.link}>
           {item.label}
         </Link>
       ))}

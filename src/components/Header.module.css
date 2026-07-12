@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: space-between;
   white-space: nowrap;
-  border-bottom: 1px solid #d1d5db;
+  border-bottom: 1px solid var(--border);
   padding: 12px 40px;
 }
 
@@ -37,13 +37,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #6b7280;
-  transition: color 0.2s;
+  color: var(--muted-foreground);
+  transition: color 0.15s ease;
   text-decoration: none;
 }
 
 .githubLink:hover {
-  color: #374151;
+  color: var(--foreground);
 }
 
 .githubIcon {

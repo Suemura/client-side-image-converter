@@ -1,0 +1,142 @@
+/* ファイル詳細モーダル。インラインスタイルからの移行 + DESIGN.md「モーダル」規定の適用 */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--overlay);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 90vw;
+  max-height: 90vh;
+  width: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+.imageArea {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--surface);
+  position: relative;
+}
+
+.previewImage {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--muted-foreground);
+}
+
+.noPreview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--muted-foreground);
+}
+
+.noPreviewIcon {
+  width: 80px;
+  height: 80px;
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.noPreviewText {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* プレビュー画像の上に重なる閉じるボタンのため、テーマ非依存の固定色
+   （DESIGN.md「Do's and Don'ts」の画像上オーバーレイ UI 例外） */
+.closeButton {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-full);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.infoPanel {
+  width: 400px;
+  padding: 24px;
+  background-color: var(--surface);
+  border-left: 1px solid var(--border);
+  overflow: auto;
+}
+
+.infoTitle {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 16px;
+  color: var(--foreground);
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--foreground);
+}
+
+.metaList {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.metaItem {
+  margin-bottom: 4px;
+}
+
+.metaValue {
+  color: var(--muted-foreground);
+}
+
+.metaValueBreak {
+  color: var(--muted-foreground);
+  word-break: break-all;
+}
+
+.exifEmpty {
+  font-size: 14px;
+  color: var(--muted-foreground);
+  font-style: italic;
+}

@@ -1,8 +1,9 @@
 import type React from "react";
+import styles from "./Logo.module.css";
 
 export const Logo: React.FC = () => {
   return (
-    <div className="size-4">
+    <div className={styles.logo}>
       <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
         <title>Image Converter Logo</title>
         <g clipPath="url(#clip0_6_543)">
