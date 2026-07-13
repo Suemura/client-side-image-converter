@@ -10,83 +10,45 @@
   padding: 0 2rem;
 }
 
+/* DESIGN.md「カード / パネル」規定 */
 .cropColumn {
-  background-color: var(--background);
-  border-radius: 12px;
-  border: 1px solid var(--border-dashed);
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   padding: 1.25rem;
   overflow: hidden;
 }
 
 .cropColumnCenter {
-  background-color: var(--background);
-  border-radius: 12px;
-  border: 1px solid var(--border-dashed);
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   min-height: 600px;
 }
 
+/* 小見出し規定（16px / 500） */
 .cropColumnTitle {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--foreground);
   margin-bottom: 1rem;
   word-wrap: break-word;
   hyphens: auto;
 }
 
+/* セクション見出し規定（20px / 700 / letter-spacing -0.01em） */
 .cropCenterTitle {
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--foreground);
   margin-bottom: 1rem;
   text-align: center;
-}
-
-.fileList {
-  max-height: 400px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.fileItem {
-  padding: 0.75rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  display: flex;
-  align-items: center;
-}
-
-.fileItemSuccess {
-  background-color: #f0f9ff;
-  border: 1px solid #bfdbfe;
-}
-
-.fileItemError {
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
-}
-
-.fileName {
-  font-weight: 500;
-  margin-bottom: 0.25rem;
-}
-
-.fileSize {
-  color: var(--muted-foreground);
-}
-
-.fileStatus {
-  color: #059669;
-}
-
-.fileError {
-  color: #dc2626;
 }
 
 .placeholder {
@@ -99,11 +61,12 @@
   hyphens: auto;
 }
 
+/* パネル内で一段沈めるインセット領域（DESIGN.md「カード / パネル」） */
 .cropOptions {
   margin-top: 1rem;
   padding: 1rem;
-  background-color: var(--background-secondary);
-  border-radius: 8px;
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
 }
 
@@ -146,22 +109,6 @@
   margin-bottom: 2rem;
 }
 
-.downloadButton {
-  display: inline-block;
-  margin-top: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  background-color: #007acc;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  transition: background-color 0.2s;
-}
-
-.downloadButton:hover {
-  background-color: #005a9e;
-}
-
 .processingText {
   text-align: center;
   color: var(--muted-foreground);
@@ -172,16 +119,18 @@
   padding: 2rem;
 }
 
+/* DESIGN.md「3. Typography」ページタイトル規定（28px / 700 / letter-spacing -0.01em） */
 .pageTitle {
-  font-size: 2.5rem;
-  font-weight: bold;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--foreground);
   margin-bottom: 1rem;
   text-align: center;
 }
 
 .pageSubtitle {
-  font-size: 1.125rem;
+  font-size: 16px;
   color: var(--muted-foreground);
   text-align: center;
   max-width: 600px;
