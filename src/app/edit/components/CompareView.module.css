@@ -1,7 +1,7 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 12px;
   align-items: center;
   width: 100%;
 }
@@ -10,10 +10,10 @@
   position: relative;
   width: 100%;
   max-width: 640px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid var(--border-dashed);
-  background-color: var(--background-secondary);
+  border: 1px solid var(--border);
+  background-color: var(--surface-muted);
   touch-action: none;
   cursor: ew-resize;
   user-select: none;
@@ -41,24 +41,27 @@
   height: 100%;
 }
 
+/* Before/After バッジ・分割線・ハンドルは任意の画像の上に重なる UI のため、
+   テーマ非依存の固定色（白 + 黒縁取り系）を使う（DESIGN.md「Do's and Don'ts」の
+   画像上オーバーレイ UI 例外） */
 .badge {
   position: absolute;
-  top: 0.5rem;
-  padding: 0.125rem 0.5rem;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: #fff;
-  background-color: rgba(0, 0, 0, 0.55);
-  border-radius: 4px;
+  top: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: var(--radius-sm);
   pointer-events: none;
 }
 
 .badgeBefore {
-  left: 0.5rem;
+  left: 8px;
 }
 
 .badgeAfter {
-  right: 0.5rem;
+  right: 8px;
 }
 
 .divider {
@@ -66,8 +69,8 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  background-color: #ffffff;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
   transform: translateX(-1px);
   pointer-events: none;
 }
@@ -77,51 +80,60 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
-  color: var(--foreground);
-  background-color: rgba(255, 255, 255, 0.95);
-  border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+  /* ハンドル内の矢印もテーマ非依存の固定色（白背景上の黒）。
+     テーマトークンだとダークテーマで白 × 白になり視認できない */
+  color: rgba(0, 0, 0, 0.6);
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-full);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .nav {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 12px;
 }
 
 .navButton {
-  min-width: 2.25rem;
-  height: 2.25rem;
+  min-width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid var(--border-dashed);
-  border-radius: 6px;
-  font-size: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  /* 前後移動の矢印グリフ（テキストではなくアイコン相当）のためサイズは現行維持 */
+  font-size: 20px;
   color: var(--foreground);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease;
 }
 
 .navButton:hover {
-  border-color: var(--muted-foreground);
+  border-color: var(--border-strong);
+}
+
+.navButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .navLabel {
-  font-size: 0.875rem;
+  font-size: 14px;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
 }
 
 .hint {
-  font-size: 0.75rem;
+  font-size: 12px;
   color: var(--muted-foreground);
   text-align: center;
   margin: 0;

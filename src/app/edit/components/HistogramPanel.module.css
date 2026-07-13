@@ -1,68 +1,82 @@
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background-color: var(--background);
-  border: 1px solid var(--border-dashed);
-  border-radius: 8px;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
+/* DESIGN.md「Typography」小見出し（カード見出し）規定。
+   同一カラムの AdjustmentPanel / LutPicker の見出しと揃える */
 .title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--muted-foreground);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--foreground);
 }
 
 .buttonRow {
   display: flex;
-  gap: 0.375rem;
+  gap: 8px;
 }
 
+/* DESIGN.md「RadioButtonGroup」の配色を踏襲したコンパクトなチップ型トグル */
 .chip {
-  padding: 0.25rem 0.625rem;
-  background: transparent;
-  border: 1px solid var(--border-dashed);
-  border-radius: 6px;
-  font-size: 0.75rem;
+  padding: 4px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
   font-weight: 500;
   color: var(--foreground);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .chip:hover {
-  border-color: var(--muted-foreground);
+  border-color: var(--border-strong);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .chipActive {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--foreground);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .chipActive:hover {
-  border-color: var(--primary);
+  border-color: var(--accent);
 }
 
 .chart {
   width: 100%;
   height: 100px;
   display: block;
-  background-color: color-mix(in srgb, var(--foreground) 5%, transparent);
-  border: 1px solid var(--border-dashed);
-  border-radius: 4px;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
 }
 
-/* RGB は半透明 fill の重畳（重なりは加法的に見える）。ライト/ダーク両テーマで視認できる彩度 */
+/* ヒストグラムの R/G/B 波形はデータ可視化色のためテーマ非依存の固定色
+   （DESIGN.md「Do's and Don'ts」のデータ可視化色例外）。
+   半透明 fill の重畳（重なりは加法的に見える）とし、--surface / --surface-muted の
+   背景上でライト/ダーク両テーマとも視認できる不透明度にする */
 .pathR {
   fill: rgb(235 70 70 / 45%);
 }
