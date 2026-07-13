@@ -1,75 +1,86 @@
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 24px;
 }
 
 .group {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 4px;
 }
 
+/* DESIGN.md「Typography」: カード見出しは小見出し規定（16px / 500） */
 .groupTitle {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
   color: var(--foreground);
-  margin: 0 0 0.5rem;
-  padding-bottom: 0.375rem;
-  border-bottom: 1px solid var(--border-dashed);
+  margin: 0 0 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
 }
 
 /* 自動補正のワンショットボタン行（HistogramPanel のチップスタイルを踏襲） */
 .autoButtons {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.375rem;
+  gap: 8px;
 }
 
 .autoButton {
-  padding: 0.25rem 0.625rem;
-  background: transparent;
-  border: 1px solid var(--border-dashed);
-  border-radius: 6px;
-  font-size: 0.75rem;
+  padding: 4px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
   font-weight: 500;
   color: var(--foreground);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .autoButton:hover:not(:disabled) {
-  border-color: var(--muted-foreground);
+  border-color: var(--border-strong);
+}
+
+.autoButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .autoButton:disabled {
-  opacity: 0.5;
-  cursor: default;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* WB スポイトのトグル中（HistogramPanel の chipActive を踏襲） */
 .autoButton[aria-pressed="true"] {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* モノクロ変換のトグル行（スライダーのラベルと同じ文字サイズ・行間） */
 .toggleRow {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8125rem;
+  gap: 8px;
+  font-size: 13px;
   color: var(--foreground);
-  padding: 0.375rem 0;
+  padding: 4px 0;
   cursor: pointer;
 }
 
 .toggleRow input[type="checkbox"] {
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
 /* トグル中のホバーで .autoButton:hover の border-color に負けないよう再固定
    （HistogramPanel の .chipActive:hover と同趣旨） */
 .autoButton[aria-pressed="true"]:hover:not(:disabled) {
-  border-color: var(--primary);
+  border-color: var(--accent);
 }

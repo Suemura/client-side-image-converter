@@ -1,82 +1,90 @@
 .picker {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1.25rem;
-  padding: 1rem;
-  background-color: var(--background);
-  border: 1px solid var(--border-dashed);
-  border-radius: 8px;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
+/* DESIGN.md「Typography」: カード見出しは小見出し規定（16px / 500） */
 .title {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
   color: var(--foreground);
   margin: 0;
-  padding-bottom: 0.375rem;
-  border-bottom: 1px solid var(--border-dashed);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: 0.5rem;
+  gap: 8px;
 }
 
+/* 境界幅は状態で変えない（選択時のレイアウトシフト防止）ため常時 2px */
 .swatch {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem;
+  gap: 4px;
+  padding: 4px;
   background: transparent;
-  border: 2px solid var(--border-dashed);
-  border-radius: 6px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .swatch:hover {
-  border-color: var(--muted-foreground);
+  border-color: var(--border-strong);
 }
 
-/* 選択中は高コントラストな枠 + 外周リング + チェックマークで明確に示す
-   （--primary は淡くダークテーマで視認しづらいため --foreground を使う） */
+.swatch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 選択中は --accent の枠 + 外周リング + チェックマークで明確に示す */
 .swatchActive {
-  border-color: var(--foreground);
-  box-shadow: 0 0 0 1px var(--foreground);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .swatchActive:hover {
-  border-color: var(--foreground);
+  border-color: var(--accent);
 }
 
 .swatchActive::after {
   content: "✓";
   position: absolute;
-  top: 5px;
-  right: 5px;
+  top: 4px;
+  right: 4px;
   width: 18px;
   height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  color: var(--background);
-  background: var(--foreground);
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--background);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 .thumb {
   width: 100%;
   aspect-ratio: 56 / 36;
-  border-radius: 4px;
-  background-color: var(--border-dashed);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-muted);
   background-size: cover;
   background-position: center;
   image-rendering: auto;
@@ -94,8 +102,8 @@
 }
 
 .swatchLabel {
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 400;
   color: var(--foreground);
   text-align: center;
   line-height: 1.2;
@@ -105,29 +113,39 @@
   max-width: 100%;
 }
 
-/* 選択中はラベルも強調する（基底 .swatchLabel より後に置き詳細度の降順を避ける） */
+/* 選択中はラベルも色で強調する（太字化はレイアウトが動くため色のみで表現。
+   基底 .swatchLabel より後に置き詳細度の降順を避ける） */
 .swatchActive .swatchLabel {
-  font-weight: 700;
+  color: var(--accent);
 }
 
 .uploadRow {
   display: flex;
 }
 
+/* DESIGN.md「Button」secondary 相当の控えめなボタン */
 .uploadButton {
-  padding: 0.5rem 1rem;
-  background: transparent;
-  border: 1px solid var(--border-dashed);
-  border-radius: 6px;
-  font-size: 0.8125rem;
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
   font-weight: 500;
   color: var(--foreground);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .uploadButton:hover {
-  border-color: var(--muted-foreground);
+  background-color: var(--surface-muted);
+  border-color: var(--border-strong);
+}
+
+.uploadButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .fileInput {
@@ -135,19 +153,24 @@
 }
 
 .hint {
-  font-size: 0.7rem;
+  font-size: 12px;
   line-height: 1.4;
   color: var(--muted-foreground);
   margin: 0;
 }
 
+/* DESIGN.md「通知ボックス」: エラーは --error-soft 背景 + --error 境界/文言 */
 .error {
-  font-size: 0.75rem;
+  font-size: 14px;
   line-height: 1.4;
-  color: var(--error, #d64545);
+  color: var(--error);
+  background-color: var(--error-soft);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
   margin: 0;
 }
 
 .strength {
-  margin-top: 0.25rem;
+  margin-top: 4px;
 }

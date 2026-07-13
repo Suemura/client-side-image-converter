@@ -1,38 +1,49 @@
+/* DESIGN.md「カード / パネル」規定の設定パネル。
+   パネル内の左右余白は各子要素（共有の RadioButtonGroup 含む）が持つ padding 16px で揃える */
 .container {
   display: flex;
   flex-direction: column;
   flex: 1;
   max-width: 960px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
+/* パネルタイトル（DESIGN.md セクション見出し規定: 20px / 700。
+   ページタイトル 28px は「1 ページ 1 箇所」のため ImageUploadSection の見出しに譲る） */
 .title {
-  font-size: 28px;
-  font-weight: bold;
-  padding: 20px 16px 12px 16px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 24px 16px 12px 16px;
   text-align: left;
   color: var(--foreground);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
+/* パネル内の項目見出し（小見出し規定: 16px / 500。パネルタイトルとの視覚階層を保つ） */
 .sectionTitle {
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
   padding: 16px 16px 8px 16px;
   color: var(--foreground);
-  letter-spacing: -0.015em;
 }
 
+/* DESIGN.md「通知ボックス」規定（情報: --accent / --accent-soft） */
 .warningBox {
-  padding: 8px 16px;
+  padding: 12px 16px;
   margin: 0 16px 8px 16px;
-  background-color: var(--primary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background-color: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
 }
 
 .warningText {
   font-size: 14px;
-  color: var(--foreground);
+  color: var(--accent);
   margin: 0;
 }
 
@@ -65,7 +76,7 @@
 .checkbox {
   width: 16px;
   height: 16px;
-  accent-color: var(--primary);
+  accent-color: var(--accent);
 }
 
 .checkboxText {
@@ -73,8 +84,9 @@
   color: var(--foreground);
 }
 
+/* 無効状態は DESIGN.md 共通規定（opacity 0.6） */
 .checkboxDisabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
@@ -84,6 +96,6 @@
 
 .buttonContainer {
   display: flex;
-  padding: 12px 16px;
+  padding: 12px 16px 16px 16px;
   justify-content: end;
 }

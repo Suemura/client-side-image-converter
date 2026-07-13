@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.9);
+  background-color: var(--overlay);
   backdrop-filter: blur(4px);
 }
 
@@ -28,9 +28,11 @@
   z-index: 10;
 }
 
+/* DESIGN.md「モーダル」: ヘッダーのタイトルはセクション見出し規定（20px / 700 / letter-spacing -0.01em） */
 .modalTitle {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--foreground);
   margin: 0;
 }
@@ -53,11 +55,11 @@
 }
 
 .compressionRatioPositive {
-  color: #059669;
+  color: var(--success);
 }
 
 .compressionRatioNegative {
-  color: #dc2626;
+  color: var(--error);
 }
 
 .buttonGroup {
@@ -79,8 +81,8 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background-color: var(--border);
-  border-radius: 8px;
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-md);
   overflow: hidden;
   user-select: none;
   max-height: calc(100vh - 200px);
@@ -114,12 +116,15 @@
   object-fit: contain;
 }
 
+/* 分割線・ハンドル・画像ラベルは任意の画像の上に重なる UI のため、
+   テーマ非依存の固定色（白 + 黒縁取り系）を使う（DESIGN.md「Do's and Don'ts」の
+   画像上オーバーレイ UI 例外） */
 .sliderLine {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: white;
+  background-color: #ffffff;
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
   cursor: ew-resize;
   z-index: 10;
@@ -132,10 +137,10 @@
   left: 50%;
   width: 24px;
   height: 24px;
-  background-color: var(--background);
-  border-radius: 50%;
+  background-color: #ffffff;
+  border-radius: var(--radius-full);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  border: 2px solid var(--border);
+  border: 2px solid rgba(0, 0, 0, 0.25);
   cursor: ew-resize;
   display: flex;
   align-items: center;
@@ -146,8 +151,8 @@
 .sliderHandleDot {
   width: 4px;
   height: 4px;
-  background-color: var(--muted-foreground);
-  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-full);
 }
 
 .imageLabel {
@@ -155,9 +160,9 @@
   top: 12px;
   padding: 4px 8px;
   background-color: rgba(0, 0, 0, 0.7);
-  color: white;
+  color: #ffffff;
   font-size: 0.75rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .imageLabelLeft {
@@ -182,11 +187,16 @@
   cursor: pointer;
   padding: 4px 8px;
   color: var(--muted-foreground);
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease;
 }
 
 .closeButton:hover {
-  background-color: var(--primary);
+  background-color: var(--surface-muted);
   color: var(--foreground);
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

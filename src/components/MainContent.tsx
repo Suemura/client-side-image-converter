@@ -1,11 +1,10 @@
 import type React from "react";
+import styles from "./MainContent.module.css";
 
 interface MainContentProps {
   children: React.ReactNode;
 }
 
 export const MainContent: React.FC<MainContentProps> = ({ children }) => {
-  return (
-    <div className="gap-1 px-6 flex flex-1 justify-center py-5">{children}</div>
-  );
+  return <div className={styles.container}>{children}</div>;
 };

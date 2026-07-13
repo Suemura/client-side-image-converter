@@ -1,7 +1,9 @@
+/* DESIGN.md「カード / パネル」規定の進捗パネル */
 .container {
-  background-color: var(--background);
-  border-radius: 16px;
-  border: 1px solid var(--border-dashed);
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   padding: 24px;
   margin-top: 24px;
 }
@@ -19,28 +21,31 @@
 
 .title {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--foreground);
 }
 
 .progressText {
   font-size: 14px;
   color: var(--muted-foreground);
+  /* 進捗数値の桁ズレ防止（DESIGN.md「ProgressBar」: 進捗数値は tabular-nums） */
+  font-variant-numeric: tabular-nums;
 }
 
+/* DESIGN.md「ProgressBar」規定: トラック --surface-muted / バー --accent / 角丸 --radius-full */
 .progressBarContainer {
   width: 100%;
   height: 8px;
-  background-color: var(--border);
-  border-radius: 4px;
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-full);
   overflow: hidden;
 }
 
 .progressBarFill {
   height: 100%;
-  background-color: var(--primary);
-  border-radius: 4px;
-  transition: width 0.3s ease-in-out;
+  background-color: var(--accent);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
 }
 
 .waitMessage {
