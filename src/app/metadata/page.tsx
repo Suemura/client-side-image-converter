@@ -355,7 +355,7 @@ export default function MetadataPage() {
                       style={{
                         marginBottom: "16px",
                         padding: "12px",
-                        backgroundColor: "var(--muted)",
+                        backgroundColor: "var(--surface-muted)",
                         borderRadius: "8px",
                       }}
                     >

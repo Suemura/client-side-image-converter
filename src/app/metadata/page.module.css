@@ -4,9 +4,11 @@
   margin: 0 auto;
 }
 
+/* DESIGN.md「3. Typography」ページタイトル規定（28px / 700 / letter-spacing -0.01em） */
 .pageTitle {
   font-size: 28px;
-  font-weight: bold;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   margin-bottom: 8px;
   color: var(--foreground);
 }
@@ -25,16 +27,20 @@
   margin-top: 32px;
 }
 
+/* DESIGN.md「カード / パネル」規定 */
 .section {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 24px;
-  background-color: var(--background);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
+/* セクション見出し規定（20px / 700 / letter-spacing -0.01em） */
 .sectionTitle {
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   margin-bottom: 16px;
   color: var(--foreground);
   display: flex;
@@ -50,24 +56,25 @@
 
 .imageCard {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: var(--background);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  background-color: var(--surface);
 }
 
 .imageCard:hover {
-  border-color: var(--primary);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .imagePreview {
   width: 100%;
   height: 120px;
-  background-color: var(--muted);
-  border-radius: 4px;
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-sm);
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -106,44 +113,46 @@
 .processingMethodBadge {
   display: inline-block;
   padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
   font-weight: 500;
   text-align: center;
 }
 
+/* JPEG = タグを選択して削除できる（ポジティブな状態）: 成功系トークン */
 .processingMethodSelective {
-  background-color: rgba(34, 197, 94, 0.1);
-  color: rgb(34, 197, 94);
+  background-color: var(--success-soft);
+  color: var(--success);
 }
 
+/* JPEG 以外 = 全削除のみ対応（中立な情報）: 情報表示は accent 系を使う（DESIGN.md「2. Colors」） */
 .processingMethodAll {
-  background-color: rgba(168, 85, 247, 0.1);
-  color: rgb(168, 85, 247);
+  background-color: var(--accent-soft);
+  color: var(--accent);
 }
 
 .privacyRiskBadge {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: var(--radius-full);
   font-size: 11px;
   font-weight: 500;
   margin-left: 8px;
 }
 
 .privacyRiskHigh {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: rgb(239, 68, 68);
+  background-color: var(--error-soft);
+  color: var(--error);
 }
 
 .privacyRiskMedium {
-  background-color: rgba(245, 158, 11, 0.1);
-  color: rgb(245, 158, 11);
+  background-color: var(--warning-soft);
+  color: var(--warning);
 }
 
 .privacyRiskLow {
-  background-color: rgba(34, 197, 94, 0.1);
-  color: rgb(34, 197, 94);
+  background-color: var(--success-soft);
+  color: var(--success);
 }
 
 .tagsList {
@@ -179,26 +188,28 @@
 .tagCount {
   font-size: 12px;
   color: var(--muted-foreground);
-  background-color: var(--muted);
+  background-color: var(--surface-muted);
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .privacyTag {
-  color: rgb(239, 68, 68);
+  color: var(--error);
   font-weight: 500;
 }
 
+/* パネル内で一段沈めるインセット領域（DESIGN.md「カード / パネル」） */
 .gpsModeSection {
   margin-bottom: 16px;
   padding: 12px;
-  background-color: var(--muted);
-  border-radius: 8px;
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-md);
 }
 
+/* 小見出し規定（16px / 500） */
 .gpsModeTitle {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 4px;
   color: var(--foreground);
 }
@@ -229,9 +240,9 @@
 .loadingSpinner {
   width: 32px;
   height: 32px;
-  border: 3px solid var(--muted);
-  border-top: 3px solid var(--primary);
-  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--radius-full);
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
 }
@@ -257,48 +268,54 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--overlay);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+/* DESIGN.md「モーダル」規定（surface + border + radius-lg + shadow-lg） */
 .processingModal {
-  background-color: var(--background);
-  border-radius: 12px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 32px;
   text-align: center;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-lg);
   max-width: 400px;
   width: 90%;
 }
 
+/* モーダルタイトルはセクション見出し規定（20px / 700） */
 .processingTitle {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   margin-bottom: 16px;
   color: var(--foreground);
 }
 
 .progressInfo {
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
   color: var(--muted-foreground);
   margin-bottom: 16px;
 }
 
+/* DESIGN.md「ProgressBar」規定（トラック surface-muted / バー accent / radius-full） */
 .progressBar {
   width: 100%;
   height: 8px;
-  background-color: var(--muted);
-  border-radius: 4px;
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-full);
   overflow: hidden;
   margin-bottom: 16px;
 }
 
 .progressFill {
   height: 100%;
-  background-color: var(--primary);
+  background-color: var(--accent);
   transition: width 0.3s ease;
 }
 
