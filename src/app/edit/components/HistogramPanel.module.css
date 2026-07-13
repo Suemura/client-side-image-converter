@@ -16,10 +16,12 @@
   gap: 8px;
 }
 
+/* DESIGN.md「Typography」小見出し（カード見出し）規定。
+   同一カラムの AdjustmentPanel / LutPicker の見出しと揃える */
 .title {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 500;
-  color: var(--muted-foreground);
+  color: var(--foreground);
 }
 
 .buttonRow {

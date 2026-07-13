@@ -20,10 +20,11 @@
   color: var(--muted-foreground);
 }
 
+/* チップ間隔は直下の出力形式（共通 RadioButtonGroup の .group）と同じ 12px に揃える */
 .buttonRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px;
 }
 
 .help {
