@@ -92,7 +92,10 @@
     border-color 0.15s ease;
 }
 
-.iconButton:hover {
+/* Button secondary の hover 規定（背景 --surface-muted + 境界 --border-strong）。
+   選択中（--accent-soft 背景）への上書きは :not() で回避する */
+.iconButton:hover:not(.iconButtonActive) {
+  background: var(--surface-muted);
   border-color: var(--border-strong);
 }
 
