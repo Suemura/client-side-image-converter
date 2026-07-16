@@ -2,7 +2,13 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { parseCspForPath } from "../src/utils/securityHeaders";
-import { pngFile } from "./helpers/fixtures";
+import {
+  heicFile,
+  jpegFileWithExif,
+  magicNumber,
+  pngFile,
+  rectPngFile,
+} from "./helpers/fixtures";
 
 // セキュリティヘッダー（CSP）の実ブラウザ検証。
 // E2E の webServer（serve out）は out/_headers を解釈しないため、postbuild が生成した
@@ -68,6 +74,25 @@ async function getCspViolations(page: Page): Promise<string[]> {
     () => (window as unknown as { __cspViolations: string[] }).__cspViolations,
   );
 }
+
+/** プレビュー canvas の相対座標 (fx, fy) の RGB を読む（edit.spec.ts と同じ手法） */
+const readPreviewPixel = (
+  page: Page,
+  fx: number,
+  fy: number,
+): Promise<[number, number, number]> =>
+  page.getByTestId("edit-preview-canvas").evaluate(
+    (canvas, { fx, fy }) => {
+      const c = canvas as HTMLCanvasElement;
+      const ctx = c.getContext("2d");
+      if (!ctx) return [0, 0, 0];
+      const x = Math.min(c.width - 1, Math.floor(c.width * fx));
+      const y = Math.min(c.height - 1, Math.floor(c.height * fy));
+      const d = ctx.getImageData(x, y, 1, 1).data;
+      return [d[0], d[1], d[2]] as [number, number, number];
+    },
+    { fx, fy },
+  );
 
 test.describe("セキュリティヘッダー", () => {
   test("生成された CSP が全ページ分あり、script-src がハッシュベースになっている", async ({
@@ -142,6 +167,106 @@ test.describe("セキュリティヘッダー", () => {
     await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
       timeout: 30_000,
     });
+
+    expect(await getCspViolations(page)).toEqual([]);
+  });
+
+  test("CSP 強制下で HEIC → AVIF 変換（libheif デコード + AVIF エンコード WASM）が動作する", async ({
+    page,
+  }) => {
+    test.skip(
+      !(await isGeneratedHeadersAvailable(page)),
+      "out/_headers の CSP は本番ビルドの postbuild でのみ生成される（dev サーバー再利用時は skip）",
+    );
+    const content = readFileSync(headersPath, "utf8");
+    await collectCspViolations(page);
+    await injectCsp(page, content);
+
+    // Emscripten 系 WASM ビルドはバージョンによって data: fetch や eval 系フォールバックを
+    // 使うことがあり CSP 違反で本番のみ壊れ得るため、libheif デコード（HEIC 入力）と
+    // @jsquash の AVIF エンコードを 1 変換で通して検証する
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(heicFile());
+
+    // ラジオの input は不可視のためラベルテキストをクリックする
+    await page.getByText("AVIF", { exact: true }).click();
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+
+    // デコーダー / エンコーダー両方の WASM 初回ロードがあるためタイムアウトを長めにとる
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 45_000,
+    });
+
+    expect(await getCspViolations(page)).toEqual([]);
+  });
+
+  test("CSP 強制下で /edit のプリセット LUT（fetch + WebGL プレビュー）が適用される", async ({
+    page,
+  }) => {
+    test.skip(
+      !(await isGeneratedHeadersAvailable(page)),
+      "out/_headers の CSP は本番ビルドの postbuild でのみ生成される（dev サーバー再利用時は skip）",
+    );
+    const content = readFileSync(headersPath, "utf8");
+    await collectCspViolations(page);
+    await injectCsp(page, content);
+
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("csp-gray.png", 16, 16, [128, 128, 128]));
+
+    // プレビューが生成されるまで待つ（初期は元のグレー ~128）
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(100);
+
+    // プリセット「暖色」を選択（connect-src 'self' の対象となる /luts/warm.cube の
+    // fetch と WebGL プレビューの再描画が CSP 下で動作する証拠として色の変化を確認）
+    await page.getByRole("button", { name: "暖色", exact: true }).click();
+    await expect
+      .poll(
+        async () => {
+          const [r, , b] = await readPreviewPixel(page, 0.5, 0.5);
+          return r - b;
+        },
+        { timeout: 10_000 },
+      )
+      .toBeGreaterThan(8);
+
+    expect(await getCspViolations(page)).toEqual([]);
+  });
+
+  test("CSP 強制下で /metadata の EXIF 表示・クリーニングが動作する", async ({
+    page,
+  }) => {
+    test.skip(
+      !(await isGeneratedHeadersAvailable(page)),
+      "out/_headers の CSP は本番ビルドの postbuild でのみ生成される（dev サーバー再利用時は skip）",
+    );
+    const content = readFileSync(headersPath, "utf8");
+    await collectCspViolations(page);
+    await injectCsp(page, content);
+
+    await page.goto("/metadata/");
+    await page.locator('input[type="file"]').setInputFiles(jpegFileWithExif());
+
+    // EXIF 解析（バイナリ読み取り）が CSP 下で完了する
+    await expect(
+      page.getByRole("heading", { name: /すべてのEXIFタグ/ }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    // リスクタグ削除 → クリーニング済み画像のダウンロード（blob URL）まで通す
+    await page.getByRole("button", { name: "リスクタグを選択" }).click();
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "クリーニング済み画像をダウンロード" })
+        .click(),
+    ]);
+    expect(magicNumber.isJpeg(readFileSync(await download.path()))).toBe(true);
 
     expect(await getCspViolations(page)).toEqual([]);
   });

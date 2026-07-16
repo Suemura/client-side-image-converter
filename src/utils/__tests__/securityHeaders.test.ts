@@ -35,6 +35,16 @@ describe("extractInlineScriptContents", () => {
     expect(extractInlineScriptContents(html)).toEqual(["first()", "second()"]);
   });
 
+  it("data-src 属性はインラインスクリプトとして扱う（src と誤判定しない）", () => {
+    const html = '<script data-src="/lazy.js">inline()</script>';
+    expect(extractInlineScriptContents(html)).toEqual(["inline()"]);
+  });
+
+  it("<script/src=...> 形式の外部スクリプトも対象外", () => {
+    const html = '<script/src="/a.js"></script>';
+    expect(extractInlineScriptContents(html)).toEqual([]);
+  });
+
   it("本文の空白・改行を一切加工せずそのまま返す（CSP ハッシュの前提）", () => {
     const content = "\n  (function() {\n    init();\n  })()\n";
     const html = `<script>${content}</script>`;
@@ -128,6 +138,23 @@ describe("mergeGeneratedRules", () => {
     expect(updated).toContain(rules);
     // 生成区間の外側（既存ルール）は保持される
     expect(updated).toContain(existing);
+  });
+
+  it("開始マーカーだけが存在する場合はエラーを投げる", () => {
+    const broken = `${existing}\n${GENERATED_START}\n/old\n  X-Old: 1\n`;
+    expect(() => mergeGeneratedRules(broken, rules)).toThrow(GENERATED_START);
+  });
+
+  it("終了マーカーだけが存在する場合はエラーを投げる", () => {
+    const broken = `${existing}\n/old\n  X-Old: 1\n${GENERATED_END}\n`;
+    expect(() => mergeGeneratedRules(broken, rules)).toThrow(GENERATED_END);
+  });
+
+  it("終了マーカーが開始マーカーより前にある場合はエラーを投げる", () => {
+    const broken = `${GENERATED_END}\n${existing}${GENERATED_START}\n`;
+    expect(() => mergeGeneratedRules(broken, rules)).toThrow(
+      "終了が開始より前",
+    );
   });
 });
 

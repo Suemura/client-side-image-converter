@@ -27,14 +27,20 @@ export interface PageScriptHashes {
  * HTML からインラインスクリプト（src 属性を持たない <script> タグ）の本文を抽出する。
  * CSP のハッシュはタグ間のテキストを**そのまま**（空白・改行含む）ハッシュ化した値と
  * 照合されるため、本文は一切加工せずに返す。
+ *
+ * 注: 属性部は [^>]* で切り出すため、属性値に ">" を含むタグ
+ * （例: <script data-x="a>b">）では本文の切り出しがずれる。
+ * Next.js の静的エクスポート出力では発生しない前提の既知の制限。
  */
 export function extractInlineScriptContents(html: string): string[] {
   const contents: string[] = [];
   const scriptTag = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
   for (const match of html.matchAll(scriptTag)) {
     const attrs = match[1];
-    // src 属性を持つ外部スクリプトは 'self' で許可されるため対象外
-    if (/\bsrc\s*=/i.test(attrs)) continue;
+    // src 属性を持つ外部スクリプトは 'self' で許可されるため対象外。
+    // \b だと data-src= 等にもマッチしてインラインスクリプトがハッシュ漏れするため、
+    // 直前を先頭・空白・引用符・"/"（<script/src=...> 形式）に限定する
+    if (/(?:^|[\s"'/])src\s*=/i.test(attrs)) continue;
     contents.push(match[2]);
   }
   return contents;
@@ -90,6 +96,10 @@ export function buildCspRules(pages: PageScriptHashes[]): string {
 /**
  * 既存の _headers 内容へ生成ルールをマーカー区間として合成する。
  * マーカー区間が既にあれば差し替え、なければ末尾に追記する（冪等）。
+ * マーカーが片方だけ・逆順の場合（手動編集での破損など）は、そのまま追記すると
+ * 古い生成ルールが残存して同一パスの CSP が重複し得る（Cloudflare Pages は
+ * 同名ヘッダーをカンマ結合する）ため、黙って続行せずエラーを投げる
+ * （generate-headers.ts がビルドを fail させる）。
  */
 export function mergeGeneratedRules(
   existing: string,
@@ -98,7 +108,18 @@ export function mergeGeneratedRules(
   const section = `${GENERATED_START}\n${generatedRules}\n${GENERATED_END}`;
   const startIndex = existing.indexOf(GENERATED_START);
   const endIndex = existing.indexOf(GENERATED_END);
-  if (startIndex !== -1 && endIndex !== -1) {
+  if ((startIndex === -1) !== (endIndex === -1)) {
+    const found = startIndex === -1 ? GENERATED_END : GENERATED_START;
+    throw new Error(
+      `_headers の生成マーカーが片方しかありません（${found} のみ検出）。手動編集で破損している可能性があります`,
+    );
+  }
+  if (startIndex !== -1 && endIndex < startIndex) {
+    throw new Error(
+      "_headers の生成マーカーの終了が開始より前にあります。手動編集で破損している可能性があります",
+    );
+  }
+  if (startIndex !== -1) {
     const before = existing.slice(0, startIndex);
     const after = existing.slice(endIndex + GENERATED_END.length);
     return `${before}${section}${after}`;

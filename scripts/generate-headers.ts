@@ -57,7 +57,15 @@ async function main(): Promise<void> {
   }
 
   const existing = await readFile(headersPath, "utf8");
-  const merged = mergeGeneratedRules(existing, buildCspRules(pages));
+
+  // マーカーが片方欠落・逆順の場合はマージ不能（古い生成ルールが残存して CSP が
+  // 重複し得る）ため、mergeGeneratedRules が投げるエラーでビルドを fail させる
+  let merged: string;
+  try {
+    merged = mergeGeneratedRules(existing, buildCspRules(pages));
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
 
   // Cloudflare Pages の制限（1 行 2000 文字・100 ルール）を超えると黙って無視されるため、
   // 超過時はビルドを fail させて無効な _headers が本番に出ることを防ぐ
