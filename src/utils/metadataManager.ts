@@ -126,8 +126,9 @@ const removeTagsFromExifObj = (
   };
 
   // GPS関連のタグは piexif.GPSIFD の定義（全 GPS タグ名 → タグ ID）を参照して削除する
-  // （個別マッピングだと GPSLatitudeRef / GPSLongitudeRef 等の Ref 系タグが漏れるため）
-  const gpsTagMapping = piexif.GPSIFD as unknown as Record<string, number>;
+  // （個別マッピングだと GPSLatitudeRef / GPSLongitudeRef 等の Ref 系タグが漏れるため）。
+  // GPSIFD は索引シグネチャ（src/types/piexifjs.d.ts）でタグ名引きを許可済みのため二重キャスト不要
+  const gpsTagMapping = piexif.GPSIFD;
 
   for (const tagName of tagsToRemove) {
     // GPS全体を削除する場合

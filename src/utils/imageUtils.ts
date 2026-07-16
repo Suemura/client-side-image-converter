@@ -10,64 +10,38 @@ import { isRawFile } from "./fileUtils";
  * @returns サムネイルのDataURL、またはnull
  */
 export const generateThumbnail = (file: File): Promise<string | null> => {
-  return new Promise((resolve) => {
-    // RAW はブラウザの Image でデコードできず onerror で null になるだけなので、
-    // 数十 MB のファイルを readAsDataURL で無駄にメモリ展開する前に即 null を返す
-    if (!file.type.startsWith("image/") || isRawFile(file)) {
-      resolve(null);
-      return;
-    }
+  // RAW はブラウザの Image でデコードできず onerror で null になるだけなので、
+  // 数十 MB のファイルを readAsDataURL で無駄にメモリ展開する前に即 null を返す
+  if (!file.type.startsWith("image/") || isRawFile(file)) {
+    return Promise.resolve(null);
+  }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+  // 読み込み・デコードは fileToImage に集約し、失敗（読み込み / デコード）は
+  // いずれも null にフォールバックする（従来の resolve(null) と同じ挙動）
+  return fileToImage(file)
+    .then((img) => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
 
-        // サムネイルのサイズを設定（32x32）
-        const size = 32;
-        canvas.width = size;
-        canvas.height = size;
+      // サムネイルのサイズを設定（32x32）
+      const size = 32;
+      canvas.width = size;
+      canvas.height = size;
 
-        if (ctx) {
-          // 画像を正方形にトリミングして描画
-          const minDimension = Math.min(img.width, img.height);
-          const sx = (img.width - minDimension) / 2;
-          const sy = (img.height - minDimension) / 2;
+      if (!ctx) {
+        return null;
+      }
 
-          ctx.drawImage(
-            img,
-            sx,
-            sy,
-            minDimension,
-            minDimension,
-            0,
-            0,
-            size,
-            size,
-          );
+      // 画像を正方形にトリミングして描画
+      const minDimension = Math.min(img.width, img.height);
+      const sx = (img.width - minDimension) / 2;
+      const sy = (img.height - minDimension) / 2;
 
-          const thumbnailUrl = canvas.toDataURL("image/png");
-          resolve(thumbnailUrl);
-        } else {
-          resolve(null);
-        }
-      };
+      ctx.drawImage(img, sx, sy, minDimension, minDimension, 0, 0, size, size);
 
-      img.onerror = () => {
-        resolve(null);
-      };
-
-      img.src = e.target?.result as string;
-    };
-
-    reader.onerror = () => {
-      resolve(null);
-    };
-
-    reader.readAsDataURL(file);
-  });
+      return canvas.toDataURL("image/png");
+    })
+    .catch(() => null);
 };
 
 /**
@@ -105,19 +79,16 @@ export const fileToDataUrl = (file: File): Promise<string> => {
  * @param file - 変換するファイル
  * @returns HTMLImageElement
  */
-export const fileToImage = (file: File): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Failed to load image"));
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsDataURL(file);
-  });
-};
+export const fileToImage = (file: File): Promise<HTMLImageElement> =>
+  fileToDataUrl(file).then(
+    (dataUrl) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = dataUrl;
+      }),
+  );
 
 /**
  * Base64文字列を効率的にUint8Arrayに変換する
