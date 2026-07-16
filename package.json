@@ -22,7 +22,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --webpack",
-    "postbuild": "next-sitemap && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generate-sw.ts",
+    "postbuild": "next-sitemap && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generate-sw.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generate-headers.ts",
     "start": "next start",
     "lint": "npx @biomejs/biome check src/",
     "lint:fix": "npx @biomejs/biome check src/ --write --unsafe",

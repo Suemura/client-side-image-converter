@@ -1,6 +1,17 @@
 # Cloudflare Pages のヘッダー設定。static export では public/ 配下が out/ にコピーされ、
 # out/_headers として配信時に適用される。
 
+# 全パス共通のセキュリティヘッダー。
+# Content-Security-Policy はここには置かない: インラインスクリプトのハッシュを含むため
+# postbuild（scripts/generate-headers.ts）がページ別ルールとして out/_headers へ生成する
+# （Cloudflare Pages は同名ヘッダーをカンマ結合するため、/* に置くと二重適用になる）。
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+
 # Service Worker は常に再検証させ、デプロイごとに新しい sw.js を確実に取得させる
 # （sw.js の内容が変わると新バージョンがインストールされ、古いキャッシュは activate で破棄される）。
 /sw.js

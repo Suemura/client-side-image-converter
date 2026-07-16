@@ -28,6 +28,7 @@ https://image-converter.suemura.app/
 
 - **サーバー送信なし**: 画像は一切サーバーに送信されません
 - **オフライン動作**: 初回アクセス時に Service Worker が全アセットをプリキャッシュするため、インターネット接続なしですべての機能が動作します
+- **厳格なセキュリティヘッダー**: 本番サイトはハッシュベースの Content-Security-Policy（スクリプトの `unsafe-inline` / `unsafe-eval` なし）、`X-Frame-Options: DENY`、HSTS などのセキュリティヘッダー付きで配信されます
 
 ## 開発環境のセットアップ
 
