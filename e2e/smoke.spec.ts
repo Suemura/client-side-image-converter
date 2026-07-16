@@ -20,9 +20,15 @@ test.describe("スモークテスト", () => {
     await expect(
       nav.getByRole("link", { name: "編集", exact: true }),
     ).toBeVisible();
+    await expect(
+      nav.getByRole("link", { name: "モザイク", exact: true }),
+    ).toBeVisible();
     await expect(nav.getByRole("link", { name: "メタデータ" })).toBeVisible();
 
-    // トップページ本文の各ツールへの CTA（/edit への導線が追加されていること）
+    // トップページ本文の各ツールへの CTA（/edit・/redact への導線が追加されていること）
     await expect(page.getByRole("link", { name: "画像編集" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "モザイク・ぼかし" }),
+    ).toBeVisible();
   });
 });

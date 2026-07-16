@@ -35,6 +35,12 @@ const PAGES = [
     title: "画像編集 | Client-Side Image Converter",
     descriptionContains: "ライト/カラー調整",
   },
+  {
+    name: "モザイク",
+    path: "/redact/",
+    title: "画像モザイク・ぼかし | Client-Side Image Converter",
+    descriptionContains: "モザイク・ぼかし・塗りつぶしで隠す",
+  },
 ] as const;
 
 test.describe("ページ別 SEO メタデータ", () => {
