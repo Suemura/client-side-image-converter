@@ -6,6 +6,8 @@
  * これにより Worker のバンドルにメインスレッド専用の Canvas コードが混入しない。
  */
 
+import { pngQualityStrategy } from "./pngQuality";
+
 export type ConversionFormat = "jpeg" | "png" | "webp" | "avif";
 
 /**
@@ -138,6 +140,41 @@ export const searchQualityForTargetSize = async (
     quality: minQuality,
     achieved: fallbackBlob.size <= targetSizeBytes,
   };
+};
+
+/** アルファ非対応出力へ合成する背景色（透過部分の黒化を防ぐ。Issue #108） */
+export const FLATTEN_BACKGROUND_COLOR = "#ffffff";
+
+/**
+ * 出力時に透過部分へ合成すべき背景色を返す純粋関数（合成不要なら null）。
+ *
+ * Canvas はアルファ 0 のピクセルが RGBA(0,0,0,0) のため、アルファを保持できない
+ * JPEG へそのままエンコードすると透過部分が黒くなる。`drawImage` の前にこの色で
+ * `fillRect` することで背景を合成する。メインスレッド（`imageConverter.ts`）・
+ * Worker（`imageProcessing.worker.ts`）・編集（`imageEditor.ts`）の全エンコード経路が
+ * この関数を「唯一の真実」として共有する（WYSIWYG 原則）。
+ *
+ * @param format - 出力フォーマット
+ * @param quality - 品質値（0-100）。PNG は低品質ティア（jpeg-roundtrip）のみ中間 JPEG を
+ *   経由して透過が失われるため、quality を渡した場合に限りティアを判定して背景色を返す。
+ *   PNG をネイティブエンコードする経路（編集ページ等）では渡さないこと（アルファ保持）
+ */
+export const resolveFlattenBackground = (
+  format: ConversionFormat,
+  quality?: number,
+): string | null => {
+  if (format === "jpeg") {
+    return FLATTEN_BACKGROUND_COLOR;
+  }
+  if (
+    format === "png" &&
+    quality !== undefined &&
+    pngQualityStrategy(quality) === "jpeg-roundtrip"
+  ) {
+    return FLATTEN_BACKGROUND_COLOR;
+  }
+  // PNG（lossless / compressed）・WebP・AVIF はアルファを保持できるため合成しない
+  return null;
 };
 
 /**

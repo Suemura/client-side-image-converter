@@ -139,34 +139,38 @@ const buildPngChunk = (type: string, data: Uint8Array): Uint8Array => {
 };
 
 /**
- * 幅・高さと「ピクセルごとの色を返す関数」から、外部ライブラリなしで有効な RGB PNG を組み立てる。
- * 圧縮は zlib の stored（無圧縮）ブロックで行う。単色・二色などの検証用画像生成の共通土台。
+ * 幅・高さと「ピクセルごとの色を返す関数」から、外部ライブラリなしで有効な PNG を組み立てる。
+ * 圧縮は zlib の stored（無圧縮）ブロックで行う。単色・二色・透過などの検証用画像生成の共通土台。
+ * カラータイプ 2（RGB、3 チャンネル）と 6（RGBA、4 チャンネル）に対応する。
  */
-const buildRgbPng = (
+const buildPng = (
   width: number,
   height: number,
-  colorAt: (x: number, y: number) => [number, number, number],
+  colorType: 2 | 6,
+  colorAt: (x: number, y: number) => number[],
 ): Uint8Array => {
-  // IHDR: 幅・高さ・ビット深度 8・カラータイプ 2（RGB）
+  const channels = colorType === 6 ? 4 : 3;
+
+  // IHDR: 幅・高さ・ビット深度 8・カラータイプ
   const ihdr = new Uint8Array(13);
   const ihdrView = new DataView(ihdr.buffer);
   ihdrView.setUint32(0, width);
   ihdrView.setUint32(4, height);
   ihdr[8] = 8; // bit depth
-  ihdr[9] = 2; // color type: truecolor RGB
+  ihdr[9] = colorType;
 
   // 各行の先頭にフィルタバイト 0 を付けた生ピクセル列
-  const rowLength = 1 + width * 3;
+  const rowLength = 1 + width * channels;
   const raw = new Uint8Array(rowLength * height);
   for (let y = 0; y < height; y++) {
     const rowStart = y * rowLength;
     raw[rowStart] = 0; // filter type: none
     for (let x = 0; x < width; x++) {
-      const p = rowStart + 1 + x * 3;
-      const [r, g, b] = colorAt(x, y);
-      raw[p] = r;
-      raw[p + 1] = g;
-      raw[p + 2] = b;
+      const p = rowStart + 1 + x * channels;
+      const color = colorAt(x, y);
+      for (let c = 0; c < channels; c++) {
+        raw[p + c] = color[c];
+      }
     }
   }
 
@@ -221,7 +225,7 @@ export const rectPngFile = (
   height = 20,
   color: [number, number, number] = [200, 60, 40],
 ) => {
-  const png = buildRgbPng(width, height, () => color);
+  const png = buildPng(width, height, 2, () => color);
   return { name, mimeType: "image/png", buffer: Buffer.from(png) };
 };
 
@@ -236,8 +240,23 @@ export const twoToneVerticalPngFile = (
   top: [number, number, number] = [230, 230, 230],
   bottom: [number, number, number] = [20, 20, 20],
 ) => {
-  const png = buildRgbPng(width, height, (_x, y) =>
+  const png = buildPng(width, height, 2, (_x, y) =>
     y < height / 2 ? top : bottom,
+  );
+  return { name, mimeType: "image/png", buffer: Buffer.from(png) };
+};
+
+/**
+ * 左半分が不透明の赤・右半分が完全透過の RGBA PNG を実行時生成する。
+ * アルファ非対応形式（JPEG）への変換で透過部分が白背景に合成されることの検証に使う。
+ */
+export const transparentPngFile = (
+  name = "transparent.png",
+  width = 64,
+  height = 64,
+) => {
+  const png = buildPng(width, height, 6, (x) =>
+    x < width / 2 ? [255, 0, 0, 255] : [0, 0, 0, 0],
   );
   return { name, mimeType: "image/png", buffer: Buffer.from(png) };
 };

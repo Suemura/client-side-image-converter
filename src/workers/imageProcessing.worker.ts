@@ -12,6 +12,7 @@
 import { encodeCanvasToAvifBlob } from "../utils/avifEncoder";
 import {
   calculateTargetSize,
+  resolveFlattenBackground,
   searchQualityForTargetSize,
 } from "../utils/conversionCore";
 import {
@@ -133,6 +134,13 @@ const processRequest = async (
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     throw new Error("Canvas context を取得できませんでした");
+  }
+  // アルファ非対応出力（JPEG / PNG 低品質ティア）では透過部分が黒くならないよう
+  // 描画前に背景色を合成する（Issue #108。メインスレッド経路と同じ純粋関数で判定する）
+  const background = resolveFlattenBackground(options.format, options.quality);
+  if (background) {
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, width, height);
   }
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();

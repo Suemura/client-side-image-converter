@@ -13,7 +13,9 @@ import {
   noisyBmpFile,
   pngFile,
   tiffFile,
+  transparentPngFile,
 } from "./helpers/fixtures";
+import { readPixelFromBuffer } from "./helpers/pixels";
 
 test.describe("画像フォーマット変換", () => {
   test("PNG を JPEG に変換してダウンロードできる", async ({ page }) => {
@@ -497,6 +499,156 @@ test.describe("画像フォーマット変換", () => {
       const buf = await zip.file(name)!.async("nodebuffer");
       expect(magicNumber.isAvif(buf)).toBe(true);
     }
+  });
+
+  test("透過 PNG → JPEG 変換で透過部分が白背景に合成される（Worker 経路）", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    // 左半分が不透明の赤・右半分が完全透過の RGBA PNG（Issue #108）
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(transparentPngFile());
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("transparent.jpeg");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isJpeg(buf)).toBe(true);
+
+    // 不透明部（左半分の中央）は赤のまま（JPEG の劣化を許容した閾値で判定）
+    const opaque = await readPixelFromBuffer(
+      page,
+      buf,
+      "image/jpeg",
+      0.25,
+      0.5,
+    );
+    expect(opaque[0]).toBeGreaterThan(200);
+    expect(opaque[1]).toBeLessThan(60);
+    expect(opaque[2]).toBeLessThan(60);
+
+    // 透過部（右半分の中央）は黒ではなく白背景に合成される
+    const flattened = await readPixelFromBuffer(
+      page,
+      buf,
+      "image/jpeg",
+      0.75,
+      0.5,
+    );
+    for (const channel of flattened) {
+      expect(channel).toBeGreaterThanOrEqual(240);
+    }
+  });
+
+  test("透過 PNG → JPEG 変換で透過部分が白背景に合成される（メインスレッド経路）", async ({
+    page,
+  }) => {
+    // OffscreenCanvas.convertToBlob を無効化して isOffscreenPipelineSupported を false にし、
+    // Worker プールではなくメインスレッドのフォールバック経路を強制する
+    await page.addInitScript(() => {
+      delete (OffscreenCanvas.prototype as { convertToBlob?: unknown })
+        .convertToBlob;
+    });
+    await page.goto("/convert/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(transparentPngFile());
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("transparent.jpeg");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isJpeg(buf)).toBe(true);
+
+    // 不透明部は赤のまま・透過部は白背景（Worker 経路と同一の WYSIWYG 検証）
+    const opaque = await readPixelFromBuffer(
+      page,
+      buf,
+      "image/jpeg",
+      0.25,
+      0.5,
+    );
+    expect(opaque[0]).toBeGreaterThan(200);
+    expect(opaque[1]).toBeLessThan(60);
+    expect(opaque[2]).toBeLessThan(60);
+
+    const flattened = await readPixelFromBuffer(
+      page,
+      buf,
+      "image/jpeg",
+      0.75,
+      0.5,
+    );
+    for (const channel of flattened) {
+      expect(channel).toBeGreaterThanOrEqual(240);
+    }
+  });
+
+  test("透過 PNG → WebP 変換では透過が保持される（回帰検証）", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(transparentPngFile());
+
+    // ラジオの input は不可視のためラベルテキストをクリックする
+    await page.getByText("WebP", { exact: true }).click();
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("transparent.webp");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isWebp(buf)).toBe(true);
+
+    // 透過部（右半分の中央）のアルファが保持されている（白塗りされていない）
+    const alpha = await page.evaluate(async (arr) => {
+      const bitmap = await createImageBitmap(
+        new Blob([new Uint8Array(arr)], { type: "image/webp" }),
+      );
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Canvas 2D context を取得できませんでした");
+      }
+      ctx.drawImage(bitmap, 0, 0);
+      const x = Math.floor(bitmap.width * 0.75);
+      const y = Math.floor(bitmap.height * 0.5);
+      return ctx.getImageData(x, y, 1, 1).data[3];
+    }, Array.from(buf));
+    expect(alpha).toBe(0);
   });
 
   test("変換時に Web Worker が生成される（処理がメインスレッド外で実行される）", async ({
