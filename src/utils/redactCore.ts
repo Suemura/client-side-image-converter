@@ -223,26 +223,30 @@ const applyMosaicToRegion = (
     for (let bx = area.x; bx < area.x + area.width; bx += blockSize) {
       const blockWidth = Math.min(blockSize, area.x + area.width - bx);
 
-      // ブロック内の平均色を求める
-      let r = 0;
-      let g = 0;
-      let b = 0;
-      let a = 0;
+      // ブロック内の平均色を求める（RGB はアルファ加重平均）。
+      // 完全透明画素の RGB は getImageData 上ほぼ (0,0,0) のため、
+      // 単純平均だと透過部分と重なるブロックが黒側へ引っ張られてしまう
+      let rSum = 0;
+      let gSum = 0;
+      let bSum = 0;
+      let aSum = 0;
       for (let y = by; y < by + blockHeight; y++) {
         let offset = (y * width + bx) * 4;
         for (let x = 0; x < blockWidth; x++) {
-          r += data[offset];
-          g += data[offset + 1];
-          b += data[offset + 2];
-          a += data[offset + 3];
+          const alpha = data[offset + 3];
+          rSum += data[offset] * alpha;
+          gSum += data[offset + 1] * alpha;
+          bSum += data[offset + 2] * alpha;
+          aSum += alpha;
           offset += 4;
         }
       }
       const count = blockWidth * blockHeight;
-      r = Math.round(r / count);
-      g = Math.round(g / count);
-      b = Math.round(b / count);
-      a = Math.round(a / count);
+      // 全画素が完全透明のブロックは色情報を持たないため黒（不可視）とする
+      const r = aSum > 0 ? Math.round(rSum / aSum) : 0;
+      const g = aSum > 0 ? Math.round(gSum / aSum) : 0;
+      const b = aSum > 0 ? Math.round(bSum / aSum) : 0;
+      const a = Math.round(aSum / count);
 
       // ブロック全体を平均色で塗る
       for (let y = by; y < by + blockHeight; y++) {
@@ -291,9 +295,38 @@ const boxBlurLine = (
   }
 };
 
+/** 1 チャンネル分の平面バッファ（w×h）へ分離型ボックスブラーを BLUR_PASSES 回適用する（結果は src） */
+const blurPlane = (
+  src: Float32Array,
+  tmp: Float32Array,
+  w: number,
+  h: number,
+  radius: number,
+): void => {
+  for (let pass = 0; pass < BLUR_PASSES; pass++) {
+    // 水平方向（src → tmp）
+    for (let y = 0; y < h; y++) {
+      boxBlurLine(src, tmp, y * w, 1, w, radius);
+    }
+    // 垂直方向（tmp → src）
+    for (let x = 0; x < w; x++) {
+      boxBlurLine(tmp, src, x, w, h, radius);
+    }
+  }
+};
+
 /**
  * ぼかし: 領域内を分離型ボックスブラー（水平→垂直を BLUR_PASSES 回）でぼかす。
  * サンプリングは領域内にクランプし、領域外の画素を読まず・書き換えない。
+ *
+ * - メモリ: チャンネルは互いに独立なため 1 チャンネルずつ処理し、一時確保を
+ *   領域 1px あたり Float32 3 個（src / tmp / ぼかし済みアルファ）に抑える
+ *   （RGBA 一括展開の 32 バイト/px → 12 バイト/px。高解像度 × 大領域での
+ *   タブクラッシュ対策）
+ * - 色: RGB はアルファ乗算済み（premultiplied）でぼかし、書き戻し時に
+ *   ぼかし済みアルファで割って戻す。完全透明画素の RGB（getImageData 上
+ *   ほぼ 0）が平均へ混ざって透過部分が黒ずむのを防ぐ。不透明画像では
+ *   ストレートアルファのぼかしと同じ結果になる
  */
 const applyBlurToRegion = (
   image: RgbaImage,
@@ -302,47 +335,55 @@ const applyBlurToRegion = (
 ): void => {
   const { data, width } = image;
   const { width: w, height: h } = area;
-
-  // 領域を RGBA 各チャンネルの平面バッファへ抜き出す（Float32 で誤差蓄積を防ぐ）
   const size = w * h;
-  const src = new Float32Array(size * 4);
+  const src = new Float32Array(size);
+  const tmp = new Float32Array(size);
+
+  // アルファチャンネルを先にぼかす（RGB の書き戻し時の除算に使う）
   for (let y = 0; y < h; y++) {
-    let offset = ((area.y + y) * width + area.x) * 4;
+    let offset = ((area.y + y) * width + area.x) * 4 + 3;
     let planeIndex = y * w;
     for (let x = 0; x < w; x++) {
       src[planeIndex] = data[offset];
-      src[planeIndex + size] = data[offset + 1];
-      src[planeIndex + size * 2] = data[offset + 2];
-      src[planeIndex + size * 3] = data[offset + 3];
       offset += 4;
       planeIndex += 1;
     }
   }
+  blurPlane(src, tmp, w, h, radius);
+  const blurredAlpha = src.slice();
 
-  const tmp = new Float32Array(size * 4);
-  for (let pass = 0; pass < BLUR_PASSES; pass++) {
-    for (let channel = 0; channel < 4; channel++) {
-      const base = channel * size;
-      // 水平方向（src → tmp）
-      for (let y = 0; y < h; y++) {
-        boxBlurLine(src, tmp, base + y * w, 1, w, radius);
-      }
-      // 垂直方向（tmp → src）
+  // RGB は元のアルファを乗算した状態でぼかし、ぼかし済みアルファで割って戻す
+  for (let channel = 0; channel < 3; channel++) {
+    for (let y = 0; y < h; y++) {
+      let offset = ((area.y + y) * width + area.x) * 4;
+      let planeIndex = y * w;
       for (let x = 0; x < w; x++) {
-        boxBlurLine(tmp, src, base + x, w, h, radius);
+        src[planeIndex] = data[offset + channel] * data[offset + 3];
+        offset += 4;
+        planeIndex += 1;
+      }
+    }
+    blurPlane(src, tmp, w, h, radius);
+    for (let y = 0; y < h; y++) {
+      let offset = ((area.y + y) * width + area.x) * 4;
+      let planeIndex = y * w;
+      for (let x = 0; x < w; x++) {
+        const alpha = blurredAlpha[planeIndex];
+        // 近傍が全て完全透明の画素は色情報を持たないため黒（不可視）とする
+        data[offset + channel] =
+          alpha > 0 ? Math.round(src[planeIndex] / alpha) : 0;
+        offset += 4;
+        planeIndex += 1;
       }
     }
   }
 
-  // 領域へ書き戻す
+  // アルファチャンネルを書き戻す
   for (let y = 0; y < h; y++) {
-    let offset = ((area.y + y) * width + area.x) * 4;
+    let offset = ((area.y + y) * width + area.x) * 4 + 3;
     let planeIndex = y * w;
     for (let x = 0; x < w; x++) {
-      data[offset] = Math.round(src[planeIndex]);
-      data[offset + 1] = Math.round(src[planeIndex + size]);
-      data[offset + 2] = Math.round(src[planeIndex + size * 2]);
-      data[offset + 3] = Math.round(src[planeIndex + size * 3]);
+      data[offset] = Math.round(blurredAlpha[planeIndex]);
       offset += 4;
       planeIndex += 1;
     }

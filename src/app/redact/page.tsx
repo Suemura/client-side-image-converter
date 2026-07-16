@@ -74,6 +74,11 @@ export default function RedactPage() {
       })
       .catch((error) => {
         console.error("Preview generation failed:", error);
+        // 失敗時に前の画像のプレビューを残すと「どの画像のどこを隠すか」を
+        // 誤認させるため、プレースホルダー表示へフォールバックする
+        if (!cancelled) {
+          setSourceCanvas(null);
+        }
       });
     return () => {
       cancelled = true;

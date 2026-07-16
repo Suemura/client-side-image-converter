@@ -298,6 +298,34 @@ describe("モザイク（mosaic）", () => {
     expect(pixelAt(image, 2, 4)).toEqual([10, 20, 30, 255]);
   });
 
+  it("完全透明画素の RGB は平均へ混ぜない（アルファ加重平均）", () => {
+    // 2×1 ブロック: 不透明の白 + 完全透明の黒。ストレートアルファの単純平均だと
+    // RGB が (128,128,128) へ沈むが、アルファ加重平均では白のまま残る
+    const image = createImage(2, 1, [0, 0, 0, 0]);
+    setPixel(image, 0, 0, [255, 255, 255, 255]);
+
+    applyRedactionsToImageData(
+      image,
+      [region(1, { x: 0, y: 0, width: 2, height: 1 })],
+      styleOf({ mode: "mosaic", mosaicBlockSize: 2 }),
+    );
+
+    // RGB は不透明画素の白・アルファのみ平均（(255+0)/2 → 128）
+    expect(pixelAt(image, 0, 0)).toEqual([255, 255, 255, 128]);
+    expect(pixelAt(image, 1, 0)).toEqual([255, 255, 255, 128]);
+  });
+
+  it("全画素が完全透明のブロックは完全透明のまま", () => {
+    const image = createImage(2, 2, [70, 80, 90, 0]);
+    applyRedactionsToImageData(
+      image,
+      [region(1, { x: 0, y: 0, width: 2, height: 2 })],
+      styleOf({ mode: "mosaic", mosaicBlockSize: 2 }),
+    );
+    expect(pixelAt(image, 0, 0)).toEqual([0, 0, 0, 0]);
+    expect(pixelAt(image, 1, 1)).toEqual([0, 0, 0, 0]);
+  });
+
   it("同じ入力から常に同じ出力を生成する（決定的）", () => {
     const build = (): RgbaImage => {
       const image = createImage(8, 8);
@@ -363,6 +391,47 @@ describe("ぼかし（blur）", () => {
         expect(pixelAt(image, x, y)).toEqual([50, 50, 50, 255]);
       }
     }
+  });
+
+  it("完全透明画素の RGB が混ざって黒ずまない（アルファ乗算済みでぼかす）", () => {
+    // 全画素 RGB=白でアルファのみ市松（255 / 0）の画像。ストレートアルファで
+    // ぼかすと透明画素の RGB(0,0,0) が混ざり白が灰色へ沈むが、
+    // premultiplied では RGB は白のままアルファだけがぼける
+    const image = createImage(8, 8, [0, 0, 0, 0]);
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        if ((x + y) % 2 === 0) {
+          setPixel(image, x, y, [255, 255, 255, 255]);
+        }
+      }
+    }
+
+    applyRedactionsToImageData(
+      image,
+      [region(1, { x: 0, y: 0, width: 8, height: 8 })],
+      styleOf({ mode: "blur", blurRadius: 2 }),
+    );
+
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        const [r, g, b, a] = pixelAt(image, x, y);
+        expect([r, g, b]).toEqual([255, 255, 255]);
+        // アルファは 255 と 0 の混合になる
+        expect(a).toBeGreaterThan(0);
+        expect(a).toBeLessThan(255);
+      }
+    }
+  });
+
+  it("完全透明の領域は完全透明のまま", () => {
+    const image = createImage(6, 6, [70, 80, 90, 0]);
+    applyRedactionsToImageData(
+      image,
+      [region(1, { x: 1, y: 1, width: 4, height: 4 })],
+      styleOf({ mode: "blur", blurRadius: 2 }),
+    );
+    expect(pixelAt(image, 2, 2)).toEqual([0, 0, 0, 0]);
+    expect(pixelAt(image, 4, 4)).toEqual([0, 0, 0, 0]);
   });
 
   it("領域外のピクセルを書き換えない", () => {
