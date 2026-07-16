@@ -37,7 +37,7 @@ npm run e2e
 npm run e2e:ui
 
 # 本番用ビルド（静的エクスポート。webpack ビルド、下記注記参照）
-# postbuild で sitemap（next-sitemap）と Service Worker（scripts/generate-sw.ts → out/sw.js）を続けて生成する
+# postbuild で sitemap（next-sitemap）・Service Worker（scripts/generate-sw.ts → out/sw.js）・セキュリティヘッダー / CSP（scripts/generate-headers.ts → out/_headers）を続けて生成する
 npm run build
 
 # Cloudflare Pages へのデプロイ
