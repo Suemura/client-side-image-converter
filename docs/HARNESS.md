@@ -40,7 +40,7 @@ flowchart TD
 | `npm run lint` | Biome によるリント・フォーマットチェック | 常時（完了条件）+ CI |
 | `npm run typecheck` | TypeScript 型チェック（`tsc --noEmit`） | 常時（完了条件）+ CI |
 | `npm run test` | vitest による単体テスト（`src/utils/__tests__/`） | 常時（完了条件）+ CI |
-| `npm run build` | 本番ビルド（静的エクスポート）。`postbuild` で sitemap（next-sitemap）と Service Worker（`scripts/generate-sw.ts` が `out/` を走査して `out/sw.js` を生成）を続けて生成する。Next.js 16 の Turbopack ビルドが無限ハングする上流バグの回避のため `next build --webpack` を使用（暫定、詳細は CLAUDE.md「開発コマンド」の注記参照） | PR 時に CI が検証 |
+| `npm run build` | 本番ビルド（静的エクスポート）。`postbuild` で sitemap（next-sitemap）・Service Worker（`scripts/generate-sw.ts` が `out/` を走査して `out/sw.js` を生成）・セキュリティヘッダー / CSP（`scripts/generate-headers.ts` が `out/_headers` へページ別 CSP を追記）を続けて生成する。Next.js 16 の Turbopack ビルドが無限ハングする上流バグの回避のため `next build --webpack` を使用（暫定、詳細は CLAUDE.md「開発コマンド」の注記参照） | PR 時に CI が検証 |
 | `npm run e2e` | Playwright E2E（実ブラウザでの動作検証） | PR 時に CI が検証（ローカルは `npm run e2e` / `npm run e2e:ui`） |
 
 コード変更を伴うタスクの完了条件は lint / typecheck / test の 3 つがすべて成功していること（CLAUDE.md「完了条件」。Stop フックが自動実行するのも同じ 3 つ）。build と e2e は完了条件には含まれず、PR 時に CI が検証する。
@@ -153,6 +153,7 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-16: セキュリティヘッダー対応（Issue #111）に伴い、`npm run build` の postbuild チェーンに CSP 生成を追加（`next-sitemap && node scripts/generate-sw.ts && node scripts/generate-headers.ts`。`out/` の全 HTML からインラインスクリプトの sha256 ハッシュを算出し `out/_headers` へページ別 CSP を冪等追記。Cloudflare Pages の制限超過時はビルドを非ゼロ終了）。E2E に `e2e/security-headers.spec.ts` を追加（serve が `_headers` を解釈しないため、生成された実 CSP を `page.route` で注入し CSP 強制下の全ページ動作を検証）
 - 2026-07-12: デザイン規定 `DESIGN.md` の策定（デザイン刷新 Phase 1、Issue #78）に伴い、reviewer エージェントのチェック観点 5-1（プロジェクトルール準拠）に DESIGN.md 準拠チェック（UI 変更でのハードコード色・規定外の角丸 / 影の検出。画像上オーバーレイ UI 等の固定色例外は DESIGN.md「Do's and Don'ts」参照）を追加。CLAUDE.md コードスタイルガイドラインにも DESIGN.md 準拠の 1 行を追加
 - 2026-07-12: CLAUDE.md の再肥大化防止ガードを追加。CLAUDE.md に「本ファイルの編集ルール」（書いてよいもの / 分割ファイルへ振り分けるもの・サイズ予算 20KB）、docs-sync エージェントに振り分けルール表とサイズガード（`wc -c` で 20KB 超なら分割ファイルへ移動）、reviewer エージェントのチェックリスト 5-2 に CLAUDE.md 肥大化の Fail 条件を追加
 - 2026-07-11: CLAUDE.md を「横断規約 + ドキュメントマップ」へ縮約し、詳細を `docs/ARCHITECTURE.md`（ディレクトリ / ファイル別詳細・コア機能）/ `docs/PATTERNS.md`（重要な実装パターン）/ `docs/TESTING.md`（テスト対象一覧）/ `docs/HISTORY.md`（実装履歴。今後の変更ログの追記先）へ分割（毎セッションのコンテキスト消費を削減し、詳細はオンデマンド参照にする）。docs-sync エージェントの同期対象表を新構成へ更新
