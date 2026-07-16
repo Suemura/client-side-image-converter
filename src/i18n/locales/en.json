@@ -12,6 +12,7 @@
     "crop": "Crop",
     "convert": "Convert",
     "edit": "Edit",
+    "redact": "Redact",
     "metadata": "Metadata"
   },
   "home": {
@@ -20,6 +21,7 @@
     "startConverting": "Start Converting",
     "tryCropTool": "Try Crop Tool",
     "tryEditTool": "Image Editor",
+    "tryRedactTool": "Mosaic / Blur",
     "tryMetadataTool": "Metadata Manager",
     "viewOnGithub": "View on GitHub",
     "features": {
@@ -209,6 +211,34 @@
         "mono": "Mono"
       }
     }
+  },
+  "redact": {
+    "title": "Mosaic & Blur Tool",
+    "subtitle": "Hide faces and other sensitive details with mosaic, blur, or solid fill. Redactions are baked into the image and cannot be undone.",
+    "selectRedactArea": "Select Areas to Hide",
+    "dragToAddRegion": "Drag on the preview to add areas you want to hide (multiple areas supported)",
+    "selectImageFirst": "Please select images first",
+    "mode": "Redaction Style",
+    "modeMosaic": "Mosaic",
+    "modeBlur": "Blur",
+    "modeFill": "Fill",
+    "mosaicSize": "Mosaic Block Size (px)",
+    "blurStrength": "Blur Strength (px)",
+    "fillColor": "Fill Color",
+    "strengthHelp": "For large areas, the strength is automatically increased so the content cannot be recognized.",
+    "clearRegions": "Clear Areas on This Image",
+    "removeRegion": "Remove area {{index}}",
+    "regionCount": "Areas selected: {{count}}",
+    "startRedacting": "Apply Redaction",
+    "reRedact": "Re-Apply",
+    "redactingInProgress": "Processing...",
+    "processedFiles": "Processed Files",
+    "processingPlaceholder": "Results will appear here after processing",
+    "selectNewImage": "Select New Images",
+    "noRegionHelp": "Images without any selected areas are output unchanged.",
+    "preserveExif": "Preserve EXIF Information",
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the processed image. Available for JPEG / PNG / WebP.",
+    "reset": "Reset"
   },
   "fileUpload": {
     "dropFiles": "Drop files here",

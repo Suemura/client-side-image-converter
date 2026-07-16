@@ -12,6 +12,7 @@
     "crop": "トリミング",
     "convert": "変換",
     "edit": "編集",
+    "redact": "モザイク",
     "metadata": "メタデータ"
   },
   "home": {
@@ -20,6 +21,7 @@
     "startConverting": "変換",
     "tryCropTool": "トリミング",
     "tryEditTool": "画像編集",
+    "tryRedactTool": "モザイク・ぼかし",
     "tryMetadataTool": "メタデータ管理",
     "viewOnGithub": "GitHubで見る",
     "features": {
@@ -209,6 +211,34 @@
         "mono": "モノクロ"
       }
     }
+  },
+  "redact": {
+    "title": "モザイク・ぼかしツール",
+    "subtitle": "顔や写り込みなど見せたくない部分をモザイク・ぼかし・塗りつぶしで隠します。処理した部分は画像に焼き込まれ、元に戻せません。",
+    "selectRedactArea": "隠す領域を選択",
+    "dragToAddRegion": "ドラッグして隠したい範囲を追加してください（複数の範囲を指定できます）",
+    "selectImageFirst": "画像を選択してください",
+    "mode": "隠し方",
+    "modeMosaic": "モザイク",
+    "modeBlur": "ぼかし",
+    "modeFill": "塗りつぶし",
+    "mosaicSize": "モザイクの粗さ (px)",
+    "blurStrength": "ぼかしの強さ (px)",
+    "fillColor": "塗りつぶしの色",
+    "strengthHelp": "大きな領域では、内容が判読できないよう強度が自動的に引き上げられます。",
+    "clearRegions": "この画像の領域をクリア",
+    "removeRegion": "領域 {{index}} を削除",
+    "regionCount": "指定中の領域: {{count}} 件",
+    "startRedacting": "レタッチを適用",
+    "reRedact": "再適用",
+    "redactingInProgress": "処理中...",
+    "processedFiles": "処理済みファイル",
+    "processingPlaceholder": "処理後にここに結果が表示されます",
+    "selectNewImage": "新しい画像を選択",
+    "noRegionHelp": "領域を指定していない画像はそのまま出力されます。",
+    "preserveExif": "EXIF情報を保持",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が処理後の画像に保持されます。JPEG / PNG / WebP で有効です。",
+    "reset": "リセット"
   },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",

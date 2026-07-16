@@ -1,0 +1,184 @@
+.redactPageContainer {
+  display: grid;
+  grid-template-columns: 2fr 4fr 2fr;
+  gap: 1.5rem;
+  align-items: start;
+  width: 100%;
+  max-width: 1400px;
+  min-height: 600px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* DESIGN.md「カード / パネル」規定 */
+.redactColumn {
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+  overflow: hidden;
+}
+
+.redactColumnCenter {
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 600px;
+}
+
+/* 小見出し規定（16px / 500） */
+.redactColumnTitle {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--foreground);
+  margin-bottom: 1rem;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+/* セクション見出し規定（20px / 700 / letter-spacing -0.01em） */
+.redactCenterTitle {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.placeholder {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 2rem 1rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+/* パネル内で一段沈めるインセット領域（DESIGN.md「カード / パネル」） */
+.redactOptions {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.checkboxText {
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.helpText {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+.centerButton {
+  margin-top: auto;
+  padding-top: 2rem;
+  text-align: center;
+}
+
+.centerDescription {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.processingText {
+  text-align: center;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.pageContainer {
+  padding: 2rem;
+}
+
+/* DESIGN.md「3. Typography」ページタイトル規定（28px / 700 / letter-spacing -0.01em） */
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.pageSubtitle {
+  font-size: 16px;
+  color: var(--muted-foreground);
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto 3rem;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.progressWrapper {
+  margin-bottom: 1rem;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 1200px) {
+  .redactPageContainer {
+    grid-template-columns: 2fr 4fr 2fr;
+    gap: 1rem;
+    max-width: 1200px;
+    padding: 0 1rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .redactPageContainer {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    max-width: 600px;
+    padding: 0 1rem;
+  }
+
+  .redactColumn,
+  .redactColumnCenter {
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .redactColumn,
+  .redactColumnCenter {
+    padding: 1rem;
+  }
+
+  .redactPageContainer {
+    gap: 1rem;
+    padding: 0 0.5rem;
+  }
+}

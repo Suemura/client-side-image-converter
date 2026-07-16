@@ -42,6 +42,11 @@ export default function Home() {
                 {t("home.tryEditTool")}
               </Button>
             </Link>
+            <Link href="/redact">
+              <Button variant="secondary" size="large">
+                {t("home.tryRedactTool")}
+              </Button>
+            </Link>
             <Link href="/metadata">
               <Button variant="secondary" size="large">
                 {t("home.tryMetadataTool")}
