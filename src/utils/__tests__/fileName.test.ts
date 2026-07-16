@@ -1,9 +1,34 @@
 import { describe, expect, it } from "vitest";
 import {
+  appendFileNameSuffix,
   createFileNameUniquifier,
   formatFileSize,
   truncateFileName,
 } from "../fileName";
+
+describe("appendFileNameSuffix", () => {
+  it("拡張子の直前へサフィックスを挿入する", () => {
+    expect(appendFileNameSuffix("photo.png", "_redacted")).toBe(
+      "photo_redacted.png",
+    );
+  });
+
+  it("多重ドットは最後の拡張子の前へ挿入する", () => {
+    expect(appendFileNameSuffix("archive.backup.jpeg", "_redacted")).toBe(
+      "archive.backup_redacted.jpeg",
+    );
+  });
+
+  it("拡張子がない場合は末尾へ付与する", () => {
+    expect(appendFileNameSuffix("photo", "_redacted")).toBe("photo_redacted");
+  });
+
+  it("ドットで始まる名前（隠しファイル）は末尾へ付与する", () => {
+    expect(appendFileNameSuffix(".gitignore", "_redacted")).toBe(
+      ".gitignore_redacted",
+    );
+  });
+});
 
 describe("createFileNameUniquifier", () => {
   it("初出のファイル名はそのまま返す", () => {

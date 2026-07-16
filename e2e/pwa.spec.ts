@@ -11,7 +11,14 @@ import { magicNumber, pngFile } from "./helpers/fixtures";
 
 // オフライン検証で巡回する全ページ。ヘッダーのナビゲーションはレイアウト共通なので、
 // 各ルートで nav リンクが表示されれば HTML / CSS / JS がキャッシュから復元・hydrate された証拠になる。
-const ROUTES = ["/", "/convert/", "/crop/", "/edit/", "/metadata/"] as const;
+const ROUTES = [
+  "/",
+  "/convert/",
+  "/crop/",
+  "/edit/",
+  "/redact/",
+  "/metadata/",
+] as const;
 
 // Service Worker が active になりページを制御下に置く（clients.claim）まで待つ。
 // controller が設定される時点で install（プリキャッシュ）は完了している。

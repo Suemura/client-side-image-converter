@@ -18,7 +18,14 @@ import {
 // 注: out/_headers の CSP は本番ビルドの postbuild でのみ生成されるため、
 // dev サーバー再利用時（reuseExistingServer）には skip する（pwa.spec.ts と同方針）。
 
-const ROUTES = ["/", "/convert/", "/crop/", "/edit/", "/metadata/"] as const;
+const ROUTES = [
+  "/",
+  "/convert/",
+  "/crop/",
+  "/edit/",
+  "/redact/",
+  "/metadata/",
+] as const;
 
 const headersPath = path.resolve(__dirname, "../out/_headers");
 

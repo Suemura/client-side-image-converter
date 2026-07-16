@@ -78,6 +78,27 @@ export const createFileNameUniquifier = (): ((name: string) => string) => {
 };
 
 /**
+ * ファイル名の拡張子の直前へサフィックスを挿入する。
+ * 拡張子がない場合は末尾へ付与する（例: "photo.png" + "_redacted" → "photo_redacted.png"）。
+ * @param fileName - 元のファイル名
+ * @param suffix - 挿入するサフィックス（例: "_redacted"）
+ * @returns サフィックス付きのファイル名
+ */
+export const appendFileNameSuffix = (
+  fileName: string,
+  suffix: string,
+): string => {
+  const lastDotIndex = fileName.lastIndexOf(".");
+  if (lastDotIndex <= 0) {
+    // 拡張子なし・ドットで始まる名前（隠しファイル等）は末尾へ付与する
+    return `${fileName}${suffix}`;
+  }
+  const base = fileName.substring(0, lastDotIndex);
+  const extension = fileName.substring(lastDotIndex);
+  return `${base}${suffix}${extension}`;
+};
+
+/**
  * ファイルサイズを人間が読める形式にフォーマットする関数
  * @param bytes - バイト数
  * @returns フォーマットされたファイルサイズ文字列
