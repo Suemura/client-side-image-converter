@@ -206,25 +206,31 @@ export const convertImage = async (
       options.preserveExif === true && options.format !== "avif";
 
     const reader = new FileReader();
-    reader.onload = (e) => {
-      let exifTiff: Uint8Array | null = null;
-      if (shouldPreserveExif) {
-        exifTiff = readExifTiffFromDataUrl(
-          e.target?.result as string,
-          file.type,
-        );
+    // EXIF 読み取り（piexifjs の動的 import を含む）のため async ハンドラにする。
+    // 例外は外側 Promise の reject へ接続し、unhandled rejection を防ぐ
+    reader.onload = async (e) => {
+      try {
+        let exifTiff: Uint8Array | null = null;
+        if (shouldPreserveExif) {
+          exifTiff = await readExifTiffFromDataUrl(
+            e.target?.result as string,
+            file.type,
+          );
+        }
+
+        const img = new Image();
+        img.onload = () => {
+          processSource(img, img.width, img.height, exifTiff);
+        };
+
+        img.onerror = () => {
+          reject(new Error("画像の読み込みに失敗しました"));
+        };
+
+        img.src = e.target?.result as string;
+      } catch (error) {
+        reject(error);
       }
-
-      const img = new Image();
-      img.onload = () => {
-        processSource(img, img.width, img.height, exifTiff);
-      };
-
-      img.onerror = () => {
-        reject(new Error("画像の読み込みに失敗しました"));
-      };
-
-      img.src = e.target?.result as string;
     };
 
     reader.onerror = () => {

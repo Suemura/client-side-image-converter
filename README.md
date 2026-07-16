@@ -31,6 +31,7 @@ https://image-converter.suemura.app/
 
 - **No Server Transmission**: Images are never sent to any server
 - **Offline Operation**: A Service Worker precaches the app on the first visit, so every feature keeps working with no internet connection
+- **Strict Security Headers**: The production site is served with a hash-based Content-Security-Policy (no `unsafe-inline` / `unsafe-eval` scripts), `X-Frame-Options: DENY`, HSTS, and other security headers
 
 ## Development Setup
 

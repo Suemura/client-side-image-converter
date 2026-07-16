@@ -37,7 +37,7 @@ npm run e2e
 npm run e2e:ui
 
 # 本番用ビルド（静的エクスポート。webpack ビルド、下記注記参照）
-# postbuild で sitemap（next-sitemap）と Service Worker（scripts/generate-sw.ts → out/sw.js）を続けて生成する
+# postbuild で sitemap（next-sitemap）・Service Worker（scripts/generate-sw.ts → out/sw.js）・セキュリティヘッダー / CSP（scripts/generate-headers.ts → out/_headers）を続けて生成する
 npm run build
 
 # Cloudflare Pages へのデプロイ
@@ -134,7 +134,7 @@ npm run preview
 - **クライアントサイド完結**: 画像処理は Canvas API / WASM / WebGL のみで行い、画像をサーバーへ送信しない
 - **純粋ロジックの分離**: Canvas / WebGL / DOM 依存のオーケストレーションから Canvas 非依存の純粋ロジックを別ファイルへ切り出し、単体テスト対象にする（例: `conversionCore.ts` / `cropGeometry.ts` / `adjustments.ts` / `handoff.ts` / `precache.ts`）
 - **WYSIWYG**: プレビューと出力は同一の描画経路を通す。GPU（GLSL）と CPU（TS）で同じ処理を持つ場合は TS 側の関数を「唯一の真実」とし、GLSL は同順序・同係数でミラーする
-- **動的 import**: WASM コーデック（`@jsquash/*` / libheif / utif2 等)は使用時のみロードし、初期バンドルへ影響させない
+- **動的 import**: WASM コーデック（`@jsquash/*` / libheif / utif2 等）と重量 JS ライブラリ（jszip / piexifjs / exif-js）は使用時のみロードし、初期バンドルへ影響させない
 - **dual-store**: 適用範囲（全画像一括 / 画像ごと）は crop 起源の dual-store パターンを踏襲する（`resolveCropForIndex` / `resolveAdjustmentForIndex` 等）
 - **i18n**: ユーザー向け文言はすべて react-i18next 経由（日英）。ページ別 SEO メタデータのみ静的 HTML（主言語は日本語）
 

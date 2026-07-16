@@ -139,14 +139,21 @@ export default function MetadataPage() {
 
     const cleanedFiles = await removeSelectedMetadata();
     if (cleanedFiles.length > 0) {
-      // クリーニング済みファイルをダウンロード
-      if (cleanedFiles.length === 1) {
-        downloadFile(cleanedFiles[0], `cleaned_${cleanedFiles[0].name}`);
-      } else {
-        await downloadMultipleFiles(cleanedFiles, "cleaned_images");
+      try {
+        // クリーニング済みファイルをダウンロード
+        if (cleanedFiles.length === 1) {
+          downloadFile(cleanedFiles[0], `cleaned_${cleanedFiles[0].name}`);
+        } else {
+          await downloadMultipleFiles(cleanedFiles, "cleaned_images");
+        }
+      } catch (error) {
+        // jszip チャンクのロード失敗等でダウンロードできない場合はユーザーへ通知する
+        // （既存の Results.tsx と同じ通知方法。通知 UI の統一は Issue #118 で対応予定）
+        console.error("Download error:", error);
+        alert(t("results.downloadError"));
       }
     }
-  }, [analysis, selectedTags, removeSelectedMetadata]);
+  }, [analysis, selectedTags, removeSelectedMetadata, t]);
 
   // クリーンアップ
   useEffect(() => {

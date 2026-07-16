@@ -98,7 +98,7 @@ export const redactImage = async (
     let exifTiff: Uint8Array | null = null;
     if (preserveExif && exifFormat) {
       const dataUrl = await fileToDataUrl(file);
-      exifTiff = readExifTiffFromDataUrl(dataUrl, file.type);
+      exifTiff = await readExifTiffFromDataUrl(dataUrl, file.type);
     }
 
     // EXIF Orientation 補正を焼き込んだキャンバスへレタッチを適用する
@@ -128,7 +128,7 @@ export const redactImage = async (
     // （除去を保証できない場合は例外になり、EXIF 引き継ぎ自体を中止する = プライバシー優先）
     if (exifTiff && exifFormat) {
       try {
-        const normalized = normalizeExifForBakedImage(
+        const normalized = await normalizeExifForBakedImage(
           exifTiff,
           canvas.width,
           canvas.height,
