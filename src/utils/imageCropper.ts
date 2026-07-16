@@ -210,7 +210,7 @@ export const cropImage = async (
     let exifTiff: Uint8Array | null = null;
     if (preserveExif && exifFormat) {
       const dataUrl = await fileToDataUrl(file);
-      exifTiff = readExifTiffFromDataUrl(dataUrl, file.type);
+      exifTiff = await readExifTiffFromDataUrl(dataUrl, file.type);
     }
 
     // EXIF Orientation 補正 + 回転/反転を焼き込んだキャンバス
@@ -279,7 +279,7 @@ export const cropImage = async (
     // 実ピクセル寸法タグを出力寸法へ揃えて、二重回転やメタデータの寸法不整合を防ぐ。
     if (exifTiff && exifFormat) {
       try {
-        const normalized = normalizeExifForBakedImage(
+        const normalized = await normalizeExifForBakedImage(
           exifTiff,
           canvas.width,
           canvas.height,

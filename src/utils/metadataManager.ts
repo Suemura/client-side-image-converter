@@ -1,11 +1,15 @@
-import EXIF from "exif-js";
-import piexif from "piexifjs";
 import {
   buildSyntheticJpegFromTiff,
   extractPngExif,
   extractWebpExif,
 } from "./exifBinary";
 import { dataUrlToBlob } from "./imageUtils";
+
+/**
+ * piexifjs のモジュール型。exif-js / piexifjs は重量ライブラリのため静的 import せず、
+ * 使用時に動的 import してこの型の値として引き回す（初期バンドル削減。Issue #114）
+ */
+type Piexif = typeof import("piexifjs");
 
 export interface ExifData {
   [key: string]: string | number | undefined;
@@ -84,6 +88,7 @@ const PRIVACY_RISK_TAGS = new Set([
  * piexifjsのExifObjから指定されたタグを削除
  */
 const removeTagsFromExifObj = (
+  piexif: Piexif,
   exifObj: MutableExifObj,
   tagsToRemove: string[],
 ): void => {
@@ -192,6 +197,7 @@ export const decimalToGpsRationals = (decimalAbs: number): number[][] => {
  * Ref（N/S/E/W）は保持する。GPS がなければ何もしない
  */
 export const roundGpsInExifObj = (
+  piexif: Piexif,
   exifObj: MutableExifObj,
   decimals: number = GPS_ROUNDING_DECIMALS,
 ): void => {
@@ -275,12 +281,14 @@ const removeAllMetadataWithCanvas = async (file: File): Promise<File> => {
  * ファイルからEXIF情報を抽出する
  */
 export const extractExifData = async (file: File): Promise<ExifData> => {
-  return new Promise((resolve) => {
-    if (!file.type.startsWith("image/")) {
-      resolve({});
-      return;
-    }
+  if (!file.type.startsWith("image/")) {
+    return {};
+  }
 
+  // exif-js は EXIF 解析時のみロードし、初期バンドルへ影響させない
+  const { default: EXIF } = await import("exif-js");
+
+  return new Promise((resolve) => {
     // exif-js の getAllTags 結果を ExifData に整形する（JPEG / WebP 共通）
     const collectTags = (source: File): void => {
       EXIF.getData(source, function (this) {
@@ -396,6 +404,9 @@ export const removeMetadataFromImage = async (
           return;
         }
 
+        // piexifjs は JPEG の選択的削除時のみロードする
+        const { default: piexif } = await import("piexifjs");
+
         // piexifjsでEXIFデータを読み込み
         const exifObj = piexif.load(imageData) as MutableExifObj;
 
@@ -408,14 +419,14 @@ export const removeMetadataFromImage = async (
           const tagsToDelete = tagsToRemove.filter(
             (tag) => !GPS_ROUND_TAGS.has(tag),
           );
-          removeTagsFromExifObj(exifObj, tagsToDelete);
+          removeTagsFromExifObj(piexif, exifObj, tagsToDelete);
           // 緯度・経度が削除対象に選ばれている場合のみ丸めを適用する
           if (roundedGpsSelected) {
-            roundGpsInExifObj(exifObj);
+            roundGpsInExifObj(piexif, exifObj);
           }
         } else {
           // 指定されたタグを削除
-          removeTagsFromExifObj(exifObj, tagsToRemove);
+          removeTagsFromExifObj(piexif, exifObj, tagsToRemove);
         }
 
         // 修正したEXIFデータを画像に挿入

@@ -172,9 +172,9 @@ export const renderEdited = async (
   if (preserveExif && writableFormat) {
     try {
       const dataUrl = await fileToDataUrl(file);
-      const exifTiff = readExifTiffFromDataUrl(dataUrl, file.type);
+      const exifTiff = await readExifTiffFromDataUrl(dataUrl, file.type);
       if (exifTiff) {
-        const normalizedExif = normalizeExifForBakedImage(
+        const normalizedExif = await normalizeExifForBakedImage(
           exifTiff,
           width,
           height,

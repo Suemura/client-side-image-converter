@@ -1,4 +1,3 @@
-import JSZip from "jszip";
 import { createFileNameUniquifier } from "./fileName";
 import type { ConversionResult } from "./imageConverter";
 import type { CropResult } from "./imageCropper";
@@ -59,6 +58,8 @@ export const downloadAsZip = async (
   if (results.length === 0) return;
 
   try {
+    // ZIP 生成時のみロードし、初期バンドルへ影響させない
+    const { default: JSZip } = await import("jszip");
     const zip = new JSZip();
     const uniquify = createFileNameUniquifier();
 
@@ -165,7 +166,8 @@ export const downloadMultipleFiles = async (
     // 1ファイルの場合は直接ダウンロード
     downloadFile(files[0]);
   } else {
-    // 複数ファイルの場合はZIPファイルを作成
+    // 複数ファイルの場合はZIPファイルを作成（JSZip は ZIP 生成時のみロード）
+    const { default: JSZip } = await import("jszip");
     const zip = new JSZip();
     const uniquify = createFileNameUniquifier();
 

@@ -1,5 +1,4 @@
 import { formatFileSize } from "@utils/fileName";
-import EXIF from "exif-js";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -46,13 +45,15 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
     [t, i18n.language],
   );
 
-  const extractExifData = useCallback((file: File): Promise<ExifData> => {
-    return new Promise((resolve) => {
-      if (!file.type.startsWith("image/")) {
-        resolve({});
-        return;
-      }
+  const extractExifData = useCallback(async (file: File): Promise<ExifData> => {
+    if (!file.type.startsWith("image/")) {
+      return {};
+    }
 
+    // exif-js はモーダルで EXIF を表示する時のみロードし、初期バンドルへ影響させない
+    const { default: EXIF } = await import("exif-js");
+
+    return new Promise((resolve) => {
       EXIF.getData(file, function (this) {
         const allMetaData = EXIF.getAllTags(this);
         const relevantData: ExifData = {};
@@ -109,8 +110,10 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
       img.src = url;
     }
 
-    // EXIF情報を取得
-    extractExifData(file).then(setExifData);
+    // EXIF情報を取得（動的 import の失敗時は EXIF なしとして表示する）
+    extractExifData(file)
+      .then(setExifData)
+      .catch(() => setExifData({}));
 
     return () => {
       URL.revokeObjectURL(url);

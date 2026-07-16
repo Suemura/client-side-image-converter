@@ -119,7 +119,7 @@ const processRequest = async (
     decodeKind === "standard"
   ) {
     const dataUrl = `data:${fileType};base64,${uint8ArrayToBase64(new Uint8Array(buffer))}`;
-    exifTiff = readExifTiffFromDataUrl(dataUrl, fileType);
+    exifTiff = await readExifTiffFromDataUrl(dataUrl, fileType);
   }
 
   const bitmap = await decodeToBitmap(buffer, fileType, decodeKind);

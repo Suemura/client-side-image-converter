@@ -5,7 +5,6 @@
  * 「読み取り→書き込み」の橋渡しをここに集約する（変換・トリミングの両経路で共用）。
  */
 
-import piexif from "piexifjs";
 import {
   buildSyntheticJpegFromTiff,
   extractPngExif,
@@ -47,12 +46,14 @@ export const exifWritableFormat = (
  * ソース画像の DataURL から EXIF（純 TIFF）を読み取る。
  * JPEG は piexifjs、PNG / WebP は各コンテナのチャンクからパースする。EXIF が無ければ null。
  */
-export const readExifTiffFromDataUrl = (
+export const readExifTiffFromDataUrl = async (
   dataUrl: string,
   fileType: string,
-): Uint8Array | null => {
+): Promise<Uint8Array | null> => {
   try {
     if (fileType.includes("jpeg") || fileType.includes("jpg")) {
+      // piexifjs は JPEG 経路でのみ必要なため使用時にロードする
+      const { default: piexif } = await import("piexifjs");
       return piexifDumpToTiff(piexif.dump(piexif.load(dataUrl)));
     }
     const base64 = dataUrl.split(",")[1];
@@ -83,12 +84,13 @@ export const readExifTiffFromDataUrl = (
  * 寸法タグは元画像に存在する場合のみ上書きし、無い画像へは新規追加しない。
  * 失敗時は元の TIFF をそのまま返す（EXIF 保持を優先）。
  */
-export const normalizeExifForBakedImage = (
+export const normalizeExifForBakedImage = async (
   tiff: Uint8Array,
   width: number,
   height: number,
-): Uint8Array => {
+): Promise<Uint8Array> => {
   try {
+    const { default: piexif } = await import("piexifjs");
     const jpeg = buildSyntheticJpegFromTiff(tiff);
     const dataUrl = `data:image/jpeg;base64,${uint8ArrayToBase64(jpeg)}`;
     const exifObj = piexif.load(dataUrl);
@@ -135,6 +137,7 @@ export const insertExifIntoBlob = async (
   height: number,
 ): Promise<Blob> => {
   if (format === "jpeg") {
+    const { default: piexif } = await import("piexifjs");
     const dataUrl = await blobToDataUrl(blob);
     // piexif.insert は "Exif\0\0" 前置の dump 文字列を要求する
     const newDataUrl = piexif.insert(tiffToPiexifDump(exifTiff), dataUrl);
