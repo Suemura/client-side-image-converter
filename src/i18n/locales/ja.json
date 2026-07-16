@@ -237,7 +237,7 @@
     "selectNewImage": "新しい画像を選択",
     "noRegionHelp": "領域を指定していない画像はそのまま出力されます。",
     "preserveExif": "EXIF情報を保持",
-    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が処理後の画像に保持されます。JPEG / PNG / WebP で有効です。",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が処理後の画像に保持されます。JPEG / PNG / WebP で有効です。EXIF内の埋め込みサムネイルにはレタッチ前の画像が残るため、常に削除されます。",
     "reset": "リセット"
   },
   "fileUpload": {

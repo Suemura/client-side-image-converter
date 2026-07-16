@@ -295,11 +295,11 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
     };
 
     const handleMouseUp = () => {
-      setDrag((current) => {
-        if (!current || !scale) {
-          return null;
-        }
-        const { draft } = current;
+      // 確定処理（親への通知）は setState updater の外で行う。updater は純粋関数の
+      // 契約があり、StrictMode の二重実行で領域が二重追加されるため（drag はこの
+      // effect の依存で、mousemove ごとに最新値へ張り替わったクロージャから読める）
+      if (scale) {
+        const { draft } = drag;
         // 小さすぎる矩形は誤操作とみなして確定しない
         if (draft.width >= MIN_CROP_SIZE && draft.height >= MIN_CROP_SIZE) {
           const natural = scaleCropArea(
@@ -310,15 +310,15 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
             sourceCanvas.height,
           );
           if (natural.width > 0 && natural.height > 0) {
-            if (current.type === "create") {
+            if (drag.type === "create") {
               onAddRegion(natural);
             } else {
-              onUpdateRegion(current.regionId, natural);
+              onUpdateRegion(drag.regionId, natural);
             }
           }
         }
-        return null;
-      });
+      }
+      setDrag(null);
     };
 
     document.addEventListener("mousemove", handleMouseMove);

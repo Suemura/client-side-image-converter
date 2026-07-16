@@ -122,4 +122,79 @@ describe("normalizeExifForBakedImage", () => {
     expect(piexif.ExifIFD.PixelXDimension in exifIfd).toBe(false);
     expect(piexif.ExifIFD.PixelYDimension in exifIfd).toBe(false);
   });
+
+  describe("stripThumbnail オプション（レタッチ経路の未編集画像リーク防止）", () => {
+    // 1x1 ピクセルの最小 JPEG（e2e/helpers/fixtures.ts の BASE_JPEG_BASE64 と同一）。
+    // piexif.dump はサムネイルの JPEG セグメントを実際にパースするため実在する JPEG が必要
+    const THUMBNAIL_JPEG_BASE64 =
+      "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigD//2Q==";
+    const FAKE_THUMBNAIL = atob(THUMBNAIL_JPEG_BASE64);
+
+    /** IFD1 + サムネイル入りの純 TIFF を生成する */
+    const buildTiffWithThumbnail = (): Uint8Array =>
+      piexifDumpToTiff(
+        piexif.dump({
+          "0th": {
+            [piexif.ImageIFD.Orientation]: 6,
+            [piexif.ImageIFD.Make]: "TestMake",
+          },
+          Exif: {},
+          GPS: {},
+          // IFD1 のタグ（256 = ImageWidth / 257 = ImageLength。型定義に無いため生番号で指定）
+          "1st": {
+            256: 160,
+            257: 120,
+          },
+          thumbnail: FAKE_THUMBNAIL,
+        }),
+      );
+
+    it("IFD1（EXIF サムネイル）を除去し、他のタグは保持する", () => {
+      const tiff = buildTiffWithThumbnail();
+      // 前提: 元の TIFF はサムネイルを持つ
+      const before = loadExif(tiff);
+      expect(before.thumbnail).toBeTruthy();
+
+      const normalized = normalizeExifForBakedImage(tiff, 100, 200, {
+        stripThumbnail: true,
+      });
+      const after = loadExif(normalized);
+      // サムネイルと IFD1 が除去されている（レタッチ前画像が残らない）
+      expect(after.thumbnail ?? null).toBeNull();
+      expect(Object.keys(after["1st"] ?? {})).toHaveLength(0);
+      // 0th のタグと Orientation 正規化は通常どおり
+      expect(after["0th"]?.[piexif.ImageIFD.Make]).toBe("TestMake");
+      expect(after["0th"]?.[piexif.ImageIFD.Orientation]).toBe(1);
+    });
+
+    it("stripThumbnail なしではサムネイルが保持される（既存経路の互換）", () => {
+      const tiff = buildTiffWithThumbnail();
+      const normalized = normalizeExifForBakedImage(tiff, 100, 200);
+      expect(loadExif(normalized).thumbnail).toBeTruthy();
+    });
+
+    it("サムネイルが無い TIFF でも例外を投げず正常に処理する", () => {
+      const tiff = piexifDumpToTiff(
+        piexif.dump({
+          "0th": { [piexif.ImageIFD.Make]: "NoThumb" },
+          Exif: {},
+          GPS: {},
+        }),
+      );
+      const normalized = normalizeExifForBakedImage(tiff, 100, 200, {
+        stripThumbnail: true,
+      });
+      expect(load0thIfd(normalized)[piexif.ImageIFD.Make]).toBe("NoThumb");
+    });
+
+    it("正規化に失敗した場合、stripThumbnail 指定時は元 TIFF を返さず例外を投げる", () => {
+      // パース不能な壊れた TIFF。通常経路は「EXIF 保持を優先」して元 TIFF を返すが、
+      // stripThumbnail 指定時は未編集サムネイルが残り得るため失敗させる
+      const broken = new Uint8Array([1, 2, 3, 4]);
+      expect(normalizeExifForBakedImage(broken, 100, 200)).toBe(broken);
+      expect(() =>
+        normalizeExifForBakedImage(broken, 100, 200, { stripThumbnail: true }),
+      ).toThrow();
+    });
+  });
 });

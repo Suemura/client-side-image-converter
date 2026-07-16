@@ -123,13 +123,16 @@ export const redactImage = async (
       );
     });
 
-    // 向きは焼き込み済みのため Orientation を 1 に正規化し、寸法タグを出力へ揃えて挿入する
+    // 向きは焼き込み済みのため Orientation を 1 に正規化し、寸法タグを出力へ揃えて挿入する。
+    // EXIF 埋め込みサムネイル（IFD1）にはレタッチ前の縮小画像が残るため必ず除去する
+    // （除去を保証できない場合は例外になり、EXIF 引き継ぎ自体を中止する = プライバシー優先）
     if (exifTiff && exifFormat) {
       try {
         const normalized = normalizeExifForBakedImage(
           exifTiff,
           canvas.width,
           canvas.height,
+          { stripThumbnail: true },
         );
         redactedBlob = await insertExifIntoBlob(
           redactedBlob,

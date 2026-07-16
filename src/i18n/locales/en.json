@@ -237,7 +237,7 @@
     "selectNewImage": "Select New Images",
     "noRegionHelp": "Images without any selected areas are output unchanged.",
     "preserveExif": "Preserve EXIF Information",
-    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the processed image. Available for JPEG / PNG / WebP.",
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the processed image. Available for JPEG / PNG / WebP. The embedded EXIF thumbnail is always removed because it contains the image before redaction.",
     "reset": "Reset"
   },
   "fileUpload": {

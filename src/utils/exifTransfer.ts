@@ -82,11 +82,24 @@ export const readExifTiffFromDataUrl = (
  *     不整合（回転で幅・高さが入れ替わる場合など）を防ぐ。
  * 寸法タグは元画像に存在する場合のみ上書きし、無い画像へは新規追加しない。
  * 失敗時は元の TIFF をそのまま返す（EXIF 保持を優先）。
+ * ただし stripThumbnail 指定時の失敗は例外を投げる（下記オプション参照）。
  */
+export interface NormalizeExifOptions {
+  /**
+   * IFD1（EXIF 埋め込みサムネイル）を除去する。
+   * サムネイルには編集前の縮小画像がそのまま残っているため、レタッチ（/redact）の
+   * ように「画像の一部を不可逆に隠す」経路では、隠したはずの内容がサムネイル経由で
+   * リークしないよう必ず除去する。除去を保証できない（パース失敗等の）場合は
+   * 元 TIFF を返す代わりに例外を投げ、呼び出し側に EXIF 引き継ぎ自体を中止させる。
+   */
+  stripThumbnail?: boolean;
+}
+
 export const normalizeExifForBakedImage = (
   tiff: Uint8Array,
   width: number,
   height: number,
+  options: NormalizeExifOptions = {},
 ): Uint8Array => {
   try {
     const jpeg = buildSyntheticJpegFromTiff(tiff);
@@ -106,8 +119,18 @@ export const normalizeExifForBakedImage = (
         exifIfd[piexif.ExifIFD.PixelYDimension] = height;
       }
     }
+    if (options.stripThumbnail) {
+      // IFD1 とサムネイル本体を除去する（レタッチ前画像のリーク防止）
+      exifObj["1st"] = {};
+      exifObj.thumbnail = null;
+    }
     return piexifDumpToTiff(piexif.dump(exifObj));
   } catch (error) {
+    if (options.stripThumbnail) {
+      // サムネイル除去を保証できない場合、未編集サムネイルが残り得る元 TIFF を
+      // 返してはいけない。失敗させて呼び出し側に EXIF 引き継ぎを中止させる
+      throw error instanceof Error ? error : new Error(String(error));
+    }
     console.warn("Failed to normalize EXIF for baked image:", error);
     return tiff;
   }
