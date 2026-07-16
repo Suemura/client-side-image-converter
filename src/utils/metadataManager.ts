@@ -404,7 +404,10 @@ export const removeMetadataFromImage = async (
           return;
         }
 
-        // piexifjs は JPEG の選択的削除時のみロードする
+        // piexifjs は JPEG の選択的削除時のみロードする。
+        // チャンクのロード失敗も piexif.load の解析エラーと同じく下の catch へ落とし、
+        // Canvas 全削除フォールバックに委ねる（プライバシー優先の意図的な fail-closed。
+        // チャンクは Service Worker でプリキャッシュされるためロード失敗自体は稀）
         const { default: piexif } = await import("piexifjs");
 
         // piexifjsでEXIFデータを読み込み

@@ -97,6 +97,11 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
   useEffect(() => {
     if (!isOpen || !file) return;
 
+    // ファイル切替時に前のファイルの EXIF が残らないよう先にリセットし、
+    // 動的 import 分のレイテンシで解決順が逆転しても古い結果を無視する（stale フラグ）
+    let stale = false;
+    setExifData({});
+
     // 画像URLを作成
     const url = URL.createObjectURL(file);
     setImageUrl(url);
@@ -112,10 +117,15 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
 
     // EXIF情報を取得（動的 import の失敗時は EXIF なしとして表示する）
     extractExifData(file)
-      .then(setExifData)
-      .catch(() => setExifData({}));
+      .then((data) => {
+        if (!stale) setExifData(data);
+      })
+      .catch(() => {
+        if (!stale) setExifData({});
+      });
 
     return () => {
+      stale = true;
       URL.revokeObjectURL(url);
     };
   }, [file, isOpen, extractExifData]);

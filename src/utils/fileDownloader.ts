@@ -166,39 +166,47 @@ export const downloadMultipleFiles = async (
     // 1ファイルの場合は直接ダウンロード
     downloadFile(files[0]);
   } else {
-    // 複数ファイルの場合はZIPファイルを作成（JSZip は ZIP 生成時のみロード）
-    const { default: JSZip } = await import("jszip");
-    const zip = new JSZip();
-    const uniquify = createFileNameUniquifier();
+    // 複数ファイルの場合はZIPファイルを作成
+    // （downloadAsZip と同様に、jszip チャンクのロード失敗を含む ZIP 生成エラーを
+    //   ユーザー向けエラーへ変換して呼び出し元に伝える）
+    try {
+      // JSZip は ZIP 生成時のみロードし、初期バンドルへ影響させない
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      const uniquify = createFileNameUniquifier();
 
-    for (const file of files) {
-      // 重複ファイル名を一意化してファイルを zip に追加
-      zip.file(uniquify(file.name), file);
+      for (const file of files) {
+        // 重複ファイル名を一意化してファイルを zip に追加
+        zip.file(uniquify(file.name), file);
+      }
+
+      // Zipファイルを生成
+      const zipBlob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 },
+      });
+
+      // デフォルトのZipファイル名を生成
+      const defaultZipFilename =
+        zipFilename ||
+        `files_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.zip`;
+
+      // Zipファイルをダウンロード
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = defaultZipFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // URLを解放
+      setTimeout(() => {
+        URL.revokeObjectURL(link.href);
+      }, 1000);
+    } catch (error) {
+      console.error("Zipファイルの作成に失敗しました:", error);
+      throw new Error("Zipファイルの作成に失敗しました");
     }
-
-    // Zipファイルを生成
-    const zipBlob = await zip.generateAsync({
-      type: "blob",
-      compression: "DEFLATE",
-      compressionOptions: { level: 6 },
-    });
-
-    // デフォルトのZipファイル名を生成
-    const defaultZipFilename =
-      zipFilename ||
-      `files_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.zip`;
-
-    // Zipファイルをダウンロード
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(zipBlob);
-    link.download = defaultZipFilename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // URLを解放
-    setTimeout(() => {
-      URL.revokeObjectURL(link.href);
-    }, 1000);
   }
 };
