@@ -109,11 +109,12 @@
 }
 
 /* 領域の削除ボタン: 画像上のオーバーレイ UI のためテーマ非依存の固定色
-   （黒暗幕 + 白文字。DESIGN.md「Do's and Don'ts」参照） */
+   （黒暗幕 + 白文字。DESIGN.md「Do's and Don'ts」参照）。
+   画像端の領域でも imageContainer の overflow: hidden にクリップされないよう領域の内側に置く */
 .deleteButton {
   position: absolute;
-  top: -10px;
-  right: -10px;
+  top: 2px;
+  right: 2px;
   width: 20px;
   height: 20px;
   display: flex;
