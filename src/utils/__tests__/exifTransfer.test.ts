@@ -4,6 +4,7 @@ import { buildSyntheticJpegFromTiff, piexifDumpToTiff } from "../exifBinary";
 import {
   exifWritableFormat,
   normalizeExifForBakedImage,
+  readExifTiffFromDataUrl,
 } from "../exifTransfer";
 import { uint8ArrayToBase64 } from "../imageUtils";
 
@@ -50,7 +51,7 @@ describe("exifWritableFormat", () => {
 });
 
 describe("normalizeExifForBakedImage", () => {
-  it("Orientation タグを 1 に正規化し、他のタグは保持する", () => {
+  it("Orientation タグを 1 に正規化し、他のタグは保持する", async () => {
     const tiff = piexifDumpToTiff(
       piexif.dump({
         "0th": {
@@ -64,7 +65,7 @@ describe("normalizeExifForBakedImage", () => {
     // 前提: 元の TIFF は Orientation=6 を持つ
     expect(load0thIfd(tiff)[piexif.ImageIFD.Orientation]).toBe(6);
 
-    const normalized = normalizeExifForBakedImage(tiff, 100, 200);
+    const normalized = await normalizeExifForBakedImage(tiff, 100, 200);
     const ifd = load0thIfd(normalized);
     // Orientation は 1（無回転）へ揃えられる
     expect(ifd[piexif.ImageIFD.Orientation]).toBe(1);
@@ -72,7 +73,7 @@ describe("normalizeExifForBakedImage", () => {
     expect(ifd[piexif.ImageIFD.Make]).toBe("TestMake");
   });
 
-  it("Orientation タグが無くても例外を投げずに TIFF を返す", () => {
+  it("Orientation タグが無くても例外を投げずに TIFF を返す", async () => {
     const tiff = piexifDumpToTiff(
       piexif.dump({
         "0th": { [piexif.ImageIFD.Make]: "NoOrientation" },
@@ -80,14 +81,14 @@ describe("normalizeExifForBakedImage", () => {
         GPS: {},
       }),
     );
-    const normalized = normalizeExifForBakedImage(tiff, 100, 200);
+    const normalized = await normalizeExifForBakedImage(tiff, 100, 200);
     const ifd = load0thIfd(normalized);
     // Make は保持され、Orientation は 1 が付与される
     expect(ifd[piexif.ImageIFD.Make]).toBe("NoOrientation");
     expect(ifd[piexif.ImageIFD.Orientation]).toBe(1);
   });
 
-  it("実ピクセル寸法タグが存在する場合は焼き込み後の実寸へ更新する", () => {
+  it("実ピクセル寸法タグが存在する場合は焼き込み後の実寸へ更新する", async () => {
     // 回転で幅・高さが入れ替わったケースを想定（元 4000x3000 → 出力 3000x4000）
     const tiff = piexifDumpToTiff(
       piexif.dump({
@@ -100,7 +101,7 @@ describe("normalizeExifForBakedImage", () => {
       }),
     );
 
-    const normalized = normalizeExifForBakedImage(tiff, 3000, 4000);
+    const normalized = await normalizeExifForBakedImage(tiff, 3000, 4000);
     const exifIfd = loadExifIfd(normalized);
     expect(exifIfd[piexif.ExifIFD.PixelXDimension]).toBe(3000);
     expect(exifIfd[piexif.ExifIFD.PixelYDimension]).toBe(4000);
@@ -108,7 +109,7 @@ describe("normalizeExifForBakedImage", () => {
     expect(load0thIfd(normalized)[piexif.ImageIFD.Orientation]).toBe(1);
   });
 
-  it("実ピクセル寸法タグが無い画像には寸法タグを新規追加しない", () => {
+  it("実ピクセル寸法タグが無い画像には寸法タグを新規追加しない", async () => {
     const tiff = piexifDumpToTiff(
       piexif.dump({
         "0th": { [piexif.ImageIFD.Orientation]: 1 },
@@ -117,9 +118,42 @@ describe("normalizeExifForBakedImage", () => {
       }),
     );
 
-    const normalized = normalizeExifForBakedImage(tiff, 300, 400);
+    const normalized = await normalizeExifForBakedImage(tiff, 300, 400);
     const exifIfd = loadExifIfd(normalized);
     expect(piexif.ExifIFD.PixelXDimension in exifIfd).toBe(false);
     expect(piexif.ExifIFD.PixelYDimension in exifIfd).toBe(false);
+  });
+});
+
+describe("readExifTiffFromDataUrl", () => {
+  it("EXIF 入り JPEG の DataURL から TIFF を読み出せる", async () => {
+    const tiff = piexifDumpToTiff(
+      piexif.dump({
+        "0th": { [piexif.ImageIFD.Make]: "TestMake" },
+        Exif: {},
+        GPS: {},
+      }),
+    );
+    const jpeg = buildSyntheticJpegFromTiff(tiff);
+    const dataUrl = `data:image/jpeg;base64,${uint8ArrayToBase64(jpeg)}`;
+
+    const result = await readExifTiffFromDataUrl(dataUrl, "image/jpeg");
+    expect(result).not.toBeNull();
+    expect(load0thIfd(result as Uint8Array)[piexif.ImageIFD.Make]).toBe(
+      "TestMake",
+    );
+  });
+
+  it("JPEG として解釈できない DataURL は throw せず null を返す", async () => {
+    const result = await readExifTiffFromDataUrl(
+      "data:image/jpeg;base64,AAAAAAAA",
+      "image/jpeg",
+    );
+    expect(result).toBeNull();
+  });
+
+  it("base64 部の無い DataURL（PNG 経路）は null を返す", async () => {
+    const result = await readExifTiffFromDataUrl("data:image/png", "image/png");
+    expect(result).toBeNull();
   });
 });

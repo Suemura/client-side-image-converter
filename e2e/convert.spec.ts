@@ -354,6 +354,23 @@ test.describe("画像フォーマット変換", () => {
     expect(buf.length).toBeGreaterThan(1 * 1024);
   });
 
+  test("ファイル詳細モーダルで EXIF 情報を表示できる（exif-js の遅延ロード）", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(jpegFileWithExif());
+
+    // ファイル一覧のアイテムをクリックして詳細モーダルを開く
+    await page.getByRole("button", { name: /with-exif\.jpg/ }).click();
+
+    // 動的 import された exif-js が実ブラウザでロードされ、EXIF が表示される
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("heading", { name: "EXIF情報" }),
+    ).toBeVisible();
+    await expect(dialog.getByText("TestMake")).toBeVisible();
+  });
+
   test("JPEG(EXIF入り)→PNG 変換で EXIF を保持できる", async ({ page }) => {
     await page.goto("/convert/");
     await page.locator('input[type="file"]').setInputFiles(jpegFileWithExif());
