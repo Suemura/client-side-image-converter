@@ -8,16 +8,17 @@ import { ThemeProvider } from "../contexts/ThemeContext";
 import { SITE_LOCALE, SITE_NAME, SITE_URL } from "../utils/pageMetadata";
 import "./globals.css";
 
+// DESIGN.md「3. Typography」に従いウェイト上限 700。未使用の 800/900 はロードしない（転送量削減）
 const manrope = Manrope({
   subsets: ["latin"],
-  weight: ["400", "500", "700", "800"],
+  weight: ["400", "500", "700"],
   variable: "--font-manrope",
   display: "swap",
 });
 
 const notoSans = Noto_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "700", "900"],
+  weight: ["400", "500", "700"],
   variable: "--font-noto-sans",
   display: "swap",
 });
@@ -63,8 +64,8 @@ export const metadata: Metadata = {
 // globals.css の --background と一致させ、テーマ切り替え時の違和感を防ぐ。
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f9fafb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e1117" },
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
   ],
 };
 

@@ -200,7 +200,8 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
               draggable={false}
             />
 
-            {/* 変換前の画像（クリップされる） */}
+            {/* 変換前の画像（クリップされる）。clipPath はスライダー位置から計算される
+                動的値のため style 経由で渡す（DESIGN.md「例外: 動的値の style 属性渡し」） */}
             <div
               className={styles.foregroundImageContainer}
               style={{
@@ -215,7 +216,8 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
               />
             </div>
 
-            {/* スライダーライン */}
+            {/* スライダーライン。left はドラッグ位置から計算される動的値のため
+                style 経由で渡す（DESIGN.md「例外: 動的値の style 属性渡し」） */}
             <div
               className={styles.sliderLine}
               style={{

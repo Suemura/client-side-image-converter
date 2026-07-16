@@ -33,16 +33,21 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid var(--border-dashed);
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   font-size: 0.875rem;
   color: var(--foreground);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease;
 }
 
 .reset:hover:not(:disabled) {
-  border-color: var(--muted-foreground);
+  border-color: var(--border-strong);
+}
+
+.reset:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .reset:disabled {
@@ -52,6 +57,6 @@
 
 .range {
   width: 100%;
-  accent-color: var(--primary);
+  accent-color: var(--accent);
   cursor: pointer;
 }

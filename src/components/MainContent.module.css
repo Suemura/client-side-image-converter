@@ -1,0 +1,9 @@
+/* メインコンテンツ領域。旧ユーティリティクラス（gap-1 / px-6 / flex / flex-1 / justify-center / py-5）
+   からの移行（見た目は移行前と同一に保つ） */
+.container {
+  display: flex;
+  flex: 1 1 0%;
+  justify-content: center;
+  gap: 4px;
+  padding: 20px 24px;
+}
