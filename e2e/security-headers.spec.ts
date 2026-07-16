@@ -50,14 +50,14 @@ async function injectCsp(page: Page, headersContent: string): Promise<void> {
 }
 
 // CSP 違反イベントを収集する（enforce モードなので違反したリソースはブロックされるが、
-// 何がブロックされたかを失敗メッセージで特定できるようにする）
+// 何がどこでブロックされたかを失敗メッセージで特定できるようにする）
 async function collectCspViolations(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const w = window as unknown as { __cspViolations: string[] };
     w.__cspViolations = [];
     document.addEventListener("securitypolicyviolation", (event) => {
       w.__cspViolations.push(
-        `${event.violatedDirective}: ${event.blockedURI || "inline"}`,
+        `${event.violatedDirective}: ${event.blockedURI || "inline"} at ${event.sourceFile}:${event.lineNumber} (${event.documentURI})`,
       );
     });
   });
