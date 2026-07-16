@@ -4,7 +4,7 @@
 //
 // 使い方: node scripts/generate-sw.ts （package.json の postbuild から実行される）
 
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -12,26 +12,12 @@ import {
   computeCacheVersion,
   getCacheName,
 } from "../src/utils/precache.ts";
+import { listFiles } from "./listFiles.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.resolve(__dirname, "../out");
 const templatePath = path.resolve(__dirname, "sw-template.js");
 const swOutPath = path.join(outDir, "sw.js");
-
-// out/ 配下の全ファイルを再帰的に列挙し、out/ からの相対パスで返す。
-async function listFiles(dir: string, base: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files: string[] = [];
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...(await listFiles(full, base)));
-    } else if (entry.isFile()) {
-      files.push(path.relative(base, full));
-    }
-  }
-  return files;
-}
 
 async function main(): Promise<void> {
   const relPaths = (await listFiles(outDir, outDir)).map((p) =>
