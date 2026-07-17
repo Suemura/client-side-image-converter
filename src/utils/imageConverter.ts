@@ -9,6 +9,7 @@ import {
   type ConversionOptions,
   type ConversionResult,
   calculateTargetSize,
+  resolveFlattenBackground,
   searchQualityForTargetSize,
 } from "./conversionCore";
 import { buildConversionResult } from "./conversionResult";
@@ -33,6 +34,8 @@ export type {
 } from "./conversionCore";
 export {
   calculateTargetSize,
+  FLATTEN_BACKGROUND_COLOR,
+  resolveFlattenBackground,
   searchQualityForTargetSize,
 } from "./conversionCore";
 export { optimizeImage } from "./imageOptimizer";
@@ -79,6 +82,17 @@ export const convertImage = async (
 
         canvas.width = width;
         canvas.height = height;
+
+        // アルファ非対応出力（JPEG / PNG 低品質ティア）では透過部分が黒くならないよう
+        // 描画前に背景色を合成する（Issue #108。Worker 経路と同じ純粋関数で判定する）
+        const background = resolveFlattenBackground(
+          options.format,
+          options.quality,
+        );
+        if (background) {
+          ctx.fillStyle = background;
+          ctx.fillRect(0, 0, width, height);
+        }
 
         // 画像を描画
         ctx.drawImage(source, 0, 0, width, height);

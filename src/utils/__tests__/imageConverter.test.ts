@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   calculateTargetSize,
   convertMultipleImages,
+  FLATTEN_BACKGROUND_COLOR,
+  resolveFlattenBackground,
   searchQualityForTargetSize,
 } from "../imageConverter";
 
@@ -69,6 +71,35 @@ describe("calculateTargetSize", () => {
         maintainAspectRatio: false,
       }),
     ).toEqual({ width: 100, height: 600 });
+  });
+});
+
+describe("resolveFlattenBackground", () => {
+  it("JPEG 出力では品質によらず背景色を返す（アルファ非対応）", () => {
+    expect(resolveFlattenBackground("jpeg", 90)).toBe(FLATTEN_BACKGROUND_COLOR);
+    expect(resolveFlattenBackground("jpeg", 10)).toBe(FLATTEN_BACKGROUND_COLOR);
+    expect(resolveFlattenBackground("jpeg")).toBe(FLATTEN_BACKGROUND_COLOR);
+  });
+
+  it("PNG の低品質ティア（jpeg-roundtrip、quality < 70）では背景色を返す", () => {
+    expect(resolveFlattenBackground("png", 69)).toBe(FLATTEN_BACKGROUND_COLOR);
+    expect(resolveFlattenBackground("png", 10)).toBe(FLATTEN_BACKGROUND_COLOR);
+  });
+
+  it("PNG の lossless / compressed ティアでは null を返す（アルファ保持）", () => {
+    expect(resolveFlattenBackground("png", 95)).toBeNull();
+    expect(resolveFlattenBackground("png", 70)).toBeNull();
+  });
+
+  it("PNG で quality 未指定の場合は null を返す（ネイティブエンコード経路はアルファ保持）", () => {
+    expect(resolveFlattenBackground("png")).toBeNull();
+  });
+
+  it("WebP / AVIF では null を返す（アルファ保持）", () => {
+    expect(resolveFlattenBackground("webp", 10)).toBeNull();
+    expect(resolveFlattenBackground("webp", 90)).toBeNull();
+    expect(resolveFlattenBackground("avif", 10)).toBeNull();
+    expect(resolveFlattenBackground("avif", 90)).toBeNull();
   });
 });
 

@@ -14,7 +14,7 @@
 - `src/contexts/` - React Context（`ThemeContext.tsx`（ライト/ダークテーマ）/ `HandoffContext.tsx`（`HandoffProvider` / `useHandoff`。ツール連携の共有ストアを配る。ストア本体は Next.js のクライアント遷移でルートレイアウトごと再マウントされても失われないようモジュールスコープのシングルトンで保持し、`usePathname` の変化を `store.onNavigate` へ通知する））
 - `src/utils/` - コアユーティリティクラス
   - `imageConverter.ts` - 画像フォーマット変換処理（単体変換 `convertImage` と一括変換 `convertMultipleImages`。一括は対応環境で Worker プールへ委譲し、非対応環境ではメインスレッド逐次処理。`mode: "optimize"` のときは形式維持の最適化として `optimizeImage` に分岐し、`optimizeImage` を再エクスポートする）
-  - `conversionCore.ts` - 変換のコア型（`ConversionFormat` / `ConversionMode`（"convert" / "optimize"） / `ConversionOptions`（`mode` を含む） / `ConversionResult` 等）と Canvas 非依存の純粋ロジック（`searchQualityForTargetSize` / `calculateTargetSize`）。メインスレッドと Worker で共有（`imageConverter.ts` から再エクスポートし既存 import 経路を維持）
+  - `conversionCore.ts` - 変換のコア型（`ConversionFormat` / `ConversionMode`（"convert" / "optimize"） / `ConversionOptions`（`mode` を含む） / `ConversionResult` 等）と Canvas 非依存の純粋ロジック（`searchQualityForTargetSize` / `calculateTargetSize`、アルファ非対応出力へ合成する背景色を判定する `resolveFlattenBackground` と背景色定数 `FLATTEN_BACKGROUND_COLOR`（Issue #108。メイン / Worker / 編集の全エンコード経路が共有する唯一の真実））。メインスレッドと Worker で共有（`imageConverter.ts` から再エクスポートし既存 import 経路を維持）
   - `conversionResult.ts` - `ConversionResult` 組み立ての共通化（変換用 `buildConversionResult` / 最適化用 `buildOptimizeResult`（同一形式のため元ファイル名を維持）/ 編集用 `buildEditResult`（`_edited` サフィックス + 出力形式の拡張子。`originalFilename` は元名保持））。convertImage・ワーカープール・imageEditor で共用
   - `concurrency.ts` - 純粋な並行スケジューラ（`mapWithConcurrency` / `resolveConcurrency`）。同時実行数制限・入力順保持・continue-on-error・逐次進捗
   - `pngQuality.ts` - PNG 品質ティア判定（`pngQualityStrategy`。閾値 95/70）。メインスレッドと Worker で共有

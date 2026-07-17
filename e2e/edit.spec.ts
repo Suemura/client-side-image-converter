@@ -6,8 +6,10 @@ import {
   invalidCubeFile,
   magicNumber,
   rectPngFile,
+  transparentPngFile,
   twoToneVerticalPngFile,
 } from "./helpers/fixtures";
+import { readPixelFromBuffer } from "./helpers/pixels";
 import { disableWebGL } from "./helpers/webgl";
 
 /** レンジスライダー（aria-label で特定）へ React 経由で値を設定する */
@@ -329,6 +331,61 @@ test.describe("画像編集 /edit", () => {
     ]);
     expect(download.suggestedFilename()).toBe("photo_edited.jpeg");
     expect(magicNumber.isJpeg(readFileSync(await download.path()))).toBe(true);
+  });
+
+  test("透過 PNG を JPEG 出力すると透過部分が白背景に合成される", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    // 左半分が不透明の赤・右半分が完全透過の RGBA PNG（Issue #108）
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(transparentPngFile("alpha.png"));
+
+    // プレビューが生成されるまで待つ（不透明部の左半分中央が赤）
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.25, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(200);
+
+    // 出力フォーマットを JPEG に
+    await page.getByText("JPEG", { exact: true }).click();
+    await applyButton(page).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      zipButton(page).click(),
+    ]);
+    expect(download.suggestedFilename()).toBe("alpha_edited.jpeg");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isJpeg(buf)).toBe(true);
+
+    // 不透明部（左半分の中央）は赤のまま・透過部（右半分の中央）は白背景に合成される
+    const opaque = await readPixelFromBuffer(
+      page,
+      buf,
+      "image/jpeg",
+      0.25,
+      0.5,
+    );
+    expect(opaque[0]).toBeGreaterThan(200);
+    expect(opaque[1]).toBeLessThan(60);
+    expect(opaque[2]).toBeLessThan(60);
+
+    const flattened = await readPixelFromBuffer(
+      page,
+      buf,
+      "image/jpeg",
+      0.75,
+      0.5,
+    );
+    for (const channel of flattened) {
+      expect(channel).toBeGreaterThanOrEqual(240);
+    }
   });
 
   // --- 自動補正（Issue #68 第 3 項目） ---

@@ -15,10 +15,11 @@ import {
   normalizeAdjustments,
 } from "./adjustments";
 import { encodeCanvasToAvifBlob } from "./avifEncoder";
-import type {
-  ConversionFailure,
-  ConversionFormat,
-  ConversionResult,
+import {
+  type ConversionFailure,
+  type ConversionFormat,
+  type ConversionResult,
+  resolveFlattenBackground,
 } from "./conversionCore";
 import { buildEditResult } from "./conversionResult";
 import {
@@ -155,10 +156,18 @@ export const renderEdited = async (
   if (!encodeCtx) {
     throw new Error("Canvas 2D context is not supported");
   }
-  encodeCtx.drawImage(adjustedCanvas, 0, 0);
-
   const format = resolveOutputFormat(file, outputFormat);
   const mime = FORMAT_MIME[format];
+
+  // アルファ非対応出力（JPEG）では透過部分が黒くならないよう描画前に背景色を合成する
+  // （Issue #108。convert 経路と同じ純粋関数で判定する。quality は渡さない =
+  // PNG 出力はネイティブエンコードのためアルファを保持する）
+  const background = resolveFlattenBackground(format);
+  if (background) {
+    encodeCtx.fillStyle = background;
+    encodeCtx.fillRect(0, 0, width, height);
+  }
+  encodeCtx.drawImage(adjustedCanvas, 0, 0);
 
   // エンコード（AVIF のみ WASM、その他は Canvas.toBlob）
   let blob =
