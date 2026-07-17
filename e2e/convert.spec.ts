@@ -5,6 +5,7 @@ import piexif from "piexifjs";
 import {
   bmpFile,
   brokenImageFile,
+  dngFile,
   heicFile,
   jpegFileWithExif,
   loadExifFromPngBuffer,
@@ -12,6 +13,7 @@ import {
   magicNumber,
   noisyBmpFile,
   pngFile,
+  pngSize,
   tiffFile,
   transparentPngFile,
 } from "./helpers/fixtures";
@@ -186,6 +188,59 @@ test.describe("画像フォーマット変換", () => {
     expect(magicNumber.isPng(buf)).toBe(true);
   });
 
+  test("DNG（RAW）を PNG に変換してダウンロードできる", async ({ page }) => {
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(dngFile());
+
+    // ラジオの input は不可視のためラベルテキストをクリックする
+    await page.getByText("PNG", { exact: true }).click();
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    // LibRaw の WASM（約 1.4MB）初回ロードがあるためタイムアウトを長めにとる
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("sample.png");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isPng(buf)).toBe(true);
+    // デモザイク後もフィクスチャの寸法（32x32）が保たれている
+    expect(pngSize(buf)).toEqual({ width: 32, height: 32 });
+  });
+
+  test("MIME タイプ不明の .dng ファイルも受理して JPEG に変換できる", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    // RAW は MIME が空や application/octet-stream で報告される環境があるため、
+    // 拡張子フォールバックでの受理を検証する
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(dngFile("sample.dng", "application/octet-stream"));
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("sample.jpeg");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isJpeg(buf)).toBe(true);
+  });
+
   test("BMP を PNG に変換してダウンロードできる", async ({ page }) => {
     await page.goto("/convert/");
     await page.locator('input[type="file"]').setInputFiles(bmpFile());
@@ -230,7 +285,7 @@ test.describe("画像フォーマット変換", () => {
   }) => {
     await page.goto("/convert/");
     await expect(
-      page.getByText("対応形式: JPG, PNG, WebP, BMP, TIFF, HEIC, HEIF", {
+      page.getByText("対応形式: JPG, PNG, WebP, BMP, TIFF, HEIC, HEIF, RAW", {
         exact: true,
       }),
     ).toBeVisible();

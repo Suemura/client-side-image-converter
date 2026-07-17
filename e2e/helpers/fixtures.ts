@@ -112,6 +112,205 @@ export const noisyBmpFile = (name = "noisy.bmp", width = 400, height = 400) => {
   return { name, mimeType: "image/bmp", buffer: buf };
 };
 
+/** TIFF データ型のバイトサイズ（1=BYTE, 2=ASCII, 3=SHORT, 4=LONG, 5=RATIONAL, 10=SRATIONAL） */
+const TIFF_TYPE_SIZES: Record<number, number> = {
+  1: 1,
+  2: 1,
+  3: 2,
+  4: 4,
+  5: 8,
+  10: 8,
+};
+
+/** DNG フィクスチャ生成用の IFD エントリ定義 */
+interface DngTag {
+  tag: number;
+  type: number;
+  /** RATIONAL / SRATIONAL は [分子, 分母] のペア列、ASCII は文字列 */
+  values: number[] | Array<[number, number]> | string;
+}
+
+/** IFD エントリの値部分をリトルエンディアンでエンコードする */
+const encodeTiffValues = (
+  type: number,
+  values: DngTag["values"],
+): { bytes: Buffer; count: number } => {
+  if (typeof values === "string") {
+    const bytes = Buffer.from(`${values}\0`, "ascii");
+    return { bytes, count: bytes.length };
+  }
+  if (type === 5 || type === 10) {
+    const pairs = values as Array<[number, number]>;
+    const bytes = Buffer.alloc(pairs.length * 8);
+    pairs.forEach(([numerator, denominator], i) => {
+      if (type === 5) {
+        bytes.writeUInt32LE(numerator, i * 8);
+        bytes.writeUInt32LE(denominator, i * 8 + 4);
+      } else {
+        bytes.writeInt32LE(numerator, i * 8);
+        bytes.writeInt32LE(denominator, i * 8 + 4);
+      }
+    });
+    return { bytes, count: pairs.length };
+  }
+  const nums = values as number[];
+  const size = TIFF_TYPE_SIZES[type];
+  const bytes = Buffer.alloc(nums.length * size);
+  nums.forEach((value, i) => {
+    if (type === 1) {
+      bytes.writeUInt8(value, i);
+    } else if (type === 3) {
+      bytes.writeUInt16LE(value, i * 2);
+    } else {
+      bytes.writeUInt32LE(value, i * 4);
+    }
+  });
+  return { bytes, count: nums.length };
+};
+
+/**
+ * 最小構成の非圧縮ベイヤー CFA DNG（リトルエンディアン TIFF）を実行時生成する。
+ * LibRaw が必要とするタグ（DNGVersion / CFAPattern / ColorMatrix1 / AsShotNeutral /
+ * BlackLevel / WhiteLevel 等）を単一 IFD に持つ 16bit RGGB モザイクで、
+ * RAW 入力対応の E2E 検証（LibRaw の実デコード）に使う。
+ */
+const buildMinimalDng = (width: number, height: number): Buffer => {
+  // 16bit RGGB ベイヤーモザイク（R が強い一様パターン。デモザイク後も赤みが残る）
+  const pixels = Buffer.alloc(width * height * 2);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const isRed = y % 2 === 0 && x % 2 === 0;
+      const isBlue = y % 2 === 1 && x % 2 === 1;
+      const value = isRed ? 58000 : isBlue ? 16000 : 32000;
+      pixels.writeUInt16LE(value, (y * width + x) * 2);
+    }
+  }
+
+  const tags: DngTag[] = [
+    { tag: 254, type: 4, values: [0] }, // NewSubfileType: 主画像
+    { tag: 256, type: 4, values: [width] }, // ImageWidth
+    { tag: 257, type: 4, values: [height] }, // ImageLength
+    { tag: 258, type: 3, values: [16] }, // BitsPerSample
+    { tag: 259, type: 3, values: [1] }, // Compression: 非圧縮
+    { tag: 262, type: 3, values: [32803] }, // PhotometricInterpretation: CFA
+    { tag: 271, type: 2, values: "TestCam" }, // Make
+    { tag: 272, type: 2, values: "DNG Fixture" }, // Model
+    { tag: 273, type: 4, values: [0] }, // StripOffsets（レイアウト確定後にパッチする）
+    { tag: 274, type: 3, values: [1] }, // Orientation
+    { tag: 277, type: 3, values: [1] }, // SamplesPerPixel
+    { tag: 278, type: 4, values: [height] }, // RowsPerStrip
+    { tag: 279, type: 4, values: [pixels.length] }, // StripByteCounts
+    { tag: 284, type: 3, values: [1] }, // PlanarConfiguration
+    { tag: 33421, type: 3, values: [2, 2] }, // CFARepeatPatternDim
+    { tag: 33422, type: 1, values: [0, 1, 1, 2] }, // CFAPattern: RGGB
+    { tag: 50706, type: 1, values: [1, 4, 0, 0] }, // DNGVersion 1.4
+    { tag: 50708, type: 2, values: "TestCam DNG" }, // UniqueCameraModel
+    { tag: 50714, type: 3, values: [0] }, // BlackLevel
+    { tag: 50717, type: 4, values: [65535] }, // WhiteLevel
+    {
+      // ColorMatrix1: XYZ→カメラ空間の単位行列（テスト用途では色再現精度は不要）
+      tag: 50721,
+      type: 10,
+      values: [
+        [1, 1],
+        [0, 1],
+        [0, 1],
+        [0, 1],
+        [1, 1],
+        [0, 1],
+        [0, 1],
+        [0, 1],
+        [1, 1],
+      ],
+    },
+    {
+      // AsShotNeutral: ニュートラル WB（useCameraWb がこの値を使う）
+      tag: 50728,
+      type: 5,
+      values: [
+        [1, 1],
+        [1, 1],
+        [1, 1],
+      ],
+    },
+    { tag: 50778, type: 3, values: [21] }, // CalibrationIlluminant1: D65
+  ];
+
+  // IFD エントリはタグ番号昇順が必須
+  tags.sort((a, b) => a.tag - b.tag);
+  const encoded = tags.map((t) => ({
+    ...t,
+    ...encodeTiffValues(t.type, t.values),
+  }));
+
+  // レイアウト: ヘッダー(8) + エントリ数(2) + エントリ(12*N) + 次IFD(4) + 溢れ値領域 + ピクセル
+  const ifdStart = 8;
+  const dataStart = ifdStart + 2 + tags.length * 12 + 4;
+  let dataOffset = dataStart;
+  const overflowOffsets = new Map<number, number>();
+  for (const entry of encoded) {
+    if (entry.bytes.length > 4) {
+      overflowOffsets.set(entry.tag, dataOffset);
+      // TIFF の値はワード境界に置く（偶数アライン）
+      dataOffset += entry.bytes.length + (entry.bytes.length % 2);
+    }
+  }
+  const pixelOffset = dataOffset;
+
+  const buf = Buffer.alloc(pixelOffset + pixels.length);
+  // TIFF ヘッダー（リトルエンディアン "II" + マジック 42 + IFD オフセット）
+  buf.write("II", 0, "ascii");
+  buf.writeUInt16LE(42, 2);
+  buf.writeUInt32LE(ifdStart, 4);
+  buf.writeUInt16LE(tags.length, ifdStart);
+
+  encoded.forEach((entry, i) => {
+    const entryOffset = ifdStart + 2 + i * 12;
+    buf.writeUInt16LE(entry.tag, entryOffset);
+    buf.writeUInt16LE(entry.type, entryOffset + 2);
+    buf.writeUInt32LE(entry.count, entryOffset + 4);
+    // StripOffsets はピクセル領域のオフセットへ差し替える
+    const bytes =
+      entry.tag === 273
+        ? (() => {
+            const patched = Buffer.alloc(4);
+            patched.writeUInt32LE(pixelOffset, 0);
+            return patched;
+          })()
+        : entry.bytes;
+    if (bytes.length > 4) {
+      const overflowOffset = overflowOffsets.get(entry.tag);
+      if (overflowOffset === undefined) {
+        throw new Error(
+          `DNG フィクスチャの溢れ値オフセットが未割当: ${entry.tag}`,
+        );
+      }
+      buf.writeUInt32LE(overflowOffset, entryOffset + 8);
+      bytes.copy(buf, overflowOffset);
+    } else {
+      bytes.copy(buf, entryOffset + 8);
+    }
+  });
+  // 次の IFD なし
+  buf.writeUInt32LE(0, ifdStart + 2 + tags.length * 12);
+  pixels.copy(buf, pixelOffset);
+  return buf;
+};
+
+/**
+ * setInputFiles に渡せる 32x32 の最小 DNG（RAW）ファイル
+ * LibRaw（dcraw 由来）は幅・高さ 22px 未満を RAW と認識しないため 32x32 とする。
+ * MIME 不明ケースは "application/octet-stream" を明示的に指定する（heicFile と同様）
+ */
+export const dngFile = (
+  name = "sample.dng",
+  mimeType = "image/x-adobe-dng",
+) => ({
+  name,
+  mimeType,
+  buffer: buildMinimalDng(32, 32),
+});
+
 /** zlib（stored ブロック）用の adler32 チェックサム */
 const adler32 = (data: Uint8Array): number => {
   const MOD = 65521;

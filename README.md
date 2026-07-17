@@ -4,7 +4,7 @@
 
 A completely privacy-focused image conversion web application built with Next.js App Router.
 All image processing is performed within the browser, ensuring your images are never sent to any server.
-Converts images to JPEG, PNG, WebP, and AVIF. HEIC/HEIF photos (such as those taken on iPhone) and TIFF images are also accepted as input on the convert page and decoded entirely in the browser.
+Converts images to JPEG, PNG, WebP, and AVIF. HEIC/HEIF photos (such as those taken on iPhone), TIFF images, and camera RAW files (CR2 / NEF / ARW / DNG, etc.) are also accepted as input on the convert page and decoded entirely in the browser.
 Images can be added by drag & drop, file selection, clipboard paste (Ctrl/⌘+V), or by dropping a folder (subfolders included).
 It is also a Progressive Web App (PWA): once loaded it works fully offline, and on supported browsers it can be installed to your home screen or desktop.
 
@@ -14,7 +14,7 @@ https://image-converter.suemura.app/
 
 ## ✨ Features
 
-- **Format Conversion**: Convert images to JPEG, PNG, WebP, and AVIF with quality control and an optional target file size (JPEG / WebP). HEIC/HEIF and TIFF are accepted as input.
+- **Format Conversion**: Convert images to JPEG, PNG, WebP, and AVIF with quality control and an optional target file size (JPEG / WebP). HEIC/HEIF, TIFF, and camera RAW files (.dng, .cr2, .cr3, .nef, .nrw, .arw, .raf, .orf, .rw2, .pef, .srw) are accepted as input — RAW files are developed entirely in the browser by LibRaw (WASM) using the camera's recorded settings.
 - **Optimize (keep format)**: Re-compress an image in its original format to shrink the file size without changing the format. PNG uses truly lossless optimization (pixels unchanged), while JPEG and WebP are re-encoded at high quality. If the result isn't smaller, the original file is kept. Supported formats: PNG / JPEG / WebP.
 - **Image Cropping**: Visual cropping tool with live preview, aspect-ratio presets (Free / 1:1 / 16:9 / 4:3 / 3:2), 90° rotation and horizontal/vertical flip with automatic EXIF Orientation correction, and a choice between applying one setting to all images or cropping each image individually.
 - **Image Editing (Light / Color / Detail / Effects adjustments + Auto enhance + Tone curve + LUT filters)**: Photo-app-style adjustments — Light (exposure, gamma, brightness, contrast, highlights, shadows, whites, blacks), Color (saturation, vibrance, temperature, tint, hue, monochrome), Detail (sharpness, clarity), and Effects (vignette, grain) — applied non-destructively with a real-time before/after preview and applied to multiple images at once. Monochrome is a one-touch toggle that, combined with temperature and tint, works like a color filter for black-and-white photography. Grain is deterministic noise that produces the exact same speckle in the preview and the exported file, and a negative vignette brightens the corners instead of darkening them. One-shot Auto Enhance buttons (Auto Levels / Auto White Balance) analyze the image and set the blacks/whites and temperature/tint sliders for you, giving you a starting point you can fine-tune by hand (pressing them again on the same image yields the same result). A WB eyedropper fixes color casts with a single click: pick a point in the preview that should be neutral gray, and the temperature/tint sliders are set from the clicked color (the eyedropper turns off automatically after applying; press Esc to cancel). A tone curve editor (RGB master / Luminance channels, with the pre-edit luminance histogram shown behind the curve) lets you click to add control points, drag to move them, and double-click to remove them, with a per-channel reset. You can also apply LUT (Look-Up Table) color filters: pick from 11 bundled presets or upload your own `.cube` (1D / 3D) or HALD CLUT PNG, and control the blend strength (applied in the order detail → adjustments → tone curve → LUT → vignette/grain). A live histogram (switchable between RGB and luminance) reflects the edited result (with adjustments, tone curve, and LUT applied) in real time as a guide for black/white level tuning. Rendering uses a WebGL2 shader with an automatic Canvas2D CPU fallback (the preview and the output share the same render path, so they match). Output keeps the original format or converts to JPEG / PNG / WebP / AVIF.
@@ -112,8 +112,9 @@ This project uses open-source libraries with the following licenses:
 
 - **MIT License**: Major libraries including Next.js and React
 - **Apache-2.0 License**: Some libraries including TypeScript
-- **ISC License**: heic-decode (HEIC/HEIF decoding)
+- **ISC License**: heic-decode (HEIC/HEIF decoding), libraw-wasm (WASM wrapper of LibRaw used for camera RAW decoding)
 - **LGPL-3.0 License**: libheif-js (WASM build of libheif used for HEIC/HEIF decoding; used as an unmodified npm package and isolated in a separate dynamically imported chunk)
+- **LGPL-2.1 / CDDL-1.0 (dual license)**: LibRaw (the RAW processing engine bundled in libraw-wasm; used as an unmodified npm package and isolated in a separate dynamically imported chunk)
 - **MPL-2.0 License**: Axe Core (accessibility validation)
 
 All dependencies are commercially usable. Please refer to each library's license file for details.

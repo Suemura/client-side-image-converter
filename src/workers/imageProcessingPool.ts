@@ -22,7 +22,7 @@ import {
   buildConversionResult,
   buildOptimizeResult,
 } from "../utils/conversionResult";
-import { isHeicFile, isTiffFile } from "../utils/fileUtils";
+import { isHeicFile, isRawFile, isTiffFile } from "../utils/fileUtils";
 import type { DecodeKind, WorkerRequest, WorkerResponse } from "./messages";
 
 /**
@@ -37,6 +37,32 @@ import type { DecodeKind, WorkerRequest, WorkerResponse } from "./messages";
  * （誤フォールバックを避けるための安全余裕。正常応答時はタイマーを必ずクリアする）。
  */
 const WORKER_RESPONSE_TIMEOUT_MS = 60_000;
+
+/**
+ * 重量ジョブ（RAW デコード / AVIF エンコードを含む）用のウォッチドッグ（ミリ秒）。
+ * RAW は数千万画素のフルデモザイク、AVIF は単一スレッド WASM エンコードのため、
+ * 実カメラ画像では正常処理でも 60 秒を超えうる。通常タイムアウトのままだと
+ * 「Worker を打ち切り → メインスレッドで同じ重量処理を最初から再実行（UI 凍結）」という
+ * 最悪経路に入るため、ハング検知を犠牲にしない範囲で余裕を持たせる（Issue #101 動作確認）。
+ */
+const WORKER_RESPONSE_TIMEOUT_HEAVY_MS = 300_000;
+
+/**
+ * リクエスト内容に応じたウォッチドッグタイムアウトを返す（純粋ロジック・単体テスト対象）
+ *
+ * RAW 入力（重量デコード）または AVIF 出力（重量エンコード。optimize モードでは
+ * format は無視されるため対象外）を含むジョブは重量ジョブとして延長する。
+ */
+export const resolveWorkerTimeoutMs = (
+  decodeKind: DecodeKind,
+  options: ConversionOptions,
+): number => {
+  const heavyDecode = decodeKind === "raw";
+  const heavyEncode = options.mode !== "optimize" && options.format === "avif";
+  return heavyDecode || heavyEncode
+    ? WORKER_RESPONSE_TIMEOUT_HEAVY_MS
+    : WORKER_RESPONSE_TIMEOUT_MS;
+};
 
 /** OffscreenCanvas ベースの Worker パイプラインが利用可能かを判定する */
 export const isOffscreenPipelineSupported = (): boolean => {
@@ -104,13 +130,16 @@ const runOnWorker = (
     // 無応答ウォッチドッグ。タイムアウト時は当該ジョブを reject し、Worker を dead 化して
     // terminate する（暴走中のデコーダ/エンコーダを確実に停止する）。pending.delete が false の
     // 場合は既に応答/クラッシュ処理済みなので何もしない（遅延応答との競合を防ぐ）。
-    const timer = setTimeout(() => {
-      if (handle.pending.delete(request.id)) {
-        handle.dead = true;
-        handle.worker.terminate();
-        reject(new Error("Worker response timeout"));
-      }
-    }, WORKER_RESPONSE_TIMEOUT_MS);
+    const timer = setTimeout(
+      () => {
+        if (handle.pending.delete(request.id)) {
+          handle.dead = true;
+          handle.worker.terminate();
+          reject(new Error("Worker response timeout"));
+        }
+      },
+      resolveWorkerTimeoutMs(request.decodeKind, request.options),
+    );
 
     // resolve/reject 実行時に必ずタイマーをクリアし、正常応答後の誤タイムアウトを防ぐ
     handle.pending.set(request.id, {
@@ -127,10 +156,14 @@ const runOnWorker = (
   });
 };
 
-/** File から Worker に渡すデコード種別を判定する（isHeicFile/isTiffFile は File を要する） */
+/** File から Worker に渡すデコード種別を判定する（isHeicFile 等は File を要する） */
 const detectDecodeKind = (file: File): DecodeKind => {
   if (isHeicFile(file)) {
     return "heic";
+  }
+  // RAW は MIME が image/tiff に誤報告される形式（NEF / DNG 等）があるため tiff より先に判定する
+  if (isRawFile(file)) {
+    return "raw";
   }
   if (isTiffFile(file)) {
     return "tiff";
