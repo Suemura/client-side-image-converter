@@ -66,6 +66,17 @@ test.describe("PWA", () => {
       ),
     ).toBeTruthy();
 
+    // share_target（共有シートからの画像受け取り、Issue #105）
+    expect(manifest.share_target.action).toBe("/share-target");
+    expect(manifest.share_target.method).toBe("POST");
+    expect(manifest.share_target.enctype).toBe("multipart/form-data");
+    const shareFiles = manifest.share_target.params.files;
+    expect(shareFiles).toHaveLength(1);
+    expect(shareFiles[0].name).toBe("images");
+    expect(shareFiles[0].accept).toContain("image/jpeg");
+    // convert のみが受理する HEIC も共有シートでは受け取れる（受理 MIME は全ツールの和集合）
+    expect(shareFiles[0].accept).toContain("image/heic");
+
     // theme-color（ライト / ダーク）が出力されている
     await expect(page.locator('head > meta[name="theme-color"]')).toHaveCount(
       2,

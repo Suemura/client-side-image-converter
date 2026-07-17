@@ -8,6 +8,9 @@ module.exports = {
   generateRobotsTxt: true,
   generateIndexSitemap: false,
   outDir: "./out",
+  // /share は共有シート専用の機能的エンドポイントのため検索対象にしない
+  // （ページ側でも robots noindex を出している）
+  exclude: ["/share"],
   transform: async (config, path) => {
     // デフォルトの優先度とページごとの設定
     const priorities = {
