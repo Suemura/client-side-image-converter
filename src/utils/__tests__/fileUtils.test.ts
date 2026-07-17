@@ -20,6 +20,7 @@ import {
   isDuplicateFile,
   isHeicFile,
   isImageFile,
+  isRawFile,
   isTiffFile,
   isUnknownMimeType,
   shouldClearLimitWarningOnDecrease,
@@ -345,6 +346,49 @@ describe("isTiffFile", () => {
   });
 });
 
+describe("isRawFile", () => {
+  it("RAW の MIME タイプを判定する", () => {
+    expect(isRawFile(createFile("a.dng", 10, "image/x-adobe-dng"))).toBe(true);
+    expect(isRawFile(createFile("a.nef", 10, "image/x-nikon-nef"))).toBe(true);
+    expect(isRawFile(createFile("a.png", 10, "image/png"))).toBe(false);
+  });
+
+  it("MIME タイプが空・application/octet-stream でも拡張子で判定する", () => {
+    expect(isRawFile(createFile("photo.cr2", 10, ""))).toBe(true);
+    expect(isRawFile(createFile("photo.CR3", 10, ""))).toBe(true);
+    expect(
+      isRawFile(createFile("photo.arw", 10, "application/octet-stream")),
+    ).toBe(true);
+    expect(isRawFile(createFile("photo.png", 10, ""))).toBe(false);
+  });
+
+  it("MIME が image/tiff に誤報告されても拡張子を優先して RAW と判定する", () => {
+    // NEF / DNG 等は TIFF ベースの形式のため OS が image/tiff と報告することがある
+    expect(isRawFile(createFile("photo.nef", 10, "image/tiff"))).toBe(true);
+    expect(isRawFile(createFile("photo.dng", 10, "image/tiff"))).toBe(true);
+    // 純粋な TIFF は RAW ではない
+    expect(isRawFile(createFile("scan.tiff", 10, "image/tiff"))).toBe(false);
+  });
+
+  it("対応拡張子を網羅的に判定する", () => {
+    for (const ext of [
+      ".dng",
+      ".cr2",
+      ".cr3",
+      ".nef",
+      ".nrw",
+      ".arw",
+      ".raf",
+      ".orf",
+      ".rw2",
+      ".pef",
+      ".srw",
+    ]) {
+      expect(isRawFile(createFile(`photo${ext}`, 10, ""))).toBe(true);
+    }
+  });
+});
+
 describe("isAcceptedFileType (HEIC フォールバック)", () => {
   const acceptedWithHeic = [
     "image/jpeg",
@@ -406,6 +450,46 @@ describe("isAcceptedFileType (TIFF フォールバック)", () => {
   });
 });
 
+describe("isAcceptedFileType (RAW フォールバック)", () => {
+  const acceptedWithRaw = [
+    "image/jpeg",
+    "image/x-adobe-dng",
+    "image/x-nikon-nef",
+  ];
+
+  it("RAW が許可されている場合は MIME 空でも拡張子で受理する", () => {
+    expect(
+      isAcceptedFileType(createFile("photo.dng", 10, ""), acceptedWithRaw),
+    ).toBe(true);
+    expect(
+      isAcceptedFileType(
+        createFile("photo.nef", 10, "application/octet-stream"),
+        acceptedWithRaw,
+      ),
+    ).toBe(true);
+  });
+
+  it("RAW が許可されていない場合（crop / metadata 等）は受理しない", () => {
+    const acceptedWithoutRaw = ["image/jpeg", "image/png", "image/webp"];
+    expect(
+      isAcceptedFileType(createFile("photo.dng", 10, ""), acceptedWithoutRaw),
+    ).toBe(false);
+    expect(
+      isAcceptedFileType(
+        createFile("photo.nef", 10, "image/x-nikon-nef"),
+        acceptedWithoutRaw,
+      ),
+    ).toBe(false);
+    // MIME が image/tiff 誤報告でも image/tiff 非許可のページでは受理しない
+    expect(
+      isAcceptedFileType(
+        createFile("photo.nef", 10, "image/tiff"),
+        acceptedWithoutRaw,
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("buildAcceptAttribute", () => {
   it("HEIC を含む場合は拡張子を併記する", () => {
     expect(buildAcceptAttribute(["image/jpeg", "image/heic"])).toBe(
@@ -423,6 +507,12 @@ describe("buildAcceptAttribute", () => {
     expect(
       buildAcceptAttribute(["image/jpeg", "image/tiff", "image/heic"]),
     ).toBe("image/jpeg,image/tiff,image/heic,.heic,.heif,.tif,.tiff");
+  });
+
+  it("RAW を含む場合は拡張子を併記する", () => {
+    expect(buildAcceptAttribute(["image/jpeg", "image/x-adobe-dng"])).toBe(
+      "image/jpeg,image/x-adobe-dng,.dng,.cr2,.cr3,.nef,.nrw,.arw,.raf,.orf,.rw2,.pef,.srw",
+    );
   });
 
   it("フォールバック対象を含まない場合は MIME タイプのみを返す", () => {
@@ -453,6 +543,31 @@ describe("formatAcceptedTypesLabel", () => {
 
   it("未知の MIME タイプはサブタイプの大文字表記にフォールバックする", () => {
     expect(formatAcceptedTypesLabel(["image/gif"])).toBe("GIF");
+  });
+
+  it("RAW の MIME 群は最初の出現位置で単一トークン RAW に集約する", () => {
+    expect(
+      formatAcceptedTypesLabel([
+        "image/jpeg",
+        "image/x-adobe-dng",
+        "image/x-canon-cr2",
+        "image/x-nikon-nef",
+        "image/png",
+      ]),
+    ).toBe("JPG, RAW, PNG");
+  });
+});
+
+describe("getFileTypeBadgeLabel (RAW)", () => {
+  it("RAW は MIME が特定できていても拡張子で表示する", () => {
+    // MIME 由来だと "X-ADOBE-DNG" のような冗長ラベルになるため
+    expect(
+      getFileTypeBadgeLabel(createFile("photo.dng", 10, "image/x-adobe-dng")),
+    ).toBe("DNG");
+    expect(
+      getFileTypeBadgeLabel(createFile("photo.nef", 10, "image/tiff")),
+    ).toBe("NEF");
+    expect(getFileTypeBadgeLabel(createFile("photo.cr2", 10, ""))).toBe("CR2");
   });
 });
 
