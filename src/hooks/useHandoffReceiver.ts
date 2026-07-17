@@ -3,12 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useHandoff } from "../contexts/HandoffContext";
 import { MAX_INPUT_FILES } from "../utils/constants";
 import { addUniqueFilesWithLimit, filterValidFiles } from "../utils/fileUtils";
-import type { ToolId } from "../utils/handoff";
+import type { HandoffOrigin } from "../utils/handoff";
 
 /** 到着バナーの表示情報 */
 export interface HandoffNoticeInfo {
-  /** 送り元ツール */
-  origin: ToolId;
+  /** 送り元ツールまたは共有シート受け口（"share"） */
+  origin: HandoffOrigin;
   /** 実際に取り込んだ件数 */
   receivedCount: number;
   /** 受理形式外・重複・上限超過で取り込めなかった件数 */

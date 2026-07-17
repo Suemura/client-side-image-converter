@@ -4,16 +4,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHandoff } from "../contexts/HandoffContext";
 import {
+  type HandoffOrigin,
   type HandoffTool,
   resolveHandoffTargets,
-  type ToolId,
 } from "../utils/handoff";
 import { Button } from "./Button";
 import styles from "./HandoffSend.module.css";
 
 interface HandoffSendProps {
-  /** 送り元ツール（自身は送り先候補から除外される） */
-  origin: ToolId;
+  /** 送り元（ツールなら自身が送り先候補から除外される。共有シート受け口は "share"） */
+  origin: HandoffOrigin;
   /** 結果ファイルの MIME タイプ一覧（送り先候補の絞り込みに使う） */
   mimeTypes: readonly string[];
   /**
