@@ -390,7 +390,18 @@
     "cleanAndSendTo": "Remove selected metadata and send to another tool (no download needed)",
     "sendToTool": "Send to {{tool}}",
     "received": "Received {{count}} result(s) from {{tool}}",
+    "receivedFromShare": "Received {{count}} file(s) from the share sheet",
     "skipped": "{{count}} file(s) could not be imported (unsupported format or file limit)",
     "dismiss": "Dismiss"
+  },
+  "share": {
+    "title": "Received from Share Sheet",
+    "loading": "Checking for shared images…",
+    "unsupported": "Receiving images from the share sheet is not supported in this environment.",
+    "empty": "No shared images",
+    "emptyHint": "This page receives images shared from your phone's share sheet. Received images are discarded when you leave the page and are never sent to any server.",
+    "goHome": "Back to Home",
+    "receivedCount": "Received {{count}} image(s)",
+    "sendTo": "Choose a tool to process the received images"
   }
 }

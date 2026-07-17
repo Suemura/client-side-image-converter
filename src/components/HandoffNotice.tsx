@@ -22,7 +22,11 @@ export const HandoffNotice: React.FC<HandoffNoticeProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const originTool = notice ? findHandoffTool(notice.origin) : undefined;
+  // 共有シート起点（"share"）はツールメタを持たないため専用文言で表示する
+  const originTool =
+    notice && notice.origin !== "share"
+      ? findHandoffTool(notice.origin)
+      : undefined;
   const toolLabel =
     notice && (originTool ? t(originTool.labelKey) : notice.origin);
 
@@ -32,10 +36,14 @@ export const HandoffNotice: React.FC<HandoffNoticeProps> = ({
         <div className={styles.container}>
           <div className={styles.textContainer}>
             <p className={styles.text}>
-              {t("handoff.received", {
-                tool: toolLabel,
-                count: notice.receivedCount,
-              })}
+              {notice.origin === "share"
+                ? t("handoff.receivedFromShare", {
+                    count: notice.receivedCount,
+                  })
+                : t("handoff.received", {
+                    tool: toolLabel,
+                    count: notice.receivedCount,
+                  })}
             </p>
             {notice.skippedCount > 0 && (
               <p className={styles.skippedText}>
