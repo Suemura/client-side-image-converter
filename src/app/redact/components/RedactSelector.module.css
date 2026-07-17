@@ -13,6 +13,8 @@
   overflow: hidden;
   background-color: var(--surface-muted);
   cursor: crosshair;
+  /* タッチでの矩形ドラッグ中にページスクロールへ奪われないようにする（Pointer Events 前提） */
+  touch-action: none;
 }
 
 .canvas {
