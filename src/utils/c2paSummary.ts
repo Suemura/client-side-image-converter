@@ -76,7 +76,7 @@ const readActions = (
       continue;
     }
     const label = asString(assertion.label);
-    if (!label || !label.startsWith("c2pa.actions")) {
+    if (!label?.startsWith("c2pa.actions")) {
       continue;
     }
     const data = assertion.data;

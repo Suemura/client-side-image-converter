@@ -200,13 +200,11 @@ export const detectC2pa = (bytes: Uint8Array, mimeType: string): boolean => {
     }
     case "image/png": {
       const chunks = parsePngChunks(bytes);
-      return chunks !== null && chunks.some((c) => c.type === PNG_C2PA_CHUNK);
+      return chunks?.some((c) => c.type === PNG_C2PA_CHUNK) ?? false;
     }
     case "image/webp": {
       const chunks = parseWebpChunks(bytes);
-      return (
-        chunks !== null && chunks.some((c) => c.fourCC === WEBP_C2PA_CHUNK)
-      );
+      return chunks?.some((c) => c.fourCC === WEBP_C2PA_CHUNK) ?? false;
     }
     default:
       return false;
@@ -233,14 +231,14 @@ export const removeC2pa = (
     }
     case "image/png": {
       const chunks = parsePngChunks(bytes);
-      if (!chunks || !chunks.some((c) => c.type === PNG_C2PA_CHUNK)) {
+      if (!chunks?.some((c) => c.type === PNG_C2PA_CHUNK)) {
         return new Uint8Array(bytes);
       }
       return assemblePng(chunks.filter((c) => c.type !== PNG_C2PA_CHUNK));
     }
     case "image/webp": {
       const chunks = parseWebpChunks(bytes);
-      if (!chunks || !chunks.some((c) => c.fourCC === WEBP_C2PA_CHUNK)) {
+      if (!chunks?.some((c) => c.fourCC === WEBP_C2PA_CHUNK)) {
         return new Uint8Array(bytes);
       }
       return assembleWebp(chunks.filter((c) => c.fourCC !== WEBP_C2PA_CHUNK));

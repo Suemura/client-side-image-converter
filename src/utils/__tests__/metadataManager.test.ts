@@ -1,10 +1,6 @@
 import piexif from "piexifjs";
 import { describe, expect, it } from "vitest";
-import {
-  buildDummyC2paJumbf,
-  detectC2pa,
-  insertJpegC2pa,
-} from "../c2paBinary";
+import { buildDummyC2paJumbf, detectC2pa, insertJpegC2pa } from "../c2paBinary";
 import { dataUrlToBlob } from "../imageUtils";
 import {
   assessPrivacyRisk,

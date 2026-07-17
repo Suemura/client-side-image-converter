@@ -2,10 +2,14 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import piexif from "piexifjs";
 import {
+  hasC2pa,
   jpegFileWithExif,
+  jpegFileWithExifAndC2pa,
   loadExifFromBuffer,
   magicNumber,
+  pngFileWithC2pa,
   pngFileWithExif,
+  webpFileWithC2pa,
   webpFileWithExif,
 } from "./helpers/fixtures";
 
@@ -117,5 +121,104 @@ test.describe("EXIF メタデータ管理", () => {
 
     // 非 GPS のリスクタグ（Make）は削除されている
     expect(exif["0th"]?.[piexif.ImageIFD.Make]).toBeUndefined();
+  });
+});
+
+test.describe("コンテンツ来歴（C2PA）", () => {
+  // ダミー JUMBF は c2pa-web で解釈できないため「解析不能」表示になるが、
+  // それ自体が動的 import + WASM ロード（8MB 超）の実ブラウザ検証になる。
+  // 有効署名の表示内容は単体テスト（c2paSummary.test.ts）で検証済み
+
+  test("C2PA を検出して来歴セクションが表示され、ロスレス除去できる（JPEG）", async ({
+    page,
+  }) => {
+    await page.goto("/metadata/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(jpegFileWithExifAndC2pa());
+
+    await expect(
+      page.getByRole("heading", { name: /すべてのEXIFタグ/ }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    // 来歴セクションと解析不能メッセージ（WASM ロード込みのため長めに待つ）
+    await expect(
+      page.getByRole("heading", { name: /コンテンツ来歴/ }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/来歴データを解析できませんでした/)).toBeVisible();
+
+    // EXIF タグは選択せず C2PA のみ除去（ロスレス経路）
+    await page.getByRole("button", { name: "選択クリア" }).click();
+    await page.getByText("コンテンツ来歴（C2PA）を削除する").click();
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "クリーニング済み画像をダウンロード" })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("cleaned_with-c2pa.jpg");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isJpeg(buf)).toBe(true);
+    // C2PA は除去され、EXIF は無傷（ロスレス = C2PA 挿入前のバイナリと完全一致）
+    expect(hasC2pa(buf, "image/jpeg")).toBe(false);
+    expect(buf.equals(jpegFileWithExif().buffer)).toBe(true);
+    const exif = loadExifFromBuffer(buf);
+    expect(Object.keys(exif.GPS ?? {}).length).toBeGreaterThan(0);
+  });
+
+  test("PNG の C2PA（caBX チャンク)を除去できる", async ({ page }) => {
+    await page.goto("/metadata/");
+    await page.locator('input[type="file"]').setInputFiles(pngFileWithC2pa());
+
+    await expect(
+      page.getByRole("heading", { name: /コンテンツ来歴/ }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    await page.getByText("コンテンツ来歴（C2PA）を削除する").click();
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "クリーニング済み画像をダウンロード" })
+        .click(),
+    ]);
+
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isPng(buf)).toBe(true);
+    expect(hasC2pa(buf, "image/png")).toBe(false);
+  });
+
+  test("WebP の C2PA チャンクを除去できる", async ({ page }) => {
+    await page.goto("/metadata/");
+    await page.locator('input[type="file"]').setInputFiles(webpFileWithC2pa());
+
+    await expect(
+      page.getByRole("heading", { name: /コンテンツ来歴/ }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    await page.getByText("コンテンツ来歴（C2PA）を削除する").click();
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "クリーニング済み画像をダウンロード" })
+        .click(),
+    ]);
+
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isWebp(buf)).toBe(true);
+    expect(hasC2pa(buf, "image/webp")).toBe(false);
+  });
+
+  test("C2PA が無い画像では来歴セクションを表示しない", async ({ page }) => {
+    await page.goto("/metadata/");
+    await page.locator('input[type="file"]').setInputFiles(jpegFileWithExif());
+
+    await expect(
+      page.getByRole("heading", { name: /すべてのEXIFタグ/ }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole("heading", { name: /コンテンツ来歴/ }),
+    ).not.toBeVisible();
   });
 });
