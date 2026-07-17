@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { pngFile } from "./helpers/fixtures";
+import { isServiceWorkerAvailable, waitForServiceWorker } from "./helpers/sw";
 
 // Web Share Target（共有シートからの画像受け取り、Issue #105）の実ブラウザ検証。
 //
@@ -11,21 +12,6 @@ import { pngFile } from "./helpers/fixtures";
 //
 // sw.js は本番ビルドの postbuild でのみ生成されるため、dev サーバー再利用時は skip する
 // （pwa.spec.ts と同じガード）。
-
-async function waitForServiceWorker(page: import("@playwright/test").Page) {
-  await page.waitForFunction(
-    () => navigator.serviceWorker?.controller != null,
-    undefined,
-    { timeout: 15_000 },
-  );
-}
-
-async function isServiceWorkerAvailable(
-  page: import("@playwright/test").Page,
-): Promise<boolean> {
-  const res = await page.request.get("/sw.js");
-  return res.ok();
-}
 
 /** SW 制御下のページから share_target へ multipart POST を送る（共有シートの代替） */
 async function postSharedImage(
