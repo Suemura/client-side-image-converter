@@ -27,7 +27,7 @@ export const extractWritableEntries = (
     if ("blob" in result) {
       // ConversionResult
       entries.push({ name: result.filename, blob: result.blob });
-    } else if ("croppedBlob" in result && result.success) {
+    } else if (result.success && "croppedBlob" in result) {
       // CropResult
       entries.push({ name: result.fileName, blob: result.croppedBlob });
     }

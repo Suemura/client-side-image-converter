@@ -4,6 +4,7 @@ import { extractWritableEntries, planFolderWrites } from "./folderExportCore";
 /** フォルダ保存の結果（cancelled はユーザーによる picker キャンセル。エラー扱いしない） */
 export type FolderSaveOutcome =
   | { status: "saved"; writtenCount: number }
+  | { status: "no-entries" }
   | { status: "cancelled" }
   | { status: "error"; writtenCount: number; totalCount: number };
 
@@ -29,7 +30,9 @@ export const saveResultsToFolder = async (
 ): Promise<FolderSaveOutcome> => {
   const entries = extractWritableEntries(results);
   if (entries.length === 0 || !window.showDirectoryPicker) {
-    return { status: "saved", writtenCount: 0 };
+    // 保存対象（成功結果）が 0 件、または API 未対応の場合は picker を開かず終了する。
+    // 「保存しました」と誤認させないよう、成功系の status とは分離する。
+    return { status: "no-entries" };
   }
 
   // picker のキャンセル（AbortError）は正常系として扱う

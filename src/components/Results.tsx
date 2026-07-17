@@ -162,6 +162,8 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
         setFolderSaveMessage(
           t("results.savedToFolder", { count: outcome.writtenCount }),
         );
+      } else if (outcome.status === "no-entries") {
+        setFolderSaveMessage(t("results.noEntriesToSave"));
       } else if (outcome.status === "error") {
         setFolderSaveMessage(
           t("results.saveToFolderError", {
