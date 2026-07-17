@@ -11,7 +11,13 @@ import { createFileNameUniquifier } from "./fileName";
 import type { CropResult } from "./imageCropper";
 
 /** ツール識別子（ハンドオフの送り元・送り先） */
-export type ToolId = "convert" | "crop" | "edit" | "redact" | "metadata";
+export type ToolId =
+  | "convert"
+  | "upscale"
+  | "crop"
+  | "edit"
+  | "redact"
+  | "metadata";
 
 /**
  * ハンドオフの送り元。ツールに加え、共有シート受け口ページ（/share、Issue #105）
@@ -56,6 +62,14 @@ export const HANDOFF_TOOLS: readonly HandoffTool[] = [
     path: "/convert",
     labelKey: "navigation.convert",
     acceptedTypes: SUPPORTED_IMAGE_FORMATS.CONVERT_UPLOAD_FORMATS,
+    canReceiveHandoff: true,
+  },
+  {
+    // 「拡大 → 編集 / 圧縮」のフロー順で convert の直後・edit の前に置く（Issue #100）
+    id: "upscale",
+    path: "/upscale",
+    labelKey: "navigation.upscale",
+    acceptedTypes: SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
     canReceiveHandoff: true,
   },
   {
