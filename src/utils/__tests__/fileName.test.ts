@@ -73,6 +73,17 @@ describe("createFileNameUniquifier", () => {
     expect(uniquify(".hidden")).toBe(".hidden_2");
   });
 
+  it("初期使用済み名と衝突する入力は初出でも連番へ回る", () => {
+    const uniquify = createFileNameUniquifier(["photo.png", "logo.png"]);
+    expect(uniquify("photo.png")).toBe("photo_2.png");
+    expect(uniquify("other.png")).toBe("other.png");
+  });
+
+  it("初期使用済み名は連番候補との衝突チェックにも使われる", () => {
+    const uniquify = createFileNameUniquifier(["photo.png", "photo_2.png"]);
+    expect(uniquify("photo.png")).toBe("photo_3.png");
+  });
+
   it("生成した関数ごとに採番状態は独立している", () => {
     const first = createFileNameUniquifier();
     const second = createFileNameUniquifier();
