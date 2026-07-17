@@ -316,6 +316,78 @@ test.describe("ツール連携（ハンドオフ）", () => {
     expect(magicNumber.isWebp(buf)).toBe(true);
   });
 
+  test("convert の結果を redact へ引き継ぎ、レタッチ結果を metadata へ送れる（投稿前の安全化フロー）", async ({
+    page,
+  }) => {
+    // 1. convert で PNG を JPEG に変換する（ドラッグ操作ができる大きさのフィクスチャを使う）
+    await page.goto("/convert/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("rect.png", 200, 100));
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 2. 結果をモザイク（redact）へ送る
+    await page
+      .getByRole("button", { name: "モザイクへ送る", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/redact\/?$/);
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "変換の結果 1 件を引き継ぎました" }),
+    ).toBeVisible();
+
+    // 3. プレビュー描画（canvas が自然サイズになる）を待って領域をドラッグ指定し、レタッチを適用する
+    const canvas = page.getByTestId("redact-preview-canvas");
+    await expect(canvas).toBeVisible({ timeout: 15_000 });
+    await expect
+      .poll(() => canvas.evaluate((el) => (el as HTMLCanvasElement).width), {
+        timeout: 15_000,
+      })
+      .toBe(200);
+    // canvas はページ下部でビューポート外へはみ出すことがあるため、ドラッグ前に可視化する
+    await canvas.scrollIntoViewIfNeeded();
+    const box = await canvas.boundingBox();
+    expect(box).not.toBeNull();
+    if (!box) return;
+    await page.mouse.move(box.x + 10, box.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 150, box.y + 80, { steps: 5 });
+    await page.mouse.up();
+
+    const applyButton = page.getByRole("button", {
+      name: "レタッチを適用",
+      exact: true,
+    });
+    await expect(applyButton).toBeEnabled();
+    await applyButton.click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 4. レタッチ結果をメタデータへ送る（レタッチ → メタデータ削除 → 投稿の安全化フロー）
+    await page
+      .getByRole("button", { name: "メタデータへ送る", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/metadata\/?$/);
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "モザイクの結果 1 件を引き継ぎました" }),
+    ).toBeVisible();
+
+    // 5. ファイル名が連鎖して取り込まれている（rect.png → rect.jpeg → rect_redacted.jpeg）
+    await expect(
+      page.getByRole("heading", { name: /アップロード済み画像 \(1\)/ }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByText("rect_redacted.jpeg", { exact: true }),
+    ).toBeVisible();
+  });
+
   test("convert の結果をダウンロードせず edit へ引き継げる", async ({
     page,
   }) => {

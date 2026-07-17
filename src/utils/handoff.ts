@@ -11,7 +11,7 @@ import { createFileNameUniquifier } from "./fileName";
 import type { CropResult } from "./imageCropper";
 
 /** ツール識別子（ハンドオフの送り元・送り先） */
-export type ToolId = "convert" | "crop" | "edit" | "metadata";
+export type ToolId = "convert" | "crop" | "edit" | "redact" | "metadata";
 
 /** ツールのメタ定義。ハンドオフと Navigation で共有する単一の真実 */
 export interface HandoffTool {
@@ -25,7 +25,8 @@ export interface HandoffTool {
   /**
    * ハンドオフの送り先（受け取り側の配線済みページ）として有効か。
    * Phase 1（Issue #70）で convert / crop、Phase 2（#71）で metadata、
-   * Phase 3（#72）で edit を有効化済み（全 4 ツール対応）。
+   * Phase 3（#72）で edit、レタッチツール追加（#98）で redact を
+   * 有効化済み（全 5 ツール対応）。
    */
   canReceiveHandoff: boolean;
 }
@@ -54,6 +55,14 @@ export const HANDOFF_TOOLS: readonly HandoffTool[] = [
     id: "edit",
     path: "/edit",
     labelKey: "navigation.edit",
+    acceptedTypes: SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
+    canReceiveHandoff: true,
+  },
+  {
+    // 「レタッチ → メタデータ削除 → 投稿」の安全化フロー順で metadata の直前に置く
+    id: "redact",
+    path: "/redact",
+    labelKey: "navigation.redact",
     acceptedTypes: SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
     canReceiveHandoff: true,
   },

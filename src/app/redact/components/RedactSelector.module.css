@@ -1,0 +1,213 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.imageContainer {
+  position: relative;
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background-color: var(--surface-muted);
+  cursor: crosshair;
+}
+
+.canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 500px;
+  height: auto;
+  user-select: none;
+}
+
+/* 領域枠は任意の画像の上に重なる UI のためテーマ非依存の固定色
+   （DESIGN.md「Do's and Don'ts」の画像上オーバーレイ UI 例外） */
+.regionOverlay {
+  position: absolute;
+  border: 2px solid #007acc;
+  background-color: rgba(0, 122, 204, 0.15);
+  pointer-events: auto;
+  z-index: 1;
+  cursor: move;
+}
+
+/* ドラッグ中のドラフト矩形（破線・操作を透過してドラッグを妨げない） */
+.regionDraft {
+  border-style: dashed;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* リサイズハンドル: 画像上のオーバーレイ UI のためテーマ非依存の固定色
+   （白縁 + 影でどんな画像上でも視認できる配色。DESIGN.md「Do's and Don'ts」参照） */
+.resizeHandle {
+  position: absolute;
+  background-color: #007acc;
+  border: 2px solid #ffffff;
+  border-radius: var(--radius-full);
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
+/* 四隅のハンドル */
+.resizeHandle.nw {
+  top: -6px;
+  left: -6px;
+  cursor: nw-resize;
+}
+
+.resizeHandle.ne {
+  top: -6px;
+  right: -6px;
+  cursor: ne-resize;
+}
+
+.resizeHandle.se {
+  bottom: -6px;
+  right: -6px;
+  cursor: se-resize;
+}
+
+.resizeHandle.sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: sw-resize;
+}
+
+/* 辺のハンドル */
+.resizeHandle.n {
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: n-resize;
+}
+
+.resizeHandle.e {
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: e-resize;
+}
+
+.resizeHandle.s {
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: s-resize;
+}
+
+.resizeHandle.w {
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: w-resize;
+}
+
+/* 領域の削除ボタン: 画像上のオーバーレイ UI のためテーマ非依存の固定色
+   （黒暗幕 + 白文字。DESIGN.md「Do's and Don'ts」参照）。
+   画像端の領域でも imageContainer の overflow: hidden にクリップされないよう領域の内側に置く */
+.deleteButton {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.75);
+  color: #ffffff;
+  border: 1px solid #ffffff;
+  border-radius: var(--radius-full);
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.deleteButton:hover {
+  background-color: rgba(0, 0, 0, 0.9);
+}
+
+.deleteButton:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 1px;
+}
+
+/* 操作説明チップ: 画像上のオーバーレイ UI のためテーマ非依存の固定色
+   （黒暗幕 + 白文字。DESIGN.md「Do's and Don'ts」参照） */
+.instructions {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* ナビゲーションヘッダー（画像の外の UI。パネル内のインセット領域として扱う） */
+.navigationHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.5rem;
+}
+
+/* DESIGN.md「Button」secondary 相当のアイコンボタン */
+.navButton {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--foreground);
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.navButton:hover:not(:disabled) {
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
+}
+
+.navButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.navButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.imageCounter {
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  min-width: 60px;
+  text-align: center;
+}

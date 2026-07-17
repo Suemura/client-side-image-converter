@@ -261,6 +261,25 @@ export const transparentPngFile = (
   return { name, mimeType: "image/png", buffer: Buffer.from(png) };
 };
 
+/**
+ * 左半分が 1px の赤/青チェッカーボード・右半分が白の RGB PNG を実行時生成する。
+ * 高周波パターンのため、モザイク / ぼかしで「判読不能に均された」ことを
+ * ピクセル値（赤とも青とも異なる混合色になる）で証明できる（/redact の E2E に使う）。
+ */
+export const checkerPngFile = (
+  name = "checker.png",
+  width = 200,
+  height = 200,
+) => {
+  const png = buildPng(width, height, 2, (x, y) => {
+    if (x >= width / 2) {
+      return [255, 255, 255];
+    }
+    return (x + y) % 2 === 0 ? [255, 0, 0] : [0, 0, 255];
+  });
+  return { name, mimeType: "image/png", buffer: Buffer.from(png) };
+};
+
 /** PNG を装った破損ファイル（デコード失敗時の通知表示の検証に使用） */
 export const brokenImageFile = (name = "broken.png") => ({
   name,

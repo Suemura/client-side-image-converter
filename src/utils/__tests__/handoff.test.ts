@@ -45,9 +45,9 @@ const createCropResult = (
 });
 
 describe("HANDOFF_TOOLS", () => {
-  it("4 ツール分の定義があり ID が一意である", () => {
+  it("5 ツール分の定義があり ID が一意である", () => {
     const ids = HANDOFF_TOOLS.map((tool) => tool.id);
-    expect(ids).toHaveLength(4);
+    expect(ids).toHaveLength(5);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -68,18 +68,22 @@ describe("HANDOFF_TOOLS", () => {
     expect(findHandoffTool("edit")?.acceptedTypes).toBe(
       SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
     );
+    expect(findHandoffTool("redact")?.acceptedTypes).toBe(
+      SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
+    );
     expect(findHandoffTool("metadata")?.acceptedTypes).toBe(
       SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
     );
   });
 
-  it("全 4 ツールが受け取り可能（Phase 3 で edit まで有効化済み）", () => {
+  it("全 5 ツールが受け取り可能（#98 で redact まで有効化済み）", () => {
     const receivable = HANDOFF_TOOLS.filter((tool) => tool.canReceiveHandoff);
     expect(receivable.map((tool) => tool.id).sort()).toEqual([
       "convert",
       "crop",
       "edit",
       "metadata",
+      "redact",
     ]);
   });
 
@@ -89,34 +93,52 @@ describe("HANDOFF_TOOLS", () => {
 });
 
 describe("resolveHandoffTargets", () => {
-  it("convert の結果（PNG）は crop / edit / metadata へ送れる", () => {
+  it("convert の結果（PNG）は crop / edit / redact / metadata へ送れる", () => {
     const targets = resolveHandoffTargets("convert", ["image/png"]);
     expect(targets.map((tool) => tool.id)).toEqual([
       "crop",
       "edit",
+      "redact",
       "metadata",
     ]);
   });
 
-  it("crop の結果（JPEG）は convert / edit / metadata へ送れる", () => {
+  it("crop の結果（JPEG）は convert / edit / redact / metadata へ送れる", () => {
     const targets = resolveHandoffTargets("crop", ["image/jpeg"]);
     expect(targets.map((tool) => tool.id)).toEqual([
       "convert",
       "edit",
+      "redact",
       "metadata",
     ]);
   });
 
-  it("metadata の結果（WebP）は crop / convert / edit へ送れる", () => {
+  it("metadata の結果（WebP）は crop / convert / edit / redact へ送れる", () => {
     const targets = resolveHandoffTargets("metadata", ["image/webp"]);
-    expect(targets.map((tool) => tool.id)).toEqual(["crop", "convert", "edit"]);
+    expect(targets.map((tool) => tool.id)).toEqual([
+      "crop",
+      "convert",
+      "edit",
+      "redact",
+    ]);
   });
 
-  it("edit の結果（PNG）は crop / convert / metadata へ送れる（編集 → 変換の中核フロー）", () => {
+  it("edit の結果（PNG）は crop / convert / redact / metadata へ送れる（編集 → 変換の中核フロー）", () => {
     const targets = resolveHandoffTargets("edit", ["image/png"]);
     expect(targets.map((tool) => tool.id)).toEqual([
       "crop",
       "convert",
+      "redact",
+      "metadata",
+    ]);
+  });
+
+  it("redact の結果（JPEG）は他の全 4 ツールへ送れる（レタッチ → メタデータ削除の安全化フロー）", () => {
+    const targets = resolveHandoffTargets("redact", ["image/jpeg"]);
+    expect(targets.map((tool) => tool.id)).toEqual([
+      "crop",
+      "convert",
+      "edit",
       "metadata",
     ]);
   });
