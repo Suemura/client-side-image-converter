@@ -59,8 +59,7 @@ gh api repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}/comments/{COMMENT_ID}/replies \
 
 - 修正はレビュー指摘の範囲に留め、関係のないコード変更は行わない
 - 修正後は `npm run lint:fix` を実行してコードを整える
-- 型エラーが懸念される場合は `npm run typecheck` も実行する
-- `src/utils/` を修正した場合は `npm run test` でテストが通ることを確認する
+- **TS/TSX ファイルを修正した場合は `npm run lint` / `npm run typecheck` / `npm run test` の 3 点を必ず実行し、すべて成功してからコミットする**（PR 前の reviewer レビューは廃止済みのため、ここが push 前の最終検証になる）
 - 修正をコミット・プッシュしてPRに反映する
 
 ## 出力
