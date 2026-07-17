@@ -14,10 +14,11 @@ import {
 } from "./conversionCore";
 import { buildConversionResult } from "./conversionResult";
 import { insertExifIntoBlob, readExifTiffFromDataUrl } from "./exifTransfer";
-import { isHeicFile, isTiffFile } from "./fileUtils";
+import { isHeicFile, isRawFile, isTiffFile } from "./fileUtils";
 import { decodeHeicToCanvas } from "./heicDecoder";
 import { optimizeImage } from "./imageOptimizer";
 import { PNG_COMPRESSED_QUALITY_HINT, pngQualityStrategy } from "./pngQuality";
+import { decodeRawToCanvas } from "./rawDecoder";
 import { decodeTiffToCanvas } from "./tiffDecoder";
 
 // 型・純粋ロジックは Canvas 非依存の conversionCore に集約している。
@@ -51,7 +52,8 @@ export const convertImage = async (
     if (
       !file.type.startsWith("image/") &&
       !isHeicFile(file) &&
-      !isTiffFile(file)
+      !isTiffFile(file) &&
+      !isRawFile(file)
     ) {
       reject(new Error("選択されたファイルは画像ではありません"));
       return;
@@ -197,6 +199,17 @@ export const convertImage = async (
     // HEIC はブラウザの Image でデコードできないため WASM デコーダーで Canvas に展開する
     if (isHeicFile(file)) {
       decodeHeicToCanvas(file)
+        .then((decoded) =>
+          processSource(decoded, decoded.width, decoded.height, null),
+        )
+        .catch(reject);
+      return;
+    }
+
+    // RAW もブラウザの Image でデコードできないため LibRaw（WASM）デコーダーで Canvas に展開する。
+    // NEF / DNG 等は MIME が image/tiff に誤報告されることがあるため isTiffFile より先に判定する
+    if (isRawFile(file)) {
+      decodeRawToCanvas(file)
         .then((decoded) =>
           processSource(decoded, decoded.width, decoded.height, null),
         )

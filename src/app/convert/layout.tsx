@@ -5,7 +5,7 @@ import { buildPageMetadata } from "../../utils/pageMetadata";
 export const metadata: Metadata = buildPageMetadata({
   title: "画像フォーマット変換",
   description:
-    "JPEG・PNG・WebP・AVIF 形式へブラウザ内で画像を変換。品質や目標ファイルサイズを指定でき、HEIC / TIFF の読み込みや複数画像の一括変換にも対応します。",
+    "JPEG・PNG・WebP・AVIF 形式へブラウザ内で画像を変換。品質や目標ファイルサイズを指定でき、HEIC / TIFF / RAW（CR2・NEF・ARW・DNG 等）の読み込みや複数画像の一括変換にも対応します。",
   path: "/convert/",
 });
 

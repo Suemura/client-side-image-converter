@@ -4,6 +4,7 @@
 
 import {
   HEIC_EXTENSIONS,
+  RAW_EXTENSIONS,
   SUPPORTED_IMAGE_FORMATS,
   TIFF_EXTENSIONS,
 } from "./constants";
@@ -193,6 +194,10 @@ const FORMAT_EXTENSION_FALLBACKS: ReadonlyArray<{
     mimeTypes: SUPPORTED_IMAGE_FORMATS.TIFF_FORMATS,
     extensions: TIFF_EXTENSIONS,
   },
+  {
+    mimeTypes: SUPPORTED_IMAGE_FORMATS.RAW_FORMATS,
+    extensions: RAW_EXTENSIONS,
+  },
 ];
 
 /**
@@ -244,6 +249,25 @@ export const isTiffFile = (file: File): boolean => {
     file,
     SUPPORTED_IMAGE_FORMATS.TIFF_FORMATS,
     TIFF_EXTENSIONS,
+  );
+};
+
+/**
+ * ファイルがカメラ RAW 形式かどうかを確認する
+ * RAW は TIFF ベースの形式が多く、OS / ブラウザによって MIME が image/tiff や
+ * application/octet-stream・空文字と揺れて報告されるため、matchesFormat と異なり
+ * MIME が既知でも拡張子を優先して判定する（image/tiff 誤報告の NEF / DNG 等を
+ * TIFF デコーダーに流さないため。呼び出し側でも isTiffFile より前に判定すること）
+ * @param file - チェックするファイル
+ * @returns RAW の場合はtrue
+ */
+export const isRawFile = (file: File): boolean => {
+  const extension = getFileExtension(file.name).toLowerCase();
+  if ((RAW_EXTENSIONS as readonly string[]).includes(extension)) {
+    return true;
+  }
+  return (SUPPORTED_IMAGE_FORMATS.RAW_FORMATS as readonly string[]).includes(
+    file.type,
   );
 };
 
@@ -355,29 +379,40 @@ const MIME_DISPLAY_NAMES: Record<string, string> = {
 
 /**
  * 許可された MIME タイプの配列から対応フォーマットの表示ラベルを生成する
+ * RAW の MIME 群（10 種以上）は列挙するとラベルが冗長になるため、
+ * 最初に登場した位置で単一トークン "RAW" に集約する
  * @param acceptedTypes - 許可されたMIMEタイプの配列
- * @returns カンマ区切りの表示ラベル（例: "JPG, PNG, WebP"）
+ * @returns カンマ区切りの表示ラベル（例: "JPG, PNG, WebP, RAW"）
  */
 export const formatAcceptedTypesLabel = (
   acceptedTypes: readonly string[],
 ): string => {
-  return acceptedTypes
-    .map(
-      (type) =>
-        MIME_DISPLAY_NAMES[type] ?? type.replace("image/", "").toUpperCase(),
-    )
-    .join(", ");
+  const rawFormats = SUPPORTED_IMAGE_FORMATS.RAW_FORMATS as readonly string[];
+  const labels: string[] = [];
+  for (const type of acceptedTypes) {
+    if (rawFormats.includes(type)) {
+      if (!labels.includes("RAW")) {
+        labels.push("RAW");
+      }
+      continue;
+    }
+    labels.push(
+      MIME_DISPLAY_NAMES[type] ?? type.replace("image/", "").toUpperCase(),
+    );
+  }
+  return labels.join(", ");
 };
 
 /**
  * ファイルタイプバッジの表示ラベルを生成する
  * MIME タイプが特定できない場合（HEIC 等）は isHeicFile と同じ基準で
- * 拡張子によるフォールバック表示を行う
+ * 拡張子によるフォールバック表示を行う。RAW も MIME 由来のラベルが
+ * "X-ADOBE-DNG" のように冗長になるため拡張子で表示する（例: "NEF" / "DNG"）
  * @param file - 対象のファイル
  * @returns バッジに表示するラベル（例: "HEIC" / "PNG" / "FILE"）
  */
 export const getFileTypeBadgeLabel = (file: File): string => {
-  if (isUnknownMimeType(file)) {
+  if (isUnknownMimeType(file) || isRawFile(file)) {
     return getFileExtension(file.name).replace(".", "").toUpperCase() || "FILE";
   }
   return file.type.split("/")[1]?.toUpperCase() || "FILE";

@@ -22,7 +22,7 @@ import {
   buildConversionResult,
   buildOptimizeResult,
 } from "../utils/conversionResult";
-import { isHeicFile, isTiffFile } from "../utils/fileUtils";
+import { isHeicFile, isRawFile, isTiffFile } from "../utils/fileUtils";
 import type { DecodeKind, WorkerRequest, WorkerResponse } from "./messages";
 
 /**
@@ -127,10 +127,14 @@ const runOnWorker = (
   });
 };
 
-/** File から Worker に渡すデコード種別を判定する（isHeicFile/isTiffFile は File を要する） */
+/** File から Worker に渡すデコード種別を判定する（isHeicFile 等は File を要する） */
 const detectDecodeKind = (file: File): DecodeKind => {
   if (isHeicFile(file)) {
     return "heic";
+  }
+  // RAW は MIME が image/tiff に誤報告される形式（NEF / DNG 等）があるため tiff より先に判定する
+  if (isRawFile(file)) {
+    return "raw";
   }
   if (isTiffFile(file)) {
     return "tiff";

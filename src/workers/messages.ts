@@ -7,10 +7,10 @@
 import type { ConversionOptions } from "../utils/conversionCore";
 
 /**
- * デコード方式。`isHeicFile` / `isTiffFile` は File を要するためメインスレッド側で判定し、
- * Worker には結果だけを渡す（standard は createImageBitmap でデコードする）。
+ * デコード方式。`isHeicFile` / `isRawFile` / `isTiffFile` は File を要するためメインスレッド側で
+ * 判定し、Worker には結果だけを渡す（standard は createImageBitmap でデコードする）。
  */
-export type DecodeKind = "standard" | "heic" | "tiff";
+export type DecodeKind = "standard" | "heic" | "tiff" | "raw";
 
 /** メインスレッド → Worker: 1 ファイルの変換要求 */
 export interface WorkerRequest {
