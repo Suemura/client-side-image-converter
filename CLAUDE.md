@@ -117,7 +117,7 @@ npm run preview
 
 詳細仕様（対応形式・制限・UI 挙動）は `docs/ARCHITECTURE.md` の「コア機能」を参照。
 
-1. **画像フォーマット変換 / 最適化**（`/convert`）- JPEG / PNG / WebP / AVIF への変換（品質・目標ファイルサイズ指定）と、形式を維持した再圧縮による「最適化」モード。HEIC / TIFF は変換ページのみ入力可
+1. **画像フォーマット変換 / 最適化**（`/convert`）- JPEG / PNG / WebP / AVIF への変換（品質・目標ファイルサイズ指定）と、形式を維持した再圧縮による「最適化」モード。HEIC / TIFF / RAW（CR2 / NEF / ARW / DNG 等）は変換ページのみ入力可
 2. **画像トリミング**（`/crop`）- アスペクト比プリセット・回転 / 反転・適用範囲切替（全画像一括 / 画像ごと）。EXIF Orientation は焼き込みで補正
 3. **画像編集**（`/edit`）- ライト / カラー / ディテール（シャープネス / 明瞭度 / ビネット / グレイン）調整・効果（モノクロ / ガンマ）・自動補正（WB スポイト含む）・トーンカーブ・LUT フィルタ・ヒストグラム表示。WebGL2 プレビュー + Canvas2D CPU フォールバック（WYSIWYG）
 4. **モザイク / ぼかしレタッチ**（`/redact`）- 複数の矩形領域をドラッグ指定してモザイク / ぼかし / 塗りつぶしを焼き込む（既定はモザイク。領域は画像ごとに保持・出力は `_redacted` サフィックスで元形式維持）
@@ -134,7 +134,7 @@ npm run preview
 - **クライアントサイド完結**: 画像処理は Canvas API / WASM / WebGL のみで行い、画像をサーバーへ送信しない
 - **純粋ロジックの分離**: Canvas / WebGL / DOM 依存のオーケストレーションから Canvas 非依存の純粋ロジックを別ファイルへ切り出し、単体テスト対象にする（例: `conversionCore.ts` / `cropGeometry.ts` / `adjustments.ts` / `handoff.ts` / `precache.ts`）
 - **WYSIWYG**: プレビューと出力は同一の描画経路を通す。GPU（GLSL）と CPU（TS）で同じ処理を持つ場合は TS 側の関数を「唯一の真実」とし、GLSL は同順序・同係数でミラーする
-- **動的 import**: WASM コーデック（`@jsquash/*` / libheif / utif2 等）と重量 JS ライブラリ（jszip / piexifjs / exif-js）は使用時のみロードし、初期バンドルへ影響させない
+- **動的 import**: WASM コーデック（`@jsquash/*` / libheif / utif2 / libraw-wasm 等）と重量 JS ライブラリ（jszip / piexifjs / exif-js）は使用時のみロードし、初期バンドルへ影響させない
 - **dual-store**: 適用範囲（全画像一括 / 画像ごと）は crop 起源の dual-store パターンを踏襲する（`resolveCropForIndex` / `resolveAdjustmentForIndex` 等）
 - **i18n**: ユーザー向け文言はすべて react-i18next 経由（日英）。ページ別 SEO メタデータのみ静的 HTML（主言語は日本語）
 
