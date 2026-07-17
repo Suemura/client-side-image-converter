@@ -172,13 +172,16 @@ npm run preview
 
 ### サブエージェント（`.claude/agents/`）
 
+起動時は差分（`git diff --stat` 等）と変更概要をプロンプトに手渡す（探索削減。`self-review.md` 参照）。
+
 - **planner**: 非自明なタスク（3ステップ以上）の実装計画を策定し、Sprint Contract（完了条件）を返す
-- **docs-sync**: reviewer の前に起動するドキュメント同期。コード変更に合わせて CLAUDE.md / docs/HARNESS.md / README（日英セット）を更新する。変更がドキュメント記載事項（コマンド・構成・ワークフロー・ユーザー向け機能）に触れる場合のみ
-- **reviewer**: タスク完了前の独立コンテキストレビュー。Pass/Fail 判定を返す。Fail があれば修正して再レビュー
+- **docs-sync**（haiku）: ドキュメント同期。起動条件は `self-review.md` のホワイトリスト（ユーザー向け機能 / コマンド・CI / ハーネス / 構造・テスト方針の変更）のみ。docs/HISTORY.md の変更ログはメインが直接追記
+- **reviewer**（sonnet）: **PR を作らないタスク専用**の完了前独立レビュー。Pass/Fail 判定を返す。PR を作るタスクでは起動しない（PR 自動レビューに一本化）
+- **pr-reviewer / pr-comment-resolver**（sonnet）: PR 自動レビューフロー用。command の手順（review-pr / resolve-pr-comments）に従う薄いラッパー
 
 ### コマンド（`.claude/commands/`）
 
-- **/start-issue <Issue番号>**: GitHub Issue を起点にタスクを開始。Issue 専用 worktree（`.claude/worktrees/issue-{番号}/`）とブランチの作成 → planner → 実装 → 検証 → docs-sync → reviewer → PR 作成（自動レビューフロー起動）まで自走。worktree で作業するため複数 Issue の並列作業が可能
+- **/start-issue <Issue番号>**: GitHub Issue を起点にタスクを開始。Issue 専用 worktree（`.claude/worktrees/issue-{番号}/`）とブランチの作成 → planner → 実装 → 検証（lint / typecheck / test + Sprint Contract 自己チェック）→ docs-sync → PR 作成（自動レビューフロー起動）まで自走。worktree で作業するため複数 Issue の並列作業が可能
 - **/review-pr <PR番号>**: PR のコードレビューを実施し、インラインコメントを投稿
 - **/resolve-pr-comments <PR番号>**: PR のレビューコメントを読み取り、修正対応・返信を実施
 
@@ -186,16 +189,16 @@ npm run preview
 
 `gh pr create` で PR を作成すると、フックが以下のフローを自動起動する：
 
-1. サブエージェントが `/review-pr` の手順で PR をレビューし、インラインコメントを投稿
-2. 別のサブエージェントが `/resolve-pr-comments` の手順でコメントに対応（修正・返信）
+1. **pr-reviewer** が `/review-pr` の手順で PR をレビューし、インラインコメントを投稿
+2. **pr-comment-resolver** が `/resolve-pr-comments` の手順でコメントに対応（修正・返信。TS/TSX 修正時は lint / typecheck / test 必須）
 3. 対応結果のサマリーを報告
 
 ※ PR 作成コマンドは単独で実行すること（`git push && gh pr create` のような複合コマンドではフックが発火しない）
 
 ### ルール（`.claude/rules/`）
 
-- **workflow-orchestration**: Issue 起点のタスク開始（/start-issue）、planner / docs-sync / reviewer / サブエージェントの使い分けと完了前検証の指針
-- **self-review**: タスク完了前に docs-sync によるドキュメント同期と reviewer エージェントによるレビューを必須とするルール
+- **workflow-orchestration**: Issue 起点のタスク開始（/start-issue）、サブエージェントの使い分け・コンテキスト手渡しと完了前検証の指針
+- **self-review**: 完了前の独立レビューの二本立て（PR あり = PR 自動レビュー / PR なし = reviewer）と docs-sync 起動条件ホワイトリストを定義するルール
 
 ## コードスタイルガイドライン
 - コードは TypeScript で記述する
