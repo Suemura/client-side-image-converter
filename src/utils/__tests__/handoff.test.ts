@@ -9,6 +9,7 @@ import {
   HANDOFF_TOOLS,
   type HandoffPayload,
   resolveHandoffTargets,
+  resolveShareAcceptTypes,
 } from "../handoff";
 import type { CropResult } from "../imageCropper";
 
@@ -170,6 +171,41 @@ describe("resolveHandoffTargets", () => {
 
   it("空の MIME 一覧では候補なし", () => {
     expect(resolveHandoffTargets("convert", [])).toEqual([]);
+  });
+
+  it("共有シート起点（origin: share）は JPEG なら全 5 ツールへ送れる（自己除外に該当しない）", () => {
+    const targets = resolveHandoffTargets("share", ["image/jpeg"]);
+    expect(targets.map((tool) => tool.id)).toEqual([
+      "crop",
+      "convert",
+      "edit",
+      "redact",
+      "metadata",
+    ]);
+  });
+
+  it("共有シート起点の HEIC は convert のみが受理する", () => {
+    const targets = resolveHandoffTargets("share", ["image/heic"]);
+    expect(targets.map((tool) => tool.id)).toEqual(["convert"]);
+  });
+});
+
+describe("resolveShareAcceptTypes", () => {
+  it("受け取り可能ツールの acceptedTypes の和集合（重複なし）を返す", () => {
+    const types = resolveShareAcceptTypes();
+    expect(new Set(types).size).toBe(types.length);
+    const expected = new Set(
+      HANDOFF_TOOLS.filter((tool) => tool.canReceiveHandoff).flatMap((tool) => [
+        ...tool.acceptedTypes,
+      ]),
+    );
+    expect(new Set(types)).toEqual(expected);
+  });
+
+  it("convert 固有の HEIC / TIFF を含む（共有シート → 変換ページの動線を塞がない）", () => {
+    const types = resolveShareAcceptTypes();
+    expect(types).toContain("image/heic");
+    expect(types).toContain("image/tiff");
   });
 });
 
