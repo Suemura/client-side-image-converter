@@ -181,4 +181,17 @@
     gap: 1rem;
     padding: 0 0.5rem;
   }
+
+  /* 主要 CTA を全幅・高さ 48px にする（モバイルデザイン準拠） */
+  .centerButton button {
+    width: 100%;
+    max-width: none;
+    height: 48px;
+    font-size: 16px;
+  }
+
+  .buttonGroup {
+    flex-direction: column;
+    width: 100%;
+  }
 }

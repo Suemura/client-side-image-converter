@@ -120,6 +120,38 @@
   margin-bottom: 16px;
 }
 
+/* 768px 以下: 余白を圧縮し、ツールボタンを縦積み・全幅にする（モバイルデザイン準拠） */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+    gap: 24px;
+    /* 親（MainContent）が flex + justify-content: center のため、fit-content のままだと
+       内容の最大幅で横オーバーフローする。全幅に固定して内部で折り返させる */
+    width: 100%;
+    min-width: 0;
+  }
+
+  .buttonContainer {
+    flex-direction: column;
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .buttonContainer a {
+    width: 100%;
+  }
+
+  .buttonContainer button {
+    width: 100%;
+    max-width: none;
+  }
+
+  .featuresGrid {
+    gap: 16px;
+    margin-top: 32px;
+  }
+}
+
 /* 特徴カード説明（補足テキスト規定: 14px / 400） */
 .featureDescription {
   font-size: 14px;
