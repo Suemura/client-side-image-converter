@@ -21,6 +21,7 @@ export const MobileMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   // ナビゲーション項目は Navigation.tsx と同じく HANDOFF_TOOLS を単一の真実とする
   const navItems = [
@@ -45,6 +46,29 @@ export const MobileMenu: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         close();
+        return;
+      }
+      // Tab キーはドロワー内の先頭/末尾でループさせ、背景側へフォーカスが漏れないようにする
+      if (e.key === "Tab") {
+        const drawer = drawerRef.current;
+        if (!drawer) {
+          return;
+        }
+        const focusable = drawer.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) {
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     document.addEventListener("keydown", handleKeyDown);
@@ -101,6 +125,7 @@ export const MobileMenu: React.FC = () => {
       />
       <div
         id="mobile-menu-drawer"
+        ref={drawerRef}
         role="dialog"
         aria-modal="true"
         aria-label={t("mobileMenu.title")}
