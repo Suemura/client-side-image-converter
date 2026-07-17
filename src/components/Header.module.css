@@ -12,6 +12,8 @@
   align-items: center;
   gap: 16px;
   color: var(--foreground);
+  /* モバイルでタイトルを ellipsis で省略できるようにする */
+  min-width: 0;
 }
 
 /* DESIGN.md「Header / Navigation / Footer」: サイトタイトル 18px / 700 / letter-spacing -0.01em */
@@ -19,6 +21,8 @@
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rightSection {
@@ -62,8 +66,14 @@
   font-weight: 500;
 }
 
-@media (max-width: 640px) {
-  .githubText {
+/* 768px 以下: デスクトップナビ一式をドロワー（MobileMenu）へ収納する */
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .rightSection {
     display: none;
   }
 }

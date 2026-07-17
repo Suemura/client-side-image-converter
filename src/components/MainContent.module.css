@@ -7,3 +7,10 @@
   gap: 4px;
   padding: 20px 24px;
 }
+
+/* DESIGN.md「9. Responsive Behavior」: 768px 以下はページ余白を 16px に縮小 */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+}

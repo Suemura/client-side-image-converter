@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import styles from "./Header.module.css";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { Logo } from "./Logo";
+import { MobileMenu } from "./MobileMenu";
 import { Navigation } from "./Navigation";
 import { ThemeSwitch } from "./ThemeSwitch";
 
@@ -15,6 +16,7 @@ export const Header: React.FC = () => {
         <Logo />
         <h2 className={styles.title}>{t("header.title")}</h2>
       </div>
+      {/* デスクトップ用ナビ。768px 以下では非表示にし MobileMenu（ドロワー）へ収納する */}
       <div className={styles.rightSection}>
         <Navigation />
         <div className={styles.socialSection}>
@@ -38,6 +40,7 @@ export const Header: React.FC = () => {
           <LanguageSwitch />
         </div>
       </div>
+      <MobileMenu />
     </header>
   );
 };
