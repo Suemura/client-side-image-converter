@@ -13,6 +13,11 @@ import styles from "./ImageComparisonModal.module.css";
 interface ImageComparisonModalProps {
   result: ConversionResult;
   originalImageUrl: string;
+  /**
+   * 変換後画像の表示用 URL。<img> で直接表示できない形式（JXL）の
+   * プレビュー URL を渡す。未指定時は result.url を表示する
+   */
+  convertedImageUrl?: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -20,6 +25,7 @@ interface ImageComparisonModalProps {
 export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
   result,
   originalImageUrl,
+  convertedImageUrl,
   isOpen,
   onClose,
 }) => {
@@ -194,7 +200,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
           >
             {/* 変換後の画像（背景） */}
             <img
-              src={result.url}
+              src={convertedImageUrl ?? result.url}
               alt={`${result.filename} (converted)`}
               className={styles.backgroundImage}
               draggable={false}

@@ -15,6 +15,7 @@ import {
 import type { ConversionResult } from "../utils/imageConverter";
 import { calculateCompressionRatio } from "../utils/imageConverter";
 import type { CropResult } from "../utils/imageCropper";
+import { createJxlPreviewUrl } from "../utils/jxlPreview";
 import { Button } from "./Button";
 import { FileDetailModal } from "./FileDetailModal";
 import { HandoffSend } from "./HandoffSend";
@@ -52,6 +53,11 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   const [cropPreviewUrls, setCropPreviewUrls] = useState<
     Record<string, string>
   >({});
+  // JXL は Chrome / Firefox の <img> で表示できないため、WASM デコードで生成した
+  // PNG のプレビュー URL を結果ごとに保持する（キーは `${filename}-${index}`）
+  const [jxlPreviewUrls, setJxlPreviewUrls] = useState<Record<string, string>>(
+    {},
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   // File System Access API の feature detection（SSG hydration 差異を避けるため useEffect で判定）
   const [canSaveToFolder, setCanSaveToFolder] = useState(false);
@@ -120,6 +126,49 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
       }
     };
   }, [cropResults, isCropMode]);
+
+  // JXL 結果のプレビュー URL 生成（変換モードのみ。cropPreviewUrls と同じライフサイクル）。
+  // 生成失敗時は当該エントリを持たないままにし、<img> は元 URL のまま（プレビュー不可でも
+  // 変換結果自体には影響させない）
+  useEffect(() => {
+    if (!results || results.length === 0) {
+      setJxlPreviewUrls({});
+      return;
+    }
+    const jxlResults = results
+      .map((result, index) => ({ result, index }))
+      .filter(({ result }) => result.blob.type === "image/jxl");
+    if (jxlResults.length === 0) {
+      setJxlPreviewUrls({});
+      return;
+    }
+
+    let cancelled = false;
+    const urls: Record<string, string> = {};
+    (async () => {
+      // WASM デコードのため逐次実行し、CPU / メモリの同時圧迫を避ける
+      for (const { result, index } of jxlResults) {
+        try {
+          const url = await createJxlPreviewUrl(result.blob);
+          if (cancelled) {
+            URL.revokeObjectURL(url);
+            return;
+          }
+          urls[`${result.filename}-${index}`] = url;
+          setJxlPreviewUrls({ ...urls });
+        } catch (error) {
+          console.warn("Failed to create JXL preview:", error);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      for (const url of Object.values(urls)) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [results]);
 
   const handleDownloadSingle = useCallback((result: ConversionResult) => {
     downloadSingle(result);
@@ -444,11 +493,22 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                           name: result.filename,
                         })}
                       >
-                        <img
-                          src={result.url}
-                          alt={result.filename}
-                          className={styles.previewImageImg}
-                        />
+                        {result.blob.type === "image/jxl" &&
+                        !jxlPreviewUrls[`${result.filename}-${index}`] ? (
+                          // JXL のプレビュー生成中（または失敗時）のプレースホルダー
+                          <div className={styles.previewImagePlaceholder}>
+                            📷
+                          </div>
+                        ) : (
+                          <img
+                            src={
+                              jxlPreviewUrls[`${result.filename}-${index}`] ??
+                              result.url
+                            }
+                            alt={result.filename}
+                            className={styles.previewImageImg}
+                          />
+                        )}
                       </button>
 
                       {/* ファイル情報 */}
@@ -500,6 +560,11 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
           result={selectedResult}
           originalImageUrl={
             originalImageUrls[selectedResult.originalFilename] || ""
+          }
+          convertedImageUrl={
+            jxlPreviewUrls[
+              `${selectedResult.filename}-${resultsToShow.indexOf(selectedResult)}`
+            ]
           }
           isOpen={isModalOpen}
           onClose={handleCloseModal}

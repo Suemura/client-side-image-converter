@@ -39,8 +39,8 @@ import type { DecodeKind, WorkerRequest, WorkerResponse } from "./messages";
 const WORKER_RESPONSE_TIMEOUT_MS = 60_000;
 
 /**
- * 重量ジョブ（RAW デコード / AVIF エンコードを含む）用のウォッチドッグ（ミリ秒）。
- * RAW は数千万画素のフルデモザイク、AVIF は単一スレッド WASM エンコードのため、
+ * 重量ジョブ（RAW デコード / AVIF・JXL エンコードを含む）用のウォッチドッグ（ミリ秒）。
+ * RAW は数千万画素のフルデモザイク、AVIF / JXL は単一スレッド WASM エンコードのため、
  * 実カメラ画像では正常処理でも 60 秒を超えうる。通常タイムアウトのままだと
  * 「Worker を打ち切り → メインスレッドで同じ重量処理を最初から再実行（UI 凍結）」という
  * 最悪経路に入るため、ハング検知を犠牲にしない範囲で余裕を持たせる（Issue #101 動作確認）。
@@ -50,7 +50,7 @@ const WORKER_RESPONSE_TIMEOUT_HEAVY_MS = 300_000;
 /**
  * リクエスト内容に応じたウォッチドッグタイムアウトを返す（純粋ロジック・単体テスト対象）
  *
- * RAW 入力（重量デコード）または AVIF 出力（重量エンコード。optimize モードでは
+ * RAW 入力（重量デコード）または AVIF / JXL 出力（重量エンコード。optimize モードでは
  * format は無視されるため対象外）を含むジョブは重量ジョブとして延長する。
  */
 export const resolveWorkerTimeoutMs = (
@@ -58,7 +58,9 @@ export const resolveWorkerTimeoutMs = (
   options: ConversionOptions,
 ): number => {
   const heavyDecode = decodeKind === "raw";
-  const heavyEncode = options.mode !== "optimize" && options.format === "avif";
+  const heavyEncode =
+    options.mode !== "optimize" &&
+    (options.format === "avif" || options.format === "jxl");
   return heavyDecode || heavyEncode
     ? WORKER_RESPONSE_TIMEOUT_HEAVY_MS
     : WORKER_RESPONSE_TIMEOUT_MS;

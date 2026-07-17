@@ -91,6 +91,44 @@ test.describe("画像フォーマット変換", () => {
     expect(magicNumber.isAvif(buf)).toBe(true);
   });
 
+  test("PNG を JPEG XL に変換してダウンロードできる（プレビューは再デコード表示）", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(pngFile());
+
+    // ラジオの input は不可視のためラベルテキストをクリックする
+    await page.getByText("JPEG XL", { exact: true }).click();
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    // WASM エンコーダーの初回ロードがあるためタイムアウトを長めにとる
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // Chromium は <img> で JXL を表示できないため、@jsquash/jxl の decode による
+    // プレビュー用 PNG が生成・表示される（naturalWidth > 0 = デコード成功）
+    const preview = page.locator('img[alt="sample.jxl"]');
+    await expect(preview).toBeVisible({ timeout: 15_000 });
+    await expect
+      .poll(
+        () => preview.evaluate((img: HTMLImageElement) => img.naturalWidth),
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+
+    // 1 ファイル時は ZIP 化されず単一ファイルとしてダウンロードされる
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("sample.jxl");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isJxl(buf)).toBe(true);
+  });
+
   test("HEIC を JPEG に変換してダウンロードできる", async ({ page }) => {
     await page.goto("/convert/");
     await page.locator('input[type="file"]').setInputFiles(heicFile());
@@ -553,6 +591,38 @@ test.describe("画像フォーマット変換", () => {
     for (const name of names) {
       const buf = await zip.file(name)!.async("nodebuffer");
       expect(magicNumber.isAvif(buf)).toBe(true);
+    }
+  });
+
+  test("複数ファイルを一括で JPEG XL に変換できる（Worker で WASM エンコード）", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles([pngFile("one.png"), pngFile("two.png")]);
+
+    // ラジオの input は不可視のためラベルテキストをクリックする
+    await page.getByText("JPEG XL", { exact: true }).click();
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    // WASM エンコーダーの初回ロードがあるためタイムアウトを長めにとる
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+    const names = Object.keys(zip.files).sort();
+    expect(names).toEqual(["one.jxl", "two.jxl"]);
+    for (const name of names) {
+      const buf = await zip.file(name)!.async("nodebuffer");
+      expect(magicNumber.isJxl(buf)).toBe(true);
     }
   });
 

@@ -661,4 +661,9 @@ export const magicNumber = {
     buf.subarray(8, 12).toString("ascii") === "WEBP",
   // ISOBMFF コンテナの ftyp ボックス（オフセット 4-12 が "ftypavif"）
   isAvif: (buf: Buffer) => buf.subarray(4, 12).toString("ascii") === "ftypavif",
+  // JPEG XL は裸コードストリーム（FF 0A）と ISOBMFF コンテナ
+  // （12 バイトのシグネチャボックス 00 00 00 0C "JXL " 0D 0A 87 0A）の 2 形態がある
+  isJxl: (buf: Buffer) =>
+    (buf[0] === 0xff && buf[1] === 0x0a) ||
+    buf.subarray(4, 8).toString("ascii") === "JXL ",
 };

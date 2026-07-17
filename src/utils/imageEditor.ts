@@ -29,6 +29,7 @@ import {
   readExifTiffFromDataUrl,
 } from "./exifTransfer";
 import { renderOrientedImage } from "./imageCropper";
+import { encodeCanvasToJxlBlob } from "./jxlEncoder";
 import {
   type AdjustmentRenderer,
   applyAdjustmentsToCanvas,
@@ -86,6 +87,7 @@ const FORMAT_MIME: Record<ConversionFormat, string> = {
   png: "image/png",
   webp: "image/webp",
   avif: "image/avif",
+  jxl: "image/jxl",
 };
 
 /** 出力フォーマット指定と入力形式から、実際の出力フォーマットを解決する */
@@ -169,11 +171,13 @@ export const renderEdited = async (
   }
   encodeCtx.drawImage(adjustedCanvas, 0, 0);
 
-  // エンコード（AVIF のみ WASM、その他は Canvas.toBlob）
+  // エンコード（AVIF / JXL は WASM、その他は Canvas.toBlob）
   let blob =
     format === "avif"
       ? await encodeCanvasToAvifBlob(encodeCanvas, Math.round(quality * 100))
-      : await canvasToBlob(encodeCanvas, mime, quality);
+      : format === "jxl"
+        ? await encodeCanvasToJxlBlob(encodeCanvas, Math.round(quality * 100))
+        : await canvasToBlob(encodeCanvas, mime, quality);
 
   // EXIF 保持（出力が書き込み可能形式かつソースに読み取り可能な EXIF がある場合のみ）。
   // 向き・寸法はピクセルへ焼き込み済みのため Orientation を 1 に正規化し寸法タグを揃える（crop 経路と同じ）。

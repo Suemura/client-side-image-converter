@@ -9,6 +9,7 @@ import {
   type ConversionOptions,
   type ConversionResult,
   calculateTargetSize,
+  canPreserveExifForFormat,
   resolveFlattenBackground,
   searchQualityForTargetSize,
 } from "./conversionCore";
@@ -17,6 +18,7 @@ import { insertExifIntoBlob, readExifTiffFromDataUrl } from "./exifTransfer";
 import { isHeicFile, isRawFile, isTiffFile } from "./fileUtils";
 import { decodeHeicToCanvas } from "./heicDecoder";
 import { optimizeImage } from "./imageOptimizer";
+import { encodeCanvasToJxlBlob } from "./jxlEncoder";
 import { PNG_COMPRESSED_QUALITY_HINT, pngQualityStrategy } from "./pngQuality";
 import { decodeRawToCanvas } from "./rawDecoder";
 import { decodeTiffToCanvas } from "./tiffDecoder";
@@ -35,6 +37,7 @@ export type {
 } from "./conversionCore";
 export {
   calculateTargetSize,
+  canPreserveExifForFormat,
   FLATTEN_BACKGROUND_COLOR,
   resolveFlattenBackground,
   searchQualityForTargetSize,
@@ -127,7 +130,7 @@ export const convertImage = async (
           };
 
           // Exif データを出力形式（JPEG / PNG / WebP）に応じて Blob に挿入する
-          if (exifTiff && options.format !== "avif") {
+          if (exifTiff && canPreserveExifForFormat(options.format)) {
             insertExifIntoBlob(blob, exifTiff, options.format, width, height)
               .then(processBlob)
               .catch((error) => {
@@ -146,6 +149,11 @@ export const convertImage = async (
         } else if (options.format === "avif") {
           // AVIF は Canvas ネイティブ未対応のため WASM エンコーダーを使用
           encodeCanvasToAvifBlob(canvas, options.quality)
+            .then(handleBlob)
+            .catch(reject);
+        } else if (options.format === "jxl") {
+          // JPEG XL も Canvas ネイティブ未対応のため WASM エンコーダーを使用
+          encodeCanvasToJxlBlob(canvas, options.quality)
             .then(handleBlob)
             .catch(reject);
         } else {
@@ -227,10 +235,10 @@ export const convertImage = async (
       return;
     }
 
-    // EXIF 保持は AVIF 以外の出力（JPEG / PNG / WebP）で有効。
+    // EXIF 保持は書き込み対応形式（JPEG / PNG / WebP）への出力でのみ有効（AVIF / JXL は対象外）。
     // ソース側は JPEG / WebP / PNG から EXIF を読み取れる（readSourceExifTiff）
     const shouldPreserveExif =
-      options.preserveExif === true && options.format !== "avif";
+      options.preserveExif === true && canPreserveExifForFormat(options.format);
 
     const reader = new FileReader();
     // EXIF 読み取り（piexifjs の動的 import を含む）のため async ハンドラにする。

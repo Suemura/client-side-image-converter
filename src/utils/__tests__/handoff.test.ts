@@ -164,6 +164,13 @@ describe("resolveHandoffTargets", () => {
     ).toEqual([]);
   });
 
+  it("JXL 結果はどのツールも受理できないため候補なし（AVIF と同挙動）", () => {
+    expect(resolveHandoffTargets("convert", ["image/jxl"])).toEqual([]);
+    expect(
+      resolveHandoffTargets("convert", ["image/png", "image/jxl"]),
+    ).toEqual([]);
+  });
+
   it("TIFF は convert のみ受理するため crop からの送り先は convert になる", () => {
     const targets = resolveHandoffTargets("crop", ["image/tiff"]);
     expect(targets.map((tool) => tool.id)).toEqual(["convert"]);
