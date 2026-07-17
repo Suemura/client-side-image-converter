@@ -56,11 +56,20 @@ test.describe("Web Share Target", () => {
     await waitForServiceWorker(page);
 
     await postSharedImage(page, "shared.png");
+
+    // HandoffSend は mount 時に送り先ルートを prefetch する。prefetch 未完了のまま
+    // push すると高負荷時に MPA フォールバック（フルリロード）で in-memory ペイロードが
+    // 失われるため、/convert の RSC ペイロード取得完了を待ってからクリックする
+    const convertPrefetched = page.waitForResponse(
+      (res) => res.url().includes("/convert/__next"),
+      { timeout: 15_000 },
+    );
     await page.goto("/share/");
 
     // 受信 UI（件数とファイル名）
     await expect(page.getByText("1 件の画像を受け取りました")).toBeVisible();
     await expect(page.getByText("shared.png")).toBeVisible();
+    await convertPrefetched;
 
     // 変換ツールへ送出 → 共有シート起点の到着バナーとファイル取り込みを確認
     await page.getByRole("button", { name: "変換へ送る" }).click();
