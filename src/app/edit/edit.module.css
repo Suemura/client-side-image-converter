@@ -141,6 +141,16 @@
     grid-column: auto;
   }
 
+  /* 単一カラムではプレビューの追従（sticky）を無効化する。
+     max-height + overflow-y でボックス高がキャップされる一方、グリッド行トラックは
+     コンテンツ基準で確保されるため差分ぶん sticky が効き、プレビューが画面に固定されたまま
+     背後でスライダー類がスクロールされてしまう（デスクトップの 3 カラム前提の挙動） */
+  .columnCenter {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+
   .resultsSection {
     max-width: 600px;
     padding: 0 16px;
