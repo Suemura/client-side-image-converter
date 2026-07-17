@@ -13,7 +13,16 @@ export interface RawImageDataLike {
   data: Uint8Array | Uint16Array;
   width: number;
   height: number;
-  /** チャンネル数（3 = RGB / 4 = RGBA） */
+  /**
+   * チャンネル数（3 = RGB / 4 = RGBA）
+   *
+   * libraw-wasm の `imageData()` は LibRaw の `dcraw_make_mem_image()` のラッパーで、
+   * この API は四色フィルタセンサー（旧型機種の RGBG/CMYG 等）を含め、
+   * 常に colors=3（RGB）または 1（グレー）へ後処理して返す。
+   * そのため実運用で 4 が返ることは通常なく、下記の colors===4 分岐は
+   * 型定義上の可能性に対する防御的なフォールバックである
+   * （4番目のチャンネルが常に透過情報であることを保証するものではない）。
+   */
   colors: number;
   /** チャンネルあたりのビット数（8 または 16） */
   bits: number;
@@ -59,6 +68,7 @@ export const rawImageDataToRgba = (raw: RawImageDataLike): DecodedImage => {
     rgba[dst] = data[src] >> shift;
     rgba[dst + 1] = data[src + 1] >> shift;
     rgba[dst + 2] = data[src + 2] >> shift;
+    // colors===4 は通常発生しない防御的フォールバック（上記 RawImageDataLike#colors 参照）
     rgba[dst + 3] = colors === 4 ? data[src + 3] >> shift : 255;
   }
 
