@@ -111,18 +111,21 @@ const readJumbfEn = (jpeg: Uint8Array, segment: JpegSegment): number | null => {
 };
 
 /**
- * APP11 セグメントのペイロードが「ラベル c2pa の JUMBF スーパーボックス先頭」かを判定する。
- * 分割チェーンの後続セグメント（jumd を含まない）は false になるため、
- * 除去は En でグループ化して行う。
+ * APP11 セグメントのペイロードが JUMBF スーパーボックス先頭（jumd 記述ボックスを持つ）かを判定し、
+ * 先頭であれば記述ボックスのラベルを返す（先頭でなければ null）。
+ * 分割チェーンの後続セグメント（jumd を含まない）は null になる。
  */
-const isC2paJumbfHead = (jpeg: Uint8Array, segment: JpegSegment): boolean => {
+const readJumbfHeadLabel = (
+  jpeg: Uint8Array,
+  segment: JpegSegment,
+): string | null => {
   // CI(2) + En(2) + Z(4) + LBox(4) + "jumb"(4) + LBox(4) + "jumd"(4) + UUID(16) + toggles(1)
   const p = segment.start + 4;
-  if (segment.end - p < 2 + 2 + 4 + 8 + 8 + 16 + 1 + C2PA_LABEL.length + 1) {
-    return false;
+  if (segment.end - p < 2 + 2 + 4 + 8 + 8 + 16 + 1) {
+    return null;
   }
   if (ascii(jpeg, p + 12, 4) !== "jumb" || ascii(jpeg, p + 20, 4) !== "jumd") {
-    return false;
+    return null;
   }
   // 記述ボックスの toggles に続く NUL 終端ラベルを読む
   const labelStart = p + 24 + 16 + 1;
@@ -130,34 +133,52 @@ const isC2paJumbfHead = (jpeg: Uint8Array, segment: JpegSegment): boolean => {
   for (let i = labelStart; i < segment.end && jpeg[i] !== 0x00; i++) {
     label += String.fromCharCode(jpeg[i]);
   }
-  return label === C2PA_LABEL;
+  return label;
 };
 
-/** JPEG 内の C2PA を構成する APP11 セグメント一覧（無ければ空配列、不正 JPEG は null） */
+/**
+ * JPEG 内の C2PA を構成する APP11 セグメント一覧（無ければ空配列、不正 JPEG は null）。
+ *
+ * En 値だけでチェーンを同定すると、無関係な JUMBF（他規格）が偶然同じ En を
+ * 採番していた場合に誤って巻き込んで削除してしまう（En の一意性は仕様上の想定に過ぎず、
+ * 不正/悪意あるファイルでは保証されない）。そのため APP11 セグメントを出現順に走査し、
+ * 「直前に現れた JUMBF ヘッド（jumd を持つ先頭セグメント）のラベルと En」を現在のチェーンとして
+ * 引き継ぐ方式にする。ヘッドの無い継続セグメントは直前チェーンと En が一致する場合のみ
+ * そのチェーンに属するとみなし、ラベルが c2pa のチェーンに属するものだけを除去対象にする。
+ */
 const findJpegC2paSegments = (jpeg: Uint8Array): JpegSegment[] | null => {
   const segments = scanJpegSegments(jpeg);
   if (!segments) {
     return null;
   }
   const app11 = segments.filter((s) => s.marker === APP11_MARKER);
-  // ラベル c2pa の JUMBF 先頭セグメントから、除去対象の En 集合を決める
-  const c2paEns = new Set<number>();
+  const targets: JpegSegment[] = [];
+  let currentChainLabel: string | null = null;
+  let currentChainEn: number | null = null;
   for (const segment of app11) {
-    if (isC2paJumbfHead(jpeg, segment)) {
-      const en = readJumbfEn(jpeg, segment);
-      if (en !== null) {
-        c2paEns.add(en);
-      }
+    const en = readJumbfEn(jpeg, segment);
+    if (en === null) {
+      // JUMBF ペイロードでない APP11 はチェーンを継続させない
+      currentChainLabel = null;
+      currentChainEn = null;
+      continue;
+    }
+    const headLabel = readJumbfHeadLabel(jpeg, segment);
+    if (headLabel !== null) {
+      // 新しい JUMBF チェーンの先頭（同じ En の再利用があっても常にここでラベルを更新する）
+      currentChainLabel = headLabel;
+      currentChainEn = en;
+    } else if (currentChainEn !== en) {
+      // ヘッドの無い継続セグメントだが直前チェーンと En が不一致 → 帰属先不明のため対象外
+      currentChainLabel = null;
+      currentChainEn = null;
+      continue;
+    }
+    if (currentChainLabel === C2PA_LABEL) {
+      targets.push(segment);
     }
   }
-  if (c2paEns.size === 0) {
-    return [];
-  }
-  // 同一 En の分割チェーン全体（後続セグメント含む）を除去対象にする
-  return app11.filter((segment) => {
-    const en = readJumbfEn(jpeg, segment);
-    return en !== null && c2paEns.has(en);
-  });
+  return targets;
 };
 
 /** 指定範囲を取り除いた JPEG を再構築する */

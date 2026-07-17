@@ -186,6 +186,72 @@ describe("JPEG の C2PA 検出・除去", () => {
     expect([...removed]).toEqual([...withOther]);
   });
 
+  it("En を再利用する他 JUMBF チェーンが混在しても継続セグメントごと誤って削除しない", () => {
+    // JUMBF ヘッド（jumd を含む先頭セグメント）1 つ分の APP11 バイト列を組み立てる
+    const buildHeadSegment = (jumbf: Uint8Array, en: number): number[] => {
+      const payload = new Uint8Array(8 + jumbf.length);
+      payload[0] = 0x4a;
+      payload[1] = 0x50; // CI "JP"
+      payload[2] = (en >>> 8) & 0xff;
+      payload[3] = en & 0xff;
+      payload[7] = 0x01; // Z
+      payload.set(jumbf, 8);
+      const length = 2 + payload.length;
+      return [0xff, 0xeb, (length >>> 8) & 0xff, length & 0xff, ...payload];
+    };
+    // jumd を含まない継続セグメント（同じ En を引き継ぐ想定）の APP11 バイト列
+    const buildContinuationSegment = (en: number, data: number[]): number[] => {
+      const payload = [
+        0x4a,
+        0x50, // CI "JP"
+        (en >>> 8) & 0xff,
+        en & 0xff,
+        0x00,
+        0x00,
+        0x00,
+        0x02, // Z
+        ...data,
+      ];
+      const length = 2 + payload.length;
+      return [0xff, 0xeb, (length >>> 8) & 0xff, length & 0xff, ...payload];
+    };
+
+    const base = buildMinimalJpeg();
+    // 無関係な他規格 JUMBF（ラベル "other"）が En=1 を使い、継続セグメントも伴う
+    const otherHead = buildHeadSegment(buildDummyC2paJumbf("other"), 1);
+    const otherContinuation = buildContinuationSegment(1, [0x61, 0x62]);
+    // 直後に C2PA の JUMBF が同じ En=1 を再利用して現れる（不正/悪意あるファイルの想定）
+    const c2paHead = buildHeadSegment(buildDummyC2paJumbf(), 1);
+    const c2paContinuation = buildContinuationSegment(1, [0x63, 0x64]);
+    const inserted = [
+      ...otherHead,
+      ...otherContinuation,
+      ...c2paHead,
+      ...c2paContinuation,
+    ];
+
+    // SOS の直前（= APP0 の直後）にまとめて挿入する
+    const sosIndex = base.findIndex(
+      (_, i) => base[i] === 0xff && base[i + 1] === 0xda,
+    );
+    const chained = new Uint8Array(base.length + inserted.length);
+    chained.set(base.subarray(0, sosIndex), 0);
+    chained.set(inserted, sosIndex);
+    chained.set(base.subarray(sosIndex), sosIndex + inserted.length);
+
+    expect(detectC2pa(chained, "image/jpeg")).toBe(true);
+    const removed = removeC2pa(chained, "image/jpeg");
+    expect(detectC2pa(removed, "image/jpeg")).toBe(false);
+
+    // En=1 を共有していても、他 JUMBF（"other"）はヘッド・継続セグメントとも温存される
+    const preserved = [...otherHead, ...otherContinuation];
+    const expected = new Uint8Array(base.length + preserved.length);
+    expected.set(base.subarray(0, sosIndex), 0);
+    expected.set(preserved, sosIndex);
+    expected.set(base.subarray(sosIndex), sosIndex + preserved.length);
+    expect([...removed]).toEqual([...expected]);
+  });
+
   it("EXIF（APP1）は C2PA 除去後も残る", () => {
     const withExif = buildJpegWithExif();
     const withBoth = insertJpegC2pa(withExif, buildDummyC2paJumbf());

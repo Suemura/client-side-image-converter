@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { detectC2pa } from "../utils/c2paBinary";
 import type { C2paReadResult } from "../utils/c2paManager";
+import { mapWithConcurrency } from "../utils/concurrency";
 import {
   analyzeMetadata,
   type MetadataAnalysis,
@@ -10,6 +11,13 @@ import {
 /** GPS の処理方法: 削除 / 市区町村レベルに丸める */
 export type GpsMode = "remove" | "round";
 
+/**
+ * C2PA 読み取り（WASM デコード）の同時実行数。
+ * 大量バッチ（最大 200 件）に C2PA 埋め込みファイルが多数含まれても
+ * WASM リーダーが一斉並行実行されメモリ・CPU 負荷が急増しないよう小さめに固定する。
+ */
+const C2PA_READ_CONCURRENCY = 3;
+
 export interface UseMetadataManagerResult {
   analysis: MetadataAnalysis | null;
   isAnalyzing: boolean;
@@ -18,8 +26,13 @@ export interface UseMetadataManagerResult {
   gpsMode: GpsMode;
   progressCurrent: number;
   progressTotal: number;
-  /** C2PA（コンテンツ来歴）検出ファイルの読み取り結果（ファイル名 → 結果） */
-  c2paResults: Map<string, C2paReadResult>;
+  /**
+   * C2PA（コンテンツ来歴）検出ファイルの読み取り結果。
+   * File オブジェクト自体をキーにする（同名・同サイズのファイルが複数あっても
+   * File インスタンスは別物として区別されるため、file.name をキーにする場合に
+   * 起きる同名ファイルの上書き衝突を避けられる）
+   */
+  c2paResults: Map<File, C2paReadResult>;
   /** C2PA を除去対象にするか */
   removeC2pa: boolean;
   analyzeFiles: (files: File[]) => Promise<void>;
@@ -37,7 +50,7 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [gpsMode, setGpsMode] = useState<GpsMode>("remove");
-  const [c2paResults, setC2paResults] = useState<Map<string, C2paReadResult>>(
+  const [c2paResults, setC2paResults] = useState<Map<File, C2paReadResult>>(
     new Map(),
   );
   const [removeC2pa, setRemoveC2pa] = useState(false);
@@ -49,7 +62,7 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
   // c2pa-web（WASM 8MB 超）を含む c2paManager をロードしない。
   // 検出ゲートによりリモート参照のみの画像も c2pa-web に渡さない（外部通信なし）
   const analyzeC2pa = useCallback(
-    async (files: File[]): Promise<Map<string, C2paReadResult>> => {
+    async (files: File[]): Promise<Map<File, C2paReadResult>> => {
       const detected: File[] = [];
       for (const file of files) {
         try {
@@ -61,16 +74,24 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
           // 読み取り失敗は「C2PA なし」として扱う
         }
       }
-      const results = new Map<string, C2paReadResult>();
+      const results = new Map<File, C2paReadResult>();
       if (detected.length === 0) {
         return results;
       }
       const { readC2paSummary } = await import("../utils/c2paManager");
-      await Promise.all(
-        detected.map(async (file) => {
-          results.set(file.name, await readC2paSummary(file));
-        }),
+      // 同時実行数を制限して WASM リーダーの一斉並行実行によるメモリ・CPU 負荷急増を防ぐ
+      const settled = await mapWithConcurrency(
+        detected,
+        C2PA_READ_CONCURRENCY,
+        (file) => readC2paSummary(file),
       );
+      settled.forEach((result, index) => {
+        // readC2paSummary は内部で fail-closed するため常に ok のはずだが、
+        // 万一 reject した場合は「結果なし」として扱う（対象ファイルは検出済みのまま残る）
+        if (result.ok) {
+          results.set(detected[index], result.value);
+        }
+      });
       return results;
     },
     [],

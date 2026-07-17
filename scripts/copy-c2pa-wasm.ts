@@ -21,7 +21,21 @@ const dest = path.join(destDir, "c2pa_bg.wasm");
 
 async function main(): Promise<void> {
   await mkdir(destDir, { recursive: true });
-  await copyFile(source, dest);
+  try {
+    await copyFile(source, dest);
+  } catch (error) {
+    // @contentauth/c2pa-web は 0.x（プレリリース）のため、dist/ 配下の内部構造は
+    // バージョンアップ（Dependabot 更新含む）で変わる可能性がある。素の ENOENT だと
+    // 原因特定に時間がかかるため、想定原因を明示したメッセージを添える
+    console.error(
+      `[copy-c2pa-wasm] コピーに失敗しました: ${source} -> ${dest}\n` +
+        "@contentauth/c2pa-web のバージョンアップにより WASM の配置パス " +
+        "（node_modules/@contentauth/c2pa-web/dist/resources/c2pa_bg.wasm）が" +
+        "変わった可能性があります。node_modules 内の実際のパスを確認し、" +
+        "変わっていれば本スクリプトの source を更新してください。",
+    );
+    throw error;
+  }
   console.log("[copy-c2pa-wasm] c2pa_bg.wasm -> public/c2pa/");
 }
 

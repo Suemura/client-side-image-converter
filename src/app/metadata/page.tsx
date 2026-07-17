@@ -388,7 +388,7 @@ export default function MetadataPage() {
                     {c2paResults.size > 0 && (
                       <ProvenanceSection
                         entries={[...c2paResults.entries()].sort((a, b) =>
-                          a[0].localeCompare(b[0]),
+                          a[0].name.localeCompare(b[0].name),
                         )}
                         removeC2pa={removeC2pa}
                         onToggleRemoveC2pa={setRemoveC2pa}

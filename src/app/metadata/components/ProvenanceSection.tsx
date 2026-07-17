@@ -5,8 +5,12 @@ import type { C2paSignatureState } from "../../../utils/c2paSummary";
 import styles from "./ProvenanceSection.module.css";
 
 interface ProvenanceSectionProps {
-  /** C2PA 検出ファイルの読み取り結果（表示順はファイル名順） */
-  entries: [string, C2paReadResult][];
+  /**
+   * C2PA 検出ファイルの読み取り結果（表示順はファイル名順）。
+   * File オブジェクト自体をキーにすることで、同名ファイルが複数あっても
+   * 結果が上書きされず個別に表示される
+   */
+  entries: [File, C2paReadResult][];
   /** C2PA を除去対象にするか */
   removeC2pa: boolean;
   onToggleRemoveC2pa: (remove: boolean) => void;
@@ -49,9 +53,9 @@ export const ProvenanceSection: React.FC<ProvenanceSectionProps> = ({
       <p className={styles.description}>{t("metadata.c2pa.description")}</p>
 
       <div className={styles.fileList}>
-        {entries.map(([fileName, result]) => (
-          <div key={fileName} className={styles.fileCard}>
-            <p className={styles.fileName}>{fileName}</p>
+        {entries.map(([file, result], index) => (
+          <div key={`${file.name}-${index}`} className={styles.fileCard}>
+            <p className={styles.fileName}>{file.name}</p>
             {result.status === "unreadable" ? (
               <p className={styles.unreadable}>
                 {t("metadata.c2pa.unreadable")}
