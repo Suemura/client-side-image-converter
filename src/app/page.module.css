@@ -125,6 +125,10 @@
   .container {
     padding: 16px;
     gap: 24px;
+    /* 親（MainContent）が flex + justify-content: center のため、fit-content のままだと
+       内容の最大幅で横オーバーフローする。全幅に固定して内部で折り返させる */
+    width: 100%;
+    min-width: 0;
   }
 
   .buttonContainer {

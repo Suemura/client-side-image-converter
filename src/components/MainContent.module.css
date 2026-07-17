@@ -8,9 +8,13 @@
   padding: 20px 24px;
 }
 
-/* DESIGN.md「9. Responsive Behavior」: 768px 以下はページ余白を 16px に縮小 */
+/* DESIGN.md「9. Responsive Behavior」: 768px 以下はページ余白を 16px に縮小し、
+   横並びの子セクション（/convert のアップロード + 設定パネル）を縦積みにする */
 @media (max-width: 768px) {
   .container {
     padding: 16px;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 16px;
   }
 }
