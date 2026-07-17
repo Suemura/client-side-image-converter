@@ -4,6 +4,10 @@ import { useTranslation } from "react-i18next";
 import { downloadMultiple, downloadSingle } from "../utils/fileDownloader";
 import { formatFileSize, truncateFileName } from "../utils/fileName";
 import {
+  isFolderSaveSupported,
+  saveResultsToFolder,
+} from "../utils/folderExport";
+import {
   conversionResultsToFiles,
   cropResultsToFiles,
   type ToolId,
@@ -49,6 +53,16 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     Record<string, string>
   >({});
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // File System Access API の feature detection（SSG hydration 差異を避けるため useEffect で判定）
+  const [canSaveToFolder, setCanSaveToFolder] = useState(false);
+  const [isSavingToFolder, setIsSavingToFolder] = useState(false);
+  const [folderSaveMessage, setFolderSaveMessage] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    setCanSaveToFolder(isFolderSaveSupported());
+  }, []);
 
   // シンプルな条件チェック
   const isConversionMode = results && results.length > 0;
@@ -134,6 +148,38 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
       setIsDownloading(false);
     }
   }, [results, cropResults, isCropMode, isDownloading, t]);
+
+  // 選択したローカルフォルダへ結果を直接書き込む（ZIP を経由しない）
+  const handleSaveToFolder = useCallback(async () => {
+    if (isSavingToFolder) return;
+
+    setIsSavingToFolder(true);
+    setFolderSaveMessage(null);
+    try {
+      const targets = isCropMode && cropResults ? cropResults : (results ?? []);
+      const outcome = await saveResultsToFolder(targets);
+      if (outcome.status === "saved") {
+        setFolderSaveMessage(
+          t("results.savedToFolder", { count: outcome.writtenCount }),
+        );
+      } else if (outcome.status === "no-entries") {
+        setFolderSaveMessage(t("results.noEntriesToSave"));
+      } else if (outcome.status === "error") {
+        setFolderSaveMessage(
+          t("results.saveToFolderError", {
+            written: outcome.writtenCount,
+            total: outcome.totalCount,
+          }),
+        );
+      }
+      // cancelled（picker のユーザーキャンセル）は何も表示しない
+    } catch (error) {
+      console.error("Folder save error:", error);
+      setFolderSaveMessage(t("results.saveToFolderFailed"));
+    } finally {
+      setIsSavingToFolder(false);
+    }
+  }, [results, cropResults, isCropMode, isSavingToFolder, t]);
 
   const handleImageClick = useCallback((result: ConversionResult) => {
     setSelectedResult(result);
@@ -244,10 +290,28 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
         >
           {isDownloading ? t("results.creating") : t("results.downloadZip")}
         </Button>
+        {canSaveToFolder && (
+          <Button
+            variant="secondary"
+            onClick={handleSaveToFolder}
+            disabled={isSavingToFolder}
+          >
+            {isSavingToFolder
+              ? t("results.savingToFolder")
+              : t("results.saveToFolder")}
+          </Button>
+        )}
         <Button variant="secondary" onClick={onClear}>
           {t("results.clear")}
         </Button>
       </div>
+
+      {/* フォルダ保存の完了 / 失敗フィードバック */}
+      {folderSaveMessage && (
+        <p className={styles.folderSaveMessage} role="status">
+          {folderSaveMessage}
+        </p>
+      )}
 
       {/* ハンドオフ送出コントロール（結果をダウンロードせず次のツールへ） */}
       {handoffOrigin && (
