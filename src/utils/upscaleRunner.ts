@@ -109,6 +109,9 @@ const runWithWorker = (
     { type: "module" },
   );
   let cancelled = false;
+  // 実行中ジョブの応答待ちを外から解決するフック。terminate すると Worker からの
+  // 応答は二度と来ないため、cancel() はこれを使って待ちを即座に打ち切る
+  let resolveCurrentAsCancelled: (() => void) | null = null;
 
   const promise = (async (): Promise<UpscaleBatchResult> => {
     const results: CropResult[] = [];
@@ -123,6 +126,18 @@ const runWithWorker = (
         const response = await new Promise<
           Extract<UpscaleWorkerEvent, { type: "result" }>
         >((resolve, reject) => {
+          resolveCurrentAsCancelled = () =>
+            resolve({
+              type: "result",
+              id: i,
+              ok: false,
+              cancelled: true,
+              error: "cancelled",
+            });
+          if (cancelled) {
+            resolveCurrentAsCancelled();
+            return;
+          }
           worker.onmessage = (event: MessageEvent<UpscaleWorkerEvent>) => {
             const message = event.data;
             if (message.type === "download") {
@@ -154,6 +169,7 @@ const runWithWorker = (
           };
           worker.postMessage(req, [buffer]);
         });
+        resolveCurrentAsCancelled = null;
 
         if (response.ok) {
           results.push(
@@ -186,6 +202,8 @@ const runWithWorker = (
         // terminate 済み等は無視する
       }
       worker.terminate();
+      // terminate 後は Worker からの応答が来ないため、応答待ちをここで打ち切る
+      resolveCurrentAsCancelled?.();
     },
   };
 };
