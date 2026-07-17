@@ -13,7 +13,11 @@ const DEFAULT_JXL_QUALITY = 90;
  * 品質値を UI と同じ 1-100 の整数に正規化する
  *
  * @jsquash/jxl 自体は 0-100 を受け付けるが、下限は UI 側のクランプ
- * （ConversionSettings.tsx の 1-100）に合わせて 1 とする
+ * （ConversionSettings.tsx の 1-100）に合わせて 1 とする。
+ *
+ * 内部的には libjxl の butteraugli distance スケールへ変換されるため、
+ * JPEG/WebP の quality と圧縮率カーブの体感が一致するわけではない点に注意
+ * （高品質域の挙動が JPEG/WebP と異なる場合がある）。
  */
 export const normalizeJxlQuality = (quality: number): number => {
   if (!Number.isFinite(quality)) {
