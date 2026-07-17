@@ -7,7 +7,10 @@ import { HandoffSend } from "../../components/HandoffSend";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
-import { filterValidFiles } from "../../utils/fileUtils";
+import {
+  filterValidFiles,
+  resolveEffectiveMimeType,
+} from "../../utils/fileUtils";
 import { resolveShareAcceptTypes } from "../../utils/handoff";
 import { readSharedPayload } from "../../utils/shareTarget";
 import styles from "./share.module.css";
@@ -19,7 +22,7 @@ const SHARE_ACCEPT_TYPES = resolveShareAcceptTypes();
 type ShareState =
   | { status: "loading" }
   | { status: "unsupported" }
-  | { status: "empty" }
+  | { status: "empty"; skippedCount: number }
   | { status: "received"; files: File[]; skippedCount: number };
 
 /**
@@ -51,7 +54,7 @@ export default function SharePage() {
           ? filterValidFiles(shared, SHARE_ACCEPT_TYPES)
           : [];
         if (!shared || valid.length === 0) {
-          setState({ status: "empty" });
+          setState({ status: "empty", skippedCount: shared?.length ?? 0 });
           return;
         }
         setState({
@@ -61,14 +64,18 @@ export default function SharePage() {
         });
       } catch {
         // Cache Storage へのアクセス自体に失敗する環境ではペイロードなし扱いにする
-        setState({ status: "empty" });
+        setState({ status: "empty", skippedCount: 0 });
       }
     })();
   }, []);
 
+  // 送り先候補（resolveHandoffTargets）は MIME の完全一致で判定するため、拡張子
+  // フォールバックで受理した HEIC/TIFF 等（file.type が空/汎用）はここで実効 MIME に
+  // 解決してから渡す。生の file.type のままだと import フィルタ（filterValidFiles）とは
+  // 通ったのに送り先候補が 0 件になるデッドエンドが起きうる
   const mimeTypes =
     state.status === "received"
-      ? [...new Set(state.files.map((file) => file.type))]
+      ? [...new Set(state.files.map((file) => resolveEffectiveMimeType(file)))]
       : [];
 
   return (
@@ -86,6 +93,11 @@ export default function SharePage() {
           {state.status === "empty" && (
             <div className={styles.stateContainer}>
               <p className={styles.stateText}>{t("share.empty")}</p>
+              {state.skippedCount > 0 && (
+                <p className={styles.hintText}>
+                  {t("handoff.skipped", { count: state.skippedCount })}
+                </p>
+              )}
               <p className={styles.hintText}>{t("share.emptyHint")}</p>
               <Link href="/" className={styles.homeLink}>
                 {t("share.goHome")}

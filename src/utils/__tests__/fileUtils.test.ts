@@ -22,6 +22,7 @@ import {
   isImageFile,
   isTiffFile,
   isUnknownMimeType,
+  resolveEffectiveMimeType,
   shouldClearLimitWarningOnDecrease,
 } from "../fileUtils";
 
@@ -403,6 +404,45 @@ describe("isAcceptedFileType (TIFF フォールバック)", () => {
         "image/png",
       ]),
     ).toBe(false);
+  });
+});
+
+describe("resolveEffectiveMimeType", () => {
+  it("MIME が特定できる場合はそのまま返す", () => {
+    expect(resolveEffectiveMimeType(createFile("a.png", 10, "image/png"))).toBe(
+      "image/png",
+    );
+  });
+
+  it("MIME が空/汎用の HEIC/HEIF は拡張子から実効 MIME を解決する", () => {
+    expect(resolveEffectiveMimeType(createFile("photo.heic", 10, ""))).toBe(
+      "image/heic",
+    );
+    expect(
+      resolveEffectiveMimeType(
+        createFile("photo.heif", 10, "application/octet-stream"),
+      ),
+    ).toBe("image/heif");
+  });
+
+  it("MIME が空/汎用の TIFF は image/tiff に解決する", () => {
+    expect(resolveEffectiveMimeType(createFile("scan.tif", 10, ""))).toBe(
+      "image/tiff",
+    );
+    expect(
+      resolveEffectiveMimeType(
+        createFile("scan.tiff", 10, "application/octet-stream"),
+      ),
+    ).toBe("image/tiff");
+  });
+
+  it("拡張子でも解決できない場合は file.type をそのまま返す", () => {
+    expect(resolveEffectiveMimeType(createFile("note.txt", 10, ""))).toBe("");
+    expect(
+      resolveEffectiveMimeType(
+        createFile("note.txt", 10, "application/octet-stream"),
+      ),
+    ).toBe("application/octet-stream");
   });
 });
 

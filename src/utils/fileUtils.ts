@@ -269,6 +269,30 @@ export const isAcceptedFileType = (
 };
 
 /**
+ * ファイルの実効 MIME タイプを解決する。
+ * file.type が特定できない（空文字 / application/octet-stream）場合は、
+ * 拡張子（FORMAT_EXTENSION_FALLBACKS）から実際の形式を推定して返す。
+ * isAcceptedFileType の拡張子フォールバック判定と整合させることで、
+ * 「拡張子フォールバックで受理はしたが、生の file.type を使う後続処理（送り先候補の
+ * 算出など）とは食い違う」乖離を防ぐ。
+ * @param file - 対象ファイル
+ * @returns 実効 MIME タイプ（推定できない場合は file.type をそのまま返す）
+ */
+export const resolveEffectiveMimeType = (file: File): string => {
+  if (!isUnknownMimeType(file)) {
+    return file.type;
+  }
+  const extension = getFileExtension(file.name).toLowerCase();
+  for (const { mimeTypes, extensions } of FORMAT_EXTENSION_FALLBACKS) {
+    const index = extensions.indexOf(extension);
+    if (index !== -1) {
+      return mimeTypes[index] ?? mimeTypes[0];
+    }
+  }
+  return file.type;
+};
+
+/**
  * ファイル配列をフィルタリングして有効なファイルのみを返す
  * @param files - フィルタリングするファイル配列
  * @param acceptedTypes - 許可されたMIMEタイプの配列
