@@ -56,3 +56,6 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# C2PA WASM（predev / prebuild で node_modules からコピーされる）
+/public/c2pa/

@@ -1,0 +1,168 @@
+.container {
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--foreground);
+  margin: 0 0 8px;
+}
+
+.description {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  margin: 0 0 12px;
+}
+
+.fileList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.fileCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+}
+
+.fileName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+
+.unreadable {
+  font-size: 14px;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.signatureBadge,
+.aiBadge {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid;
+}
+
+.signatureValid {
+  color: var(--success);
+  background: var(--success-soft);
+  border-color: var(--success);
+}
+
+.signatureInvalid {
+  color: var(--error);
+  background: var(--error-soft);
+  border-color: var(--error);
+}
+
+.signatureUnknown {
+  color: var(--muted-foreground);
+  background: var(--surface-muted);
+  border-color: var(--border);
+}
+
+.aiBadge {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.details {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detailRow {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.detailRow dt {
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.detailRow dd {
+  color: var(--foreground);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  margin-top: 8px;
+}
+
+.actionsTitle {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  margin: 0 0 4px;
+}
+
+.actionsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.actionItem {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--foreground);
+  font-family: monospace;
+}
+
+.removeLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.removeCheckbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.removeCheckbox:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.removeHelp {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  margin: 4px 0 0 24px;
+}

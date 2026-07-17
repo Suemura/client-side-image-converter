@@ -20,7 +20,9 @@
   ],
   "private": false,
   "scripts": {
+    "predev": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/copy-c2pa-wasm.ts",
     "dev": "next dev --turbopack",
+    "prebuild": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/copy-c2pa-wasm.ts",
     "build": "next build --webpack",
     "postbuild": "next-sitemap && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generate-sw.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generate-headers.ts",
     "start": "next start",
@@ -35,6 +37,7 @@
     "preview": "wrangler pages dev out"
   },
   "dependencies": {
+    "@contentauth/c2pa-web": "^0.12.2",
     "@jsquash/avif": "^2.1.1",
     "@jsquash/jpeg": "^1.6.0",
     "@jsquash/oxipng": "^2.3.0",

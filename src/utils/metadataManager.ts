@@ -1,3 +1,4 @@
+import { removeC2pa } from "./c2paBinary";
 import {
   buildSyntheticJpegFromTiff,
   extractPngExif,
@@ -35,6 +36,12 @@ export interface RemoveMetadataOptions {
    * piexifjs を使う JPEG のみ有効（その他の形式は Canvas 全削除のため無効）
    */
   roundGpsInsteadOfRemove?: boolean;
+  /**
+   * true の場合、C2PA マニフェスト（コンテンツ来歴）を除去する（Issue #104）。
+   * EXIF タグが未選択なら再エンコードなしの純バイナリ除去（ロスレス）になる。
+   * JPEG の選択的削除と併用した場合は piexif 処理後のバイナリへ適用する
+   */
+  removeC2pa?: boolean;
 }
 
 /**
@@ -374,6 +381,16 @@ export const analyzeMetadata = async (
 };
 
 /**
+ * ファイルの C2PA マニフェストを再エンコードなしで除去する（ロスレス。画素不変）。
+ * C2PA が無い・非対応形式の場合は同内容の File を返す
+ */
+const removeC2paFromFile = async (file: File): Promise<File> => {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const cleaned = removeC2pa(bytes, file.type);
+  return new File([cleaned], file.name, { type: file.type });
+};
+
+/**
  * 指定されたタグを画像から削除する
  * piexifjsを使用したEXIFデータの選択的削除
  */
@@ -382,6 +399,12 @@ export const removeMetadataFromImage = async (
   tagsToRemove: string[],
   options?: RemoveMetadataOptions,
 ): Promise<File> => {
+  // EXIF タグ未選択で C2PA 除去のみの場合は、全形式とも再エンコードなしの
+  // 純バイナリ除去で完結する（Canvas 経路を通さないため画質劣化ゼロ）
+  if (tagsToRemove.length === 0 && options?.removeC2pa) {
+    return removeC2paFromFile(file);
+  }
+
   return new Promise((resolve, reject) => {
     if (tagsToRemove.length === 0) {
       resolve(file);
@@ -390,7 +413,8 @@ export const removeMetadataFromImage = async (
 
     // JPEGファイルのみ対応
     if (!file.type.includes("jpeg") && !file.type.includes("jpg")) {
-      // JPEG以外はCanvas経由で全削除（GPS 丸めは piexif 経路のみのため非対応）
+      // JPEG以外はCanvas経由で全削除（GPS 丸めは piexif 経路のみのため非対応。
+      // 再エンコードにより C2PA セグメントも残らない）
       removeAllMetadataWithCanvas(file).then(resolve).catch(reject);
       return;
     }
@@ -442,6 +466,12 @@ export const removeMetadataFromImage = async (
           type: file.type,
         });
 
+        // piexif は APP1（EXIF）のみを差し替えるため、C2PA（APP11）の除去は
+        // 処理後のバイナリへ別途適用する
+        if (options?.removeC2pa) {
+          removeC2paFromFile(modifiedFile).then(resolve).catch(reject);
+          return;
+        }
         resolve(modifiedFile);
       } catch (error) {
         console.error("EXIF編集エラー:", error);

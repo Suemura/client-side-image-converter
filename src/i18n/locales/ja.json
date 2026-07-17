@@ -364,7 +364,24 @@
     },
     "selectRiskTags": "リスクタグを選択",
     "clearSelection": "選択クリア",
-    "progressFiles": "{{current}} / {{total}} ファイル"
+    "progressFiles": "{{current}} / {{total}} ファイル",
+    "c2pa": {
+      "title": "コンテンツ来歴（C2PA / Content Credentials）",
+      "description": "この画像には C2PA のコンテンツ来歴が埋め込まれています。発行者・生成ツール・編集履歴と署名の検証結果を確認できます（検証はブラウザ内で完結します）。",
+      "issuer": "発行者",
+      "claimGenerator": "生成ツール",
+      "signedAt": "署名日時",
+      "aiGenerated": "AI 生成",
+      "actions": "編集履歴",
+      "signature": {
+        "valid": "署名は有効",
+        "invalid": "署名は無効",
+        "unknown": "署名を検証できません"
+      },
+      "unreadable": "来歴データを解析できませんでした（破損または未対応の形式。除去は可能です）",
+      "removeLabel": "コンテンツ来歴（C2PA）を削除する",
+      "removeHelp": "再エンコードせずに来歴データだけを取り除きます（画質は変化しません）。EXIF タグを選択していない場合も単独で実行できます。"
+    }
   },
   "footer": {
     "privacyMessage": "すべての画像処理はお使いのデバイス内で完結し、サーバーへのアップロードは一切行いません。",
