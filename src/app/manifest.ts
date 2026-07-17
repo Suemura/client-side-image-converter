@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
+import { resolveShareAcceptTypes } from "../utils/handoff";
 import { SITE_NAME } from "../utils/pageMetadata";
+import { buildShareTargetManifestEntry } from "../utils/shareTarget";
 
 // PWA の Web App Manifest。Next が /manifest.webmanifest として静的出力し、
 // 各ページの <head> に <link rel="manifest"> を自動注入する。
@@ -38,5 +40,9 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
+    // スマホの共有シートから画像を受け取る（Issue #105）。POST はサーバーでは受けず
+    // Service Worker が intercept する（scripts/sw-template.js）。受理 MIME は
+    // 受け取り可能ツールの和集合（どのツールにも渡せない形式を共有シートに出さない）
+    share_target: buildShareTargetManifestEntry(resolveShareAcceptTypes()),
   };
 }

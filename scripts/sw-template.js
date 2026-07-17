@@ -11,9 +11,16 @@
 // - activate: 現行バージョン以外の古いキャッシュを削除し、clients.claim で初回訪問タブも制御下に置く
 //   （skipWaiting は付けない。セッション中の突然のアセット差し替えを防ぎ、更新は次回起動時に反映）
 // - fetch: ハッシュ付きアセットは cache-first。ナビゲーションは cache → network → キャッシュ済み "/" にフォールバック
+// - share_target: 静的エクスポートは POST を受けられないため、共有シートからの POST を
+//   intercept して multipart ボディを一時キャッシュへ保管し、受け口ページへ 303 リダイレクトする
+//   （Issue #105。定数は src/utils/shareTarget.ts から注入される）
 
 const CACHE_NAME = "__CACHE_NAME__";
 const PRECACHE_URLS = __PRECACHE_URLS__;
+const SHARE_TARGET_ACTION = "__SHARE_TARGET_ACTION__";
+const SHARE_CACHE_NAME = "__SHARE_CACHE_NAME__";
+const SHARE_PAYLOAD_URL = "__SHARE_PAYLOAD_URL__";
+const SHARE_RECEIVE_PATH = "__SHARE_RECEIVE_PATH__";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -51,10 +58,41 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+  const url = new URL(request.url);
 
-  // GET かつ同一オリジンのみ対象（外部リクエストや POST 等は素通し）
+  // 同一オリジンのみ対象（外部リクエストは素通し）
+  if (url.origin !== self.location.origin) return;
+
+  // 共有シート（share_target）の POST を intercept する。multipart ボディを
+  // 一時キャッシュへ保管し終えてから受け口ページへ 303 を返す（waitUntil での
+  // 並行保存は、遷移先ページの読み取りが保存前に走るレースがあるため使わない）
+  if (request.method === "POST" && url.pathname === SHARE_TARGET_ACTION) {
+    event.respondWith(
+      (async () => {
+        try {
+          const cache = await caches.open(SHARE_CACHE_NAME);
+          await cache.put(
+            SHARE_PAYLOAD_URL,
+            new Response(await request.arrayBuffer(), {
+              headers: {
+                // multipart の boundary を含む Content-Type を保持する
+                // （欠けると受け口ページの formData() がパースできない）
+                "content-type": request.headers.get("content-type") ?? "",
+              },
+            }),
+          );
+        } catch (error) {
+          // 保管に失敗しても受け口ページへは遷移させる（空状態が表示される）
+          console.warn("[sw] 共有ペイロードを保管できませんでした", error);
+        }
+        return Response.redirect(SHARE_RECEIVE_PATH, 303);
+      })(),
+    );
+    return;
+  }
+
+  // 以降は GET のみ対象（その他のメソッドは素通し）
   if (request.method !== "GET") return;
-  if (new URL(request.url).origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
