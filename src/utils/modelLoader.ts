@@ -19,8 +19,16 @@ export const MODEL_CACHE_NAME = "wic-model-cache";
 /** ort ランタイムアセットの配置ディレクトリ（copy-ort-assets.ts の出力先） */
 export const ORT_ASSETS_BASE_PATH = "/ort/";
 
+/**
+ * 超解像モデルのバージョン識別子。
+ * モデルファイルを差し替える際はここを上げる（`wic-model-cache` は固定名で
+ * デプロイをまたいで生存するため、クエリを変えないと古いバイナリが
+ * 既存ユーザーのキャッシュに残り続けてしまう）。
+ */
+const UPSCALE_MODEL_VERSION = "1";
+
 /** 超解像モデルの配信 URL（public/models/ に同梱。出所は public/models/CREDITS.md） */
-export const UPSCALE_MODEL_URL = "/models/realesr-general-x4v3.onnx";
+export const UPSCALE_MODEL_URL = `/models/realesr-general-x4v3.onnx?v=${UPSCALE_MODEL_VERSION}`;
 
 /** copy-ort-assets.ts が生成する分割マニフェストの形 */
 export interface OrtAssetsManifest {

@@ -57,8 +57,12 @@ export const computeTileGrid = (
   if (width <= 0 || height <= 0) {
     return [];
   }
-  if (tileSize <= overlap) {
-    throw new Error("tileSize must be greater than overlap");
+  if (tileSize <= overlap * 2) {
+    // overlap がタイル寸法の半分以上だと、隣接タイル両側のフェザーランプが
+    // 出力中央で重なり合い、重みが不当に低下し得る（正規化はされるため
+    // 実害はないが、将来 tileSize / overlap を可変にする際の不変条件として
+    // ここで弾いておく）
+    throw new Error("tileSize must be greater than twice the overlap");
   }
   const stride = tileSize - overlap;
   const positions = (length: number): number[] => {

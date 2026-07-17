@@ -138,6 +138,14 @@ const runWithWorker = (
             resolveCurrentAsCancelled();
             return;
           }
+          const req: Extract<UpscaleWorkerRequest, { type: "upscale" }> = {
+            type: "upscale",
+            id: i,
+            buffer,
+            fileType: file.type,
+            scale: options.scale,
+            preserveExif: options.preserveExif,
+          };
           worker.onmessage = (event: MessageEvent<UpscaleWorkerEvent>) => {
             const message = event.data;
             if (message.type === "download") {
@@ -158,14 +166,6 @@ const runWithWorker = (
           };
           worker.onerror = (event) => {
             reject(new Error(event.message || "Worker error"));
-          };
-          const req: Extract<UpscaleWorkerRequest, { type: "upscale" }> = {
-            type: "upscale",
-            id: i,
-            buffer,
-            fileType: file.type,
-            scale: options.scale,
-            preserveExif: options.preserveExif,
           };
           worker.postMessage(req, [buffer]);
         });
