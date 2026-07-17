@@ -66,7 +66,19 @@ self.addEventListener("fetch", (event) => {
   // 共有シート（share_target）の POST を intercept する。multipart ボディを
   // 一時キャッシュへ保管し終えてから受け口ページへ 303 を返す（waitUntil での
   // 並行保存は、遷移先ページの読み取りが保存前に走るレースがあるため使わない）
-  if (request.method === "POST" && url.pathname === SHARE_TARGET_ACTION) {
+  //
+  // ハードニング: リクエスト URL が同一オリジンというだけでは発火元を問わないため、
+  // 悪意あるページの <form action="<本アプリ>/share-target" method="post"> でも
+  // ペイロードを注入できてしまう。Sec-Fetch-Site が "cross-site" のときだけ確実に
+  // 危険（他サイト起点）と判定できるので intercept せず素通しする（静的エクスポートは
+  // POST を処理できないため 405 相当がそのまま返る）。same-origin / same-site / none
+  // （ヘッダー自体が未送出の非対応ブラウザを含む）は共有シート本来の遷移でも
+  // 取り得る値なので許容する。
+  if (
+    request.method === "POST" &&
+    url.pathname === SHARE_TARGET_ACTION &&
+    request.headers.get("sec-fetch-site") !== "cross-site"
+  ) {
     event.respondWith(
       (async () => {
         try {
