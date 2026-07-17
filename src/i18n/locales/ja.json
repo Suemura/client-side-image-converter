@@ -7,6 +7,13 @@
     "title": "Client-Side Image Converter",
     "github": "GitHub"
   },
+  "mobileMenu": {
+    "title": "メニュー",
+    "open": "メニューを開く",
+    "close": "閉じる",
+    "theme": "テーマ",
+    "language": "言語"
+  },
   "navigation": {
     "top": "トップ",
     "crop": "トリミング",

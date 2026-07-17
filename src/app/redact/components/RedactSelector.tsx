@@ -191,7 +191,7 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
       : null;
 
   const getRelativePosition = useCallback(
-    (event: React.MouseEvent | MouseEvent) => {
+    (event: React.PointerEvent | PointerEvent) => {
       const canvas = canvasRef.current;
       if (!canvas) {
         return { x: 0, y: 0 };
@@ -202,9 +202,9 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
     [],
   );
 
-  // 空き領域のドラッグ開始 = 新規矩形の作成
+  // 空き領域のドラッグ開始 = 新規矩形の作成（Pointer Events でマウス / タッチ / ペン共通）
   const handleCreateStart = useCallback(
-    (event: React.MouseEvent) => {
+    (event: React.PointerEvent) => {
       if (event.button !== 0) {
         return;
       }
@@ -220,8 +220,8 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
   );
 
   // 既存矩形のドラッグ開始 = 移動
-  const handleRegionMouseDown = useCallback(
-    (event: React.MouseEvent, region: RedactRegion) => {
+  const handleRegionPointerDown = useCallback(
+    (event: React.PointerEvent, region: RedactRegion) => {
       if (event.button !== 0 || !scale) {
         return;
       }
@@ -240,7 +240,7 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
 
   // ハンドルのドラッグ開始 = リサイズ
   const handleResizeStart = useCallback(
-    (event: React.MouseEvent, region: RedactRegion, handle: ResizeHandle) => {
+    (event: React.PointerEvent, region: RedactRegion, handle: ResizeHandle) => {
       if (event.button !== 0 || !scale) {
         return;
       }
@@ -263,7 +263,7 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
       return;
     }
 
-    const handleMouseMove = (event: MouseEvent) => {
+    const handlePointerMove = (event: PointerEvent) => {
       const pos = getRelativePosition(event);
       setDrag((current) => {
         if (!current) {
@@ -294,10 +294,10 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
       });
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       // 確定処理（親への通知）は setState updater の外で行う。updater は純粋関数の
       // 契約があり、StrictMode の二重実行で領域が二重追加されるため（drag はこの
-      // effect の依存で、mousemove ごとに最新値へ張り替わったクロージャから読める）
+      // effect の依存で、pointermove ごとに最新値へ張り替わったクロージャから読める）
       if (scale) {
         const { draft } = drag;
         // 小さすぎる矩形は誤操作とみなして確定しない
@@ -321,11 +321,18 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
       setDrag(null);
     };
 
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    // タッチ操作がブラウザ側でキャンセルされた場合（画面回転等）はドラッグを破棄する
+    const handlePointerCancel = () => {
+      setDrag(null);
+    };
+
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerUp);
+    document.addEventListener("pointercancel", handlePointerCancel);
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerUp);
+      document.removeEventListener("pointercancel", handlePointerCancel);
     };
   }, [
     drag,
@@ -368,7 +375,7 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
         </div>
       )}
 
-      <div className={styles.imageContainer} onMouseDown={handleCreateStart}>
+      <div className={styles.imageContainer} onPointerDown={handleCreateStart}>
         <canvas
           ref={canvasRef}
           className={styles.canvas}
@@ -396,7 +403,7 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
                   width: display.width,
                   height: display.height,
                 }}
-                onMouseDown={(e) => handleRegionMouseDown(e, region)}
+                onPointerDown={(e) => handleRegionPointerDown(e, region)}
                 data-testid="redact-region"
                 role="presentation"
               >
@@ -404,13 +411,13 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
                   <div
                     key={handle}
                     className={`${styles.resizeHandle} ${styles[handle]}`}
-                    onMouseDown={(e) => handleResizeStart(e, region, handle)}
+                    onPointerDown={(e) => handleResizeStart(e, region, handle)}
                   />
                 ))}
                 <button
                   type="button"
                   className={styles.deleteButton}
-                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemoveRegion(region.id);
