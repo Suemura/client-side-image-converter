@@ -31,6 +31,16 @@ describe("shouldPrecache", () => {
       false,
     );
   });
+
+  it("AI モデルと ort ランタイムは除外（初回インストール肥大防止・実行時に別キャッシュへ）", () => {
+    expect(shouldPrecache("models/realesr-general-x4v3.onnx")).toBe(false);
+    expect(shouldPrecache("models/CREDITS.md")).toBe(false);
+    expect(shouldPrecache("ort/ort-wasm-simd-threaded.jsep.mjs")).toBe(false);
+    expect(shouldPrecache("ort/ort-wasm-simd-threaded.jsep.wasm.part0")).toBe(
+      false,
+    );
+    expect(shouldPrecache("ort/ort-assets.json")).toBe(false);
+  });
 });
 
 describe("toCacheUrl", () => {

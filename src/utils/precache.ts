@@ -14,6 +14,10 @@ function isDenied(relPath: string): boolean {
   if (relPath.endsWith(".map")) return true;
   // sitemap.xml / sitemap-0.xml など
   if (/^sitemap.*\.xml$/.test(relPath)) return true;
+  // AI モデル（数 MB）と onnxruntime-web ランタイム（数十 MB）は初回インストールを
+  // 肥大化させないためプリキャッシュしない。初回実行時に modelLoader.ts が取得し、
+  // 固定名キャッシュ（wic-model-cache）へ保存してオフライン動作を担保する
+  if (relPath.startsWith("models/") || relPath.startsWith("ort/")) return true;
   return false;
 }
 

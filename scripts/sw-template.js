@@ -48,7 +48,14 @@ self.addEventListener("activate", (event) => {
       const keys = await caches.keys();
       await Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
+          .filter(
+            (key) =>
+              // 旧バージョンのプリキャッシュだけを削除する。それ以外の固定名キャッシュ
+              // （AI モデル用の wic-model-cache 等）はデプロイをまたいで保持する
+              (key.startsWith("wic-precache-") && key !== CACHE_NAME) ||
+              // 共有ペイロードの一時キャッシュは取り残し掃除として従来どおり削除する
+              key === SHARE_CACHE_NAME,
+          )
           .map((key) => caches.delete(key)),
       );
       await self.clients.claim();
