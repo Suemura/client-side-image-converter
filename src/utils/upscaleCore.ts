@@ -215,7 +215,7 @@ export const accumulateTile = (
 export const finalizeToRgba = (
   acc: BlendAccumulator,
   alpha: Uint8ClampedArray | null,
-): Uint8ClampedArray => {
+): Uint8ClampedArray<ArrayBuffer> => {
   const pixelCount = acc.width * acc.height;
   const rgba = new Uint8ClampedArray(pixelCount * 4);
   for (let i = 0; i < pixelCount; i++) {
@@ -251,7 +251,7 @@ export const resizeAlphaBilinear = (
   srcHeight: number,
   dstWidth: number,
   dstHeight: number,
-): Uint8ClampedArray => {
+): Uint8ClampedArray<ArrayBuffer> => {
   const dst = new Uint8ClampedArray(dstWidth * dstHeight);
   const scaleX = srcWidth / dstWidth;
   const scaleY = srcHeight / dstHeight;
@@ -291,7 +291,7 @@ export const downscaleRgbaByHalf = (
   rgba: Uint8ClampedArray,
   width: number,
   height: number,
-): { data: Uint8ClampedArray; width: number; height: number } => {
+): { data: Uint8ClampedArray<ArrayBuffer>; width: number; height: number } => {
   if (width % 2 !== 0 || height % 2 !== 0) {
     throw new Error("downscaleRgbaByHalf requires even dimensions");
   }
