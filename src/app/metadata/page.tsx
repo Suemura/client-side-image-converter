@@ -22,6 +22,7 @@ import {
 } from "../../utils/fileDownloader";
 import { assessPrivacyRisk } from "../../utils/metadataManager";
 import { ImageUploadSection } from "../convert/components/ImageUploadSection";
+import { ProvenanceSection } from "./components/ProvenanceSection";
 import styles from "./page.module.css";
 
 export default function MetadataPage() {
@@ -41,13 +42,19 @@ export default function MetadataPage() {
     gpsMode,
     progressCurrent,
     progressTotal,
+    c2paResults,
+    removeC2pa,
     analyzeFiles,
     toggleTag,
     selectAllPrivacyTags,
     clearSelection,
     setGpsMode,
+    setRemoveC2pa,
     removeSelectedMetadata,
   } = useMetadataManager();
+
+  // 削除・送出の実行可否（EXIF タグまたは C2PA のいずれかが除去対象のとき有効）
+  const hasRemovalTarget = selectedTags.size > 0 || removeC2pa;
 
   // GPS 処理モードの選択肢（削除 / 市区町村レベルに丸める）
   const gpsModeOptions = [
@@ -127,15 +134,15 @@ export default function MetadataPage() {
 
   // ハンドオフ送出用: クリーニングを実行して結果 File[] を返す（送出クリック時にのみ実行）
   const handleCleanForHandoff = useCallback(async (): Promise<File[]> => {
-    if (!analysis || selectedTags.size === 0) {
+    if (!analysis || !hasRemovalTarget) {
       return [];
     }
     return await removeSelectedMetadata();
-  }, [analysis, selectedTags, removeSelectedMetadata]);
+  }, [analysis, hasRemovalTarget, removeSelectedMetadata]);
 
   // メタデータ削除とダウンロード
   const handleRemoveAndDownload = useCallback(async () => {
-    if (!analysis || selectedTags.size === 0) return;
+    if (!analysis || !hasRemovalTarget) return;
 
     const cleanedFiles = await removeSelectedMetadata();
     if (cleanedFiles.length > 0) {
@@ -153,7 +160,7 @@ export default function MetadataPage() {
         alert(t("results.downloadError"));
       }
     }
-  }, [analysis, selectedTags, removeSelectedMetadata, t]);
+  }, [analysis, hasRemovalTarget, removeSelectedMetadata, t]);
 
   // クリーンアップ
   useEffect(() => {
@@ -377,6 +384,18 @@ export default function MetadataPage() {
                       </p>
                     </div>
 
+                    {/* コンテンツ来歴（C2PA）: 検出されたファイルがある場合のみ表示 */}
+                    {c2paResults.size > 0 && (
+                      <ProvenanceSection
+                        entries={[...c2paResults.entries()].sort((a, b) =>
+                          a[0].name.localeCompare(b[0].name),
+                        )}
+                        removeC2pa={removeC2pa}
+                        onToggleRemoveC2pa={setRemoveC2pa}
+                        disabled={isProcessing}
+                      />
+                    )}
+
                     {/* GPS 処理モード（GPS タグがある場合のみ表示） */}
                     {hasGpsTags && (
                       <div className={styles.gpsModeSection}>
@@ -414,7 +433,7 @@ export default function MetadataPage() {
                       <Button
                         variant="primary"
                         onClick={handleRemoveAndDownload}
-                        disabled={selectedTags.size === 0 || isProcessing}
+                        disabled={!hasRemovalTarget || isProcessing}
                       >
                         {isProcessing
                           ? t("metadata.processing")
@@ -423,7 +442,7 @@ export default function MetadataPage() {
                     </div>
 
                     {/* クリーニング結果をダウンロードせず次のツールへ送る導線 */}
-                    {selectedTags.size > 0 && (
+                    {hasRemovalTarget && (
                       <HandoffSend
                         origin="metadata"
                         mimeTypes={handoffMimeTypes}

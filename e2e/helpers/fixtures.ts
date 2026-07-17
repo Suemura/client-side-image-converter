@@ -1,5 +1,12 @@
 import piexif from "piexifjs";
 import {
+  buildDummyC2paJumbf,
+  detectC2pa,
+  insertJpegC2pa,
+  insertPngC2pa,
+  insertWebpC2pa,
+} from "../../src/utils/c2paBinary";
+import {
   buildSyntheticJpegFromTiff,
   crc32,
   extractPngExif,
@@ -463,3 +470,36 @@ export const magicNumber = {
   // ISOBMFF コンテナの ftyp ボックス（オフセット 4-12 が "ftypavif"）
   isAvif: (buf: Buffer) => buf.subarray(4, 12).toString("ascii") === "ftypavif",
 };
+
+// ---- C2PA（コンテンツ来歴）フィクスチャ ----
+// 有効な署名付きマニフェストは実行時生成できない（署名鍵・署名ツールが必要）ため、
+// 構造だけ正しいダミー JUMBF を純粋ロジック（c2paBinary）で挿入し、
+// 「検出 → 表示（解析不能扱い）→ 除去」のパイプラインをバイナリレベルで検証する。
+
+/** EXIF とダミー C2PA（JUMBF / APP11）を埋め込んだ JPEG ファイル */
+export const jpegFileWithExifAndC2pa = (name = "with-c2pa.jpg") => {
+  const base = jpegFileWithExif(name);
+  const withC2pa = insertJpegC2pa(
+    new Uint8Array(base.buffer),
+    buildDummyC2paJumbf(),
+  );
+  return { name, mimeType: "image/jpeg", buffer: Buffer.from(withC2pa) };
+};
+
+/** ダミー C2PA（caBX チャンク）を埋め込んだ PNG ファイル */
+export const pngFileWithC2pa = (name = "with-c2pa.png") => {
+  const base = new Uint8Array(Buffer.from(PNG_1PX_BASE64, "base64"));
+  const withC2pa = insertPngC2pa(base, buildDummyC2paJumbf());
+  return { name, mimeType: "image/png", buffer: Buffer.from(withC2pa) };
+};
+
+/** ダミー C2PA（C2PA チャンク）を埋め込んだ WebP ファイル */
+export const webpFileWithC2pa = (name = "with-c2pa.webp") => {
+  const base = new Uint8Array(Buffer.from(BASE_WEBP_BASE64, "base64"));
+  const withC2pa = insertWebpC2pa(base, buildDummyC2paJumbf());
+  return { name, mimeType: "image/webp", buffer: Buffer.from(withC2pa) };
+};
+
+/** ダウンロードしたバイナリに C2PA 埋め込みが残っているか */
+export const hasC2pa = (buf: Buffer, mimeType: string): boolean =>
+  detectC2pa(new Uint8Array(buf), mimeType);

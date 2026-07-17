@@ -1,5 +1,6 @@
 import piexif from "piexifjs";
 import { describe, expect, it } from "vitest";
+import { buildDummyC2paJumbf, detectC2pa, insertJpegC2pa } from "../c2paBinary";
 import { dataUrlToBlob } from "../imageUtils";
 import {
   assessPrivacyRisk,
@@ -238,5 +239,67 @@ describe("GPS 座標の十進変換", () => {
   it("十進度→度分秒→十進度の往復で値が保持される", () => {
     const dms = decimalToGpsRationals(35.67);
     expect(gpsRationalsToDecimal(dms, "N")).toBeCloseTo(35.67, 4);
+  });
+});
+
+describe("C2PA の除去（removeC2pa オプション）", () => {
+  /** EXIF とダミー C2PA の両方を埋め込んだ JPEG を生成する */
+  const createJpegWithExifAndC2pa = async (): Promise<{
+    original: File;
+    withC2pa: File;
+  }> => {
+    const original = createJpegFileWithExif();
+    const bytes = new Uint8Array(await original.arrayBuffer());
+    const withC2pa = new File(
+      [insertJpegC2pa(bytes, buildDummyC2paJumbf())],
+      original.name,
+      { type: original.type },
+    );
+    return { original, withC2pa };
+  };
+
+  it("EXIF タグ未選択 + removeC2pa は再エンコードなしのロスレス除去になる", async () => {
+    const { original, withC2pa } = await createJpegWithExifAndC2pa();
+    const result = await removeMetadataFromImage(withC2pa, [], {
+      removeC2pa: true,
+    });
+
+    const resultBytes = new Uint8Array(await result.arrayBuffer());
+    expect(detectC2pa(resultBytes, "image/jpeg")).toBe(false);
+    // 挿入前のバイナリと完全一致 = 画素・EXIF に一切手を付けていない
+    expect([...resultBytes]).toEqual([
+      ...new Uint8Array(await original.arrayBuffer()),
+    ]);
+  });
+
+  it("JPEG の選択的削除と併用すると EXIF タグと C2PA の両方が除去される", async () => {
+    const { withC2pa } = await createJpegWithExifAndC2pa();
+    const result = await removeMetadataFromImage(withC2pa, ["Make"], {
+      removeC2pa: true,
+    });
+
+    const resultBytes = new Uint8Array(await result.arrayBuffer());
+    expect(detectC2pa(resultBytes, "image/jpeg")).toBe(false);
+    const exif = await loadExifFromFile(result);
+    expect(exif["0th"]?.[piexif.ImageIFD.Make]).toBeUndefined();
+    expect(exif["0th"]?.[piexif.ImageIFD.Model]).toBe("TestModel");
+  });
+
+  it("removeC2pa なしでは C2PA は残る（選択的削除は APP11 に触れない）", async () => {
+    const { withC2pa } = await createJpegWithExifAndC2pa();
+    const result = await removeMetadataFromImage(withC2pa, ["Make"]);
+
+    const resultBytes = new Uint8Array(await result.arrayBuffer());
+    expect(detectC2pa(resultBytes, "image/jpeg")).toBe(true);
+  });
+
+  it("C2PA が無いファイルへの removeC2pa は内容を変えない", async () => {
+    const original = createJpegFileWithExif();
+    const result = await removeMetadataFromImage(original, [], {
+      removeC2pa: true,
+    });
+    expect([...new Uint8Array(await result.arrayBuffer())]).toEqual([
+      ...new Uint8Array(await original.arrayBuffer()),
+    ]);
   });
 });
