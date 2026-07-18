@@ -115,6 +115,37 @@ test.describe("AI 超解像", () => {
     await expect(page.getByText("photo_upscaled.png")).toBeVisible();
   });
 
+  test("結果サムネイルのクリックで処理前後の比較モーダルが開く", async ({
+    page,
+  }) => {
+    test.setTimeout(UPSCALE_TIMEOUT);
+    await page.goto("/upscale/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("photo.png", 60, 40));
+    await page.getByRole("button", { name: "拡大を実行", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: UPSCALE_TIMEOUT,
+    });
+
+    // サムネイルをクリックすると比較モーダル（変換前 / 処理後ラベル + 双方の画像）が開く
+    await page
+      .getByRole("button", { name: "photo_upscaled.pngの変換前後比較を表示" })
+      .click();
+    await expect(page.getByText("変換前", { exact: true })).toBeVisible();
+    await expect(page.getByText("処理後", { exact: true })).toBeVisible();
+    await expect(
+      page.locator('img[alt="photo_upscaled.png (original)"]'),
+    ).toBeVisible();
+    await expect(
+      page.locator('img[alt="photo_upscaled.png (result)"]'),
+    ).toBeVisible();
+
+    // ESC で閉じて一覧へ戻れる
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("処理後", { exact: true })).toHaveCount(0);
+  });
+
   test("実行中にキャンセルすると操作可能な状態に戻る", async ({ page }) => {
     test.setTimeout(UPSCALE_TIMEOUT);
     await page.goto("/upscale/");

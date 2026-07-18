@@ -2,24 +2,45 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatFileSize } from "../utils/fileName";
-import type { ConversionResult } from "../utils/imageConverter";
-import {
-  calculateCompressionRatio,
-  downloadFile,
-} from "../utils/imageConverter";
+import { calculateCompressionRatio } from "../utils/imageConverter";
 import { Button } from "./Button";
 import styles from "./ImageComparisonModal.module.css";
 
+/**
+ * 処理前後の画像をスライダーで見比べる共通モーダル。
+ * 変換（ConversionResult）・トリミング / レタッチ / 拡大（CropResult）のどちらの
+ * 結果形式にも依存しない中立な props を受け取り、呼び出し側（Results.tsx）が
+ * それぞれの結果から URL・サイズ・ダウンロード処理を組み立てて渡す。
+ */
 interface ImageComparisonModalProps {
-  result: ConversionResult;
+  fileName: string;
+  /** 処理前画像の URL（空文字なら表示しない） */
   originalImageUrl: string;
+  /** 処理後画像の URL */
+  resultImageUrl: string;
+  originalSize: number;
+  resultSize: number;
+  /**
+   * サイズ削減率バッジを表示するか（変換 / 最適化用）。
+   * 拡大などサイズ増が前提のツールでは false にしてノイズを避ける。
+   */
+  showCompressionRatio?: boolean;
+  /** 処理後側のラベル（未指定は「変換後」= comparison.converted） */
+  resultLabel?: string;
+  onDownload: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
 export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
-  result,
+  fileName,
   originalImageUrl,
+  resultImageUrl,
+  originalSize,
+  resultSize,
+  showCompressionRatio = true,
+  resultLabel,
+  onDownload,
   isOpen,
   onClose,
 }) => {
@@ -124,8 +145,8 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
   }, [isOpen]);
 
   const handleDownload = useCallback(() => {
-    downloadFile(result);
-  }, [result]);
+    onDownload();
+  }, [onDownload]);
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
@@ -138,10 +159,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
 
   if (!isOpen || !originalImageUrl) return null;
 
-  const compressionRatio = calculateCompressionRatio(
-    result.originalSize,
-    result.convertedSize,
-  );
+  const compressionRatio = calculateCompressionRatio(originalSize, resultSize);
 
   return (
     <div className={styles.modalOverlay} onClick={handleBackdropClick}>
@@ -149,22 +167,23 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
         {/* ヘッダー */}
         <div className={styles.modalHeader}>
           <div>
-            <h3 className={styles.modalTitle}>{result.filename}</h3>
+            <h3 className={styles.modalTitle}>{fileName}</h3>
             <div className={styles.modalSubtitle}>
               <span className={styles.fileSizeText}>
-                {formatFileSize(result.originalSize)} →{" "}
-                {formatFileSize(result.convertedSize)}
+                {formatFileSize(originalSize)} → {formatFileSize(resultSize)}
               </span>
-              <span
-                className={`${styles.compressionRatio} ${
-                  compressionRatio > 0
-                    ? styles.compressionRatioPositive
-                    : styles.compressionRatioNegative
-                }`}
-              >
-                {compressionRatio > 0 ? "-" : "+"}
-                {Math.abs(compressionRatio)}%
-              </span>
+              {showCompressionRatio && (
+                <span
+                  className={`${styles.compressionRatio} ${
+                    compressionRatio > 0
+                      ? styles.compressionRatioPositive
+                      : styles.compressionRatioNegative
+                  }`}
+                >
+                  {compressionRatio > 0 ? "-" : "+"}
+                  {Math.abs(compressionRatio)}%
+                </span>
+              )}
             </div>
           </div>
           <div className={styles.buttonGroup}>
@@ -192,15 +211,15 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
                 : styles.comparisonContainerIdle
             }`}
           >
-            {/* 変換後の画像（背景） */}
+            {/* 処理後の画像（背景） */}
             <img
-              src={result.url}
-              alt={`${result.filename} (converted)`}
+              src={resultImageUrl}
+              alt={`${fileName} (result)`}
               className={styles.backgroundImage}
               draggable={false}
             />
 
-            {/* 変換前の画像（クリップされる）。clipPath はスライダー位置から計算される
+            {/* 処理前の画像（クリップされる）。clipPath はスライダー位置から計算される
                 動的値のため style 経由で渡す（DESIGN.md「例外: 動的値の style 属性渡し」） */}
             <div
               className={styles.foregroundImageContainer}
@@ -210,7 +229,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
             >
               <img
                 src={originalImageUrl}
-                alt={`${result.filename} (original)`}
+                alt={`${fileName} (original)`}
                 className={styles.foregroundImage}
                 draggable={false}
               />
@@ -237,7 +256,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
               {t("comparison.original")}
             </div>
             <div className={`${styles.imageLabel} ${styles.imageLabelRight}`}>
-              {t("comparison.converted")}
+              {resultLabel ?? t("comparison.converted")}
             </div>
           </div>
 

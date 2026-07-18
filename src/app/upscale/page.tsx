@@ -245,7 +245,6 @@ export default function UpscalePage() {
                 <ConversionResults
                   cropResults={upscaleResults}
                   onClear={handleClearResults}
-                  showComparison={false}
                   handoffOrigin="upscale"
                 />
               ) : (

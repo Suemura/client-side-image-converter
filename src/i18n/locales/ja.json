@@ -350,7 +350,8 @@
   "comparison": {
     "original": "変換前",
     "converted": "変換後",
-    "instruction": "境界線をドラッグして変換前後の画像を比較"
+    "instruction": "境界線をドラッグして変換前後の画像を比較",
+    "processed": "処理後"
   },
   "common": {
     "files": "個",
