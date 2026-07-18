@@ -89,7 +89,29 @@
     "metadataSettings": "Metadata Settings",
     "preserveExif": "Preserve EXIF Information",
     "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the converted image. Available for JPEG / PNG / WebP.",
-    "preserveExifUnsupported": "EXIF preservation is not supported for AVIF / JPEG XL."
+    "preserveExifUnsupported": "EXIF preservation is not supported for AVIF / JPEG XL.",
+    "rawDevelop": {
+      "title": "RAW Development",
+      "description": "Applies development parameters to the RAW sensor data. This preserves far more tonal range than editing after development, which helps recover highlights and shadows. Settings apply to all RAW files at once.",
+      "exposure": "Exposure Compensation",
+      "exposureLabel": "Exposure (EV)",
+      "whiteBalance": "White Balance",
+      "wbCamera": "As Shot",
+      "wbAuto": "Auto",
+      "wbManual": "Color Temperature",
+      "colorTemperature": "Temperature (K)",
+      "colorTemperatureHelp": "Neutralizes the light source at the specified color temperature (lower values look cooler, higher values warmer). This is a relative adjustment, not a reproduction of the camera's measured value.",
+      "highlight": "Highlight Recovery",
+      "highlightClip": "Clip (default)",
+      "highlightBlend": "Blend",
+      "highlightRebuild": "Rebuild",
+      "preview": "Preview",
+      "previewLoading": "Developing...",
+      "previewNote": "The preview is a quick half-size development of the first RAW file.",
+      "previewError": "Failed to develop the preview. Conversion may still work.",
+      "reset": "Reset Development Settings",
+      "resetItem": "Reset"
+    }
   },
   "crop": {
     "title": "Image Cropping Tool",

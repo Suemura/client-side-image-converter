@@ -9,11 +9,16 @@ import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
 import { useHandoffReceiver } from "../../hooks/useHandoffReceiver";
 import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
+import { isRawFile } from "../../utils/fileUtils";
 import {
   type ConversionFailure,
   type ConversionResult,
   convertMultipleImages,
 } from "../../utils/imageConverter";
+import {
+  DEFAULT_RAW_DEVELOP_PARAMS,
+  type RawDevelopParams,
+} from "../../utils/rawDevelopment";
 import { ConversionErrors } from "./components/ConversionErrors";
 import {
   ConversionSettings,
@@ -21,6 +26,7 @@ import {
 } from "./components/ConversionSettings";
 import { ImageUploadSection } from "./components/ImageUploadSection";
 import { ProgressBar } from "./components/ProgressBar";
+import { RawDevelopPanel } from "./components/RawDevelopPanel";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -39,6 +45,10 @@ export default function Home() {
   const [conversionFailures, setConversionFailures] = useState<
     ConversionFailure[]
   >([]);
+  // RAW 現像パラメータ（Issue #132）。RAW ファイル投入時のみ UI に現れ、全 RAW ファイルへ一括適用する
+  const [rawDevelopParams, setRawDevelopParams] = useState<RawDevelopParams>(
+    DEFAULT_RAW_DEVELOP_PARAMS,
+  );
   const [isConverting, setIsConverting] = useState(false);
   const [conversionProgress, setConversionProgress] = useState({
     current: 0,
@@ -61,6 +71,8 @@ export default function Home() {
     setSelectedFiles([]);
     // ファイルを選び直す際は前回の失敗通知も不要になるためリセットする
     setConversionFailures([]);
+    // RAW 現像パラメータもファイルに紐づく調整のためリセットする
+    setRawDevelopParams(DEFAULT_RAW_DEVELOP_PARAMS);
     clearHandoffNotice();
     console.log("Files cleared");
   };
@@ -92,6 +104,7 @@ export default function Home() {
           maintainAspectRatio: conversionSettings.maintainAspectRatio,
           preserveExif: conversionSettings.preserveExif,
           targetFileSizeKB: conversionSettings.targetFileSizeKB,
+          rawDevelopParams,
         },
         (current, total) => {
           setConversionProgress({ current, total });
@@ -107,7 +120,14 @@ export default function Home() {
       setIsConverting(false);
       setConversionProgress({ current: 0, total: 0 });
     }
-  }, [selectedFiles, conversionSettings, t]);
+  }, [selectedFiles, conversionSettings, rawDevelopParams, t]);
+
+  // RAW 現像パネルは convert モードで RAW ファイルが投入されているときのみ表示する。
+  // プレビュー対象は先頭の RAW ファイル 1 件（パラメータは全 RAW ファイルへ一括適用）
+  const firstRawFile =
+    conversionSettings.mode === "convert"
+      ? selectedFiles.find(isRawFile)
+      : undefined;
 
   const handleClearResults = useCallback(() => {
     setConversionResults([]);
@@ -129,6 +149,13 @@ export default function Home() {
           onClearFiles={handleClearFiles}
           acceptedTypes={SUPPORTED_IMAGE_FORMATS.CONVERT_UPLOAD_FORMATS}
         />
+        {firstRawFile && (
+          <RawDevelopPanel
+            file={firstRawFile}
+            params={rawDevelopParams}
+            onParamsChange={setRawDevelopParams}
+          />
+        )}
         <ConversionSettings
           settings={conversionSettings}
           onSettingsChange={handleSettingsChange}
