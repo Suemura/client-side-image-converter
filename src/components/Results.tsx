@@ -116,7 +116,13 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
         URL.revokeObjectURL(url);
       }
     };
-  }, [originalFiles, isConversionMode, isCropMode, cropResults, showComparison]);
+  }, [
+    originalFiles,
+    isConversionMode,
+    isCropMode,
+    cropResults,
+    showComparison,
+  ]);
 
   // トリミング結果のプレビューURL生成（トリミングモードのみ）
   useEffect(() => {
