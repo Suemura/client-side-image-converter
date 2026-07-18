@@ -14,6 +14,7 @@ import type { CropResult } from "./imageCropper";
 export type ToolId =
   | "convert"
   | "upscale"
+  | "remove-bg"
   | "crop"
   | "edit"
   | "redact"
@@ -69,6 +70,14 @@ export const HANDOFF_TOOLS: readonly HandoffTool[] = [
     id: "upscale",
     path: "/upscale",
     labelKey: "navigation.upscale",
+    acceptedTypes: SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
+    canReceiveHandoff: true,
+  },
+  {
+    // 「拡大 → 背景除去 → 編集」のフロー順で upscale の直後・edit の前に置く（Issue #99）
+    id: "remove-bg",
+    path: "/remove-bg",
+    labelKey: "navigation.remove-bg",
     acceptedTypes: SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
     canReceiveHandoff: true,
   },

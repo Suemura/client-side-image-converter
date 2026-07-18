@@ -103,6 +103,24 @@ export const appendFileNameSuffix = (
 };
 
 /**
+ * ファイル名の拡張子を指定の拡張子へ置き換える。
+ * 拡張子がない場合（ドットで始まる隠しファイル等を含む）は末尾へ付与する
+ * （例: "photo.jpg" + "png" → "photo.png"）。
+ * @param fileName - 元のファイル名
+ * @param extension - 新しい拡張子（ドットなし。例: "png"）
+ */
+export const replaceFileExtension = (
+  fileName: string,
+  extension: string,
+): string => {
+  const lastDotIndex = fileName.lastIndexOf(".");
+  if (lastDotIndex <= 0) {
+    return `${fileName}.${extension}`;
+  }
+  return `${fileName.substring(0, lastDotIndex)}.${extension}`;
+};
+
+/**
  * ファイルサイズを人間が読める形式にフォーマットする関数
  * @param bytes - バイト数
  * @returns フォーマットされたファイルサイズ文字列

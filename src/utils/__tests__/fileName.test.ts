@@ -3,8 +3,29 @@ import {
   appendFileNameSuffix,
   createFileNameUniquifier,
   formatFileSize,
+  replaceFileExtension,
   truncateFileName,
 } from "../fileName";
+
+describe("replaceFileExtension", () => {
+  it("拡張子を置き換える", () => {
+    expect(replaceFileExtension("photo.jpg", "png")).toBe("photo.png");
+  });
+
+  it("多重ドットは最後の拡張子だけ置き換える", () => {
+    expect(replaceFileExtension("archive.backup.jpeg", "webp")).toBe(
+      "archive.backup.webp",
+    );
+  });
+
+  it("拡張子がない場合は末尾へ付与する", () => {
+    expect(replaceFileExtension("photo", "png")).toBe("photo.png");
+  });
+
+  it("ドットで始まる名前（隠しファイル）は末尾へ付与する", () => {
+    expect(replaceFileExtension(".gitignore", "png")).toBe(".gitignore.png");
+  });
+});
 
 describe("appendFileNameSuffix", () => {
   it("拡張子の直前へサフィックスを挿入する", () => {
