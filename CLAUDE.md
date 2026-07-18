@@ -66,7 +66,6 @@ npm run preview
 - `docs/ARCHITECTURE.md` — ディレクトリ / ファイル別の詳細な責務・関数一覧と、コア機能の詳細仕様
 - `docs/PATTERNS.md` — 重要な実装パターンの詳細（Worker 構成・最適化エンジン・EXIF バイナリ・編集パイプライン・ツール連携・ファイル投入・PWA キャッシュ戦略等）
 - `docs/TESTING.md` — テスト方針の詳細（機能別の単体テスト / E2E 対象一覧）
-- `docs/HISTORY.md` — 実装履歴（Issue / PR ごとの詳細な変更ログ）
 - `docs/HARNESS.md` — Claude Code ハーネスの全体像・設計意図・運用上の注意
 - `DESIGN.md`（リポジトリルート） — デザイン規定（トークン・タイポグラフィ・コンポーネント規定。UI・スタイルに触れる前に読む）
 
@@ -75,7 +74,7 @@ npm run preview
 本ファイルは毎セッション全文がコンテキストに載る。編集時は以下を守ること：
 
 - **書いてよいもの**: 開発コマンド・完了条件・パスエイリアス・ハーネス構成・コードスタイル、およびディレクトリ / コア機能 / 設計原則 / テスト方針の**ダイジェスト（1 項目 = 1 行）**
-- **書いてはいけないもの**（分割ファイルへ）: ファイル別の関数名・型名・props の列挙 → `docs/ARCHITECTURE.md`、実装パターンの詳細 → `docs/PATTERNS.md`、テスト対象の列挙 → `docs/TESTING.md`、タスクの変更ログ → `docs/HISTORY.md` の先頭
+- **書いてはいけないもの**（分割ファイルへ）: ファイル別の関数名・型名・props の列挙 → `docs/ARCHITECTURE.md`、実装パターンの詳細 → `docs/PATTERNS.md`、テスト対象の列挙 → `docs/TESTING.md`、タスクの変更ログ → コミットメッセージ / PR 説明（ドキュメントファイルには記録しない）
 - **サイズ予算 20KB**: 編集後に `wc -c CLAUDE.md` が 20480 バイトを超える場合は、直近の追記を分割ファイルへ移して縮めること
 
 ## アーキテクチャ
@@ -175,7 +174,7 @@ npm run preview
 起動時は差分（`git diff --stat` 等）と変更概要をプロンプトに手渡す（探索削減。`self-review.md` 参照）。
 
 - **planner**: 非自明なタスク（3ステップ以上）の実装計画を策定し、Sprint Contract（完了条件）を返す
-- **docs-sync**（haiku）: ドキュメント同期。起動条件は `self-review.md` のホワイトリスト（ユーザー向け機能 / コマンド・CI / ハーネス / 構造・テスト方針の変更）のみ。docs/HISTORY.md の変更ログはメインが直接追記
+- **docs-sync**（haiku）: ドキュメント同期。起動条件は `self-review.md` のホワイトリスト（ユーザー向け機能 / コマンド・CI / ハーネス / 構造・テスト方針の変更）のみ
 - **reviewer**（sonnet）: **PR を作らないタスク専用**の完了前独立レビュー。Pass/Fail 判定を返す。PR を作るタスクでは起動しない（PR 自動レビューに一本化）
 - **pr-reviewer / pr-comment-resolver**（sonnet）: PR 自動レビューフロー用。command の手順（review-pr / resolve-pr-comments）に従う薄いラッパー
 
@@ -214,6 +213,6 @@ npm run preview
 - コードの可読性を重視し、コメントは必要に応じて記述し、記述する場合は日本語で記述する
 - 実装前に既存のコンポーネントの再利用を検討する
 
-## 最近の更新
+## 変更履歴の扱い
 
-実装履歴（Issue / PR ごとの詳細な変更ログ）は `docs/HISTORY.md` を参照。新しいエントリは `docs/HISTORY.md` の先頭へ追加すること（本ファイルには書かない）。
+実装履歴はコミットメッセージと PR 説明が single source of truth（`git log` / `gh pr view` で参照）。変更ログ用のドキュメントファイルは持たない（本ファイルにも書かない）。ハーネス構成の変更経緯のみ `docs/HARNESS.md` の変更履歴に記録する。

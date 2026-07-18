@@ -110,7 +110,7 @@ npm 単一パッケージ（リポジトリルートで実行）。
 
 - 削除・変更した用語が別箇所に残っていないか
 - 関連ファイル（import、設定、i18n 翻訳、ドキュメント）の更新漏れがないか
-- **CLAUDE.md が肥大化していないか**: 差分に CLAUDE.md への追記が含まれる場合、CLAUDE.md「本ファイルの編集ルール」に違反する詳細（関数名 / 型名 / props の列挙・実装パターン詳細・テスト対象列挙・変更ログ）が追記されていたら **Fail**（`docs/ARCHITECTURE.md` / `docs/PATTERNS.md` / `docs/TESTING.md` / `docs/HISTORY.md` への移動を指示）。`wc -c CLAUDE.md` が 20480 バイト超も Fail
+- **CLAUDE.md が肥大化していないか**: 差分に CLAUDE.md への追記が含まれる場合、CLAUDE.md「本ファイルの編集ルール」に違反する詳細（関数名 / 型名 / props の列挙・実装パターン詳細・テスト対象列挙・変更ログ）が追記されていたら **Fail**（`docs/ARCHITECTURE.md` / `docs/PATTERNS.md` / `docs/TESTING.md` への移動、変更ログは削除（コミットメッセージ / PR 説明へ）を指示）。`wc -c CLAUDE.md` が 20480 バイト超も Fail
 
 #### 5-3. 技術的完全性
 
