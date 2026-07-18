@@ -29,6 +29,7 @@ import {
   readExifTiffFromDataUrl,
 } from "./exifTransfer";
 import { renderOrientedImage } from "./imageCropper";
+import { fileToDataUrl } from "./imageUtils";
 import { encodeCanvasToJxlBlob } from "./jxlEncoder";
 import {
   type AdjustmentRenderer,
@@ -207,14 +208,6 @@ export const renderEdited = async (
 
   return buildEditResult(file, blob, format);
 };
-
-const fileToDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target?.result as string);
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsDataURL(file);
-  });
 
 /**
  * 複数の画像へ一括で調整を適用する。

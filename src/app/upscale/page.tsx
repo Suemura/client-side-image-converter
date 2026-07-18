@@ -10,6 +10,7 @@ import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
 import { useHandoffReceiver } from "../../hooks/useHandoffReceiver";
 import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
+import { isImageFile } from "../../utils/fileUtils";
 import type { CropResult } from "../../utils/imageCropper";
 import type { UpscaleScale } from "../../utils/upscaleCore";
 import {
@@ -52,9 +53,7 @@ export default function UpscalePage() {
   }, []);
 
   const handleFilesSelected = useCallback((selectedFiles: File[]) => {
-    const imageFiles = selectedFiles.filter((file) =>
-      file.type.startsWith("image/"),
-    );
+    const imageFiles = selectedFiles.filter(isImageFile);
     setFiles(imageFiles);
     setUpscaleResults([]);
     setWasCancelled(false);
