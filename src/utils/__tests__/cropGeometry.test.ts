@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   ASPECT_RATIO_PRESETS,
-  type CropState,
   clampCropArea,
   clampCropAreaToAspect,
   enforceAspectRatio,
   fitAspectRatio,
-  IDENTITY_TRANSFORM,
   orientedSize,
-  resolveCropForIndex,
   rotateLeft,
   rotateRight,
   scaleCropArea,
@@ -285,52 +282,6 @@ describe("enforceAspectRatio", () => {
     expect(result.y + result.height).toBeCloseTo(50, 5);
     // 水平中心 100 を維持
     expect(result.x + result.width / 2).toBeCloseTo(100, 5);
-  });
-});
-
-describe("resolveCropForIndex", () => {
-  const baseState: CropState = {
-    applyToAll: true,
-    sharedArea: { x: 1, y: 2, width: 3, height: 4 },
-    sharedTransform: {
-      rotation: 90,
-      flipHorizontal: true,
-      flipVertical: false,
-    },
-    perImageArea: {
-      0: { x: 10, y: 10, width: 10, height: 10 },
-      2: { x: 20, y: 20, width: 20, height: 20 },
-    },
-    perImageTransform: {
-      2: { rotation: 180, flipHorizontal: false, flipVertical: true },
-    },
-  };
-
-  it("一括モードは全インデックスで共有値を返す", () => {
-    expect(resolveCropForIndex(0, baseState)).toEqual({
-      area: baseState.sharedArea,
-      transform: baseState.sharedTransform,
-    });
-    expect(resolveCropForIndex(5, baseState)).toEqual({
-      area: baseState.sharedArea,
-      transform: baseState.sharedTransform,
-    });
-  });
-
-  it("画像ごとモードは当該インデックスの値を返す", () => {
-    const state = { ...baseState, applyToAll: false };
-    expect(resolveCropForIndex(2, state)).toEqual({
-      area: { x: 20, y: 20, width: 20, height: 20 },
-      transform: { rotation: 180, flipHorizontal: false, flipVertical: true },
-    });
-  });
-
-  it("画像ごとモードで未設定のインデックスは無変換・領域なしを返す", () => {
-    const state = { ...baseState, applyToAll: false };
-    expect(resolveCropForIndex(1, state)).toEqual({
-      area: null,
-      transform: IDENTITY_TRANSFORM,
-    });
   });
 });
 
