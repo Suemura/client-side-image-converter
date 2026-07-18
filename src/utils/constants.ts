@@ -25,7 +25,13 @@ export const IMAGE_CONSTANTS = {
 // サポートされる画像フォーマット
 export const SUPPORTED_IMAGE_FORMATS = {
   // 変換でサポートされる形式
-  CONVERSION_FORMATS: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+  CONVERSION_FORMATS: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/avif",
+    "image/jxl",
+  ],
 
   // アップロードでサポートされる形式（crop / metadata ページ用。
   // TIFF はブラウザの Image がデコードできずプレビュー描画できないため HEIC 同様に対象外）
@@ -118,6 +124,7 @@ export const IMAGE_FORMATS = {
   PNG: "png",
   WEBP: "webp",
   AVIF: "avif",
+  JXL: "jxl",
 } as const;
 
 // MIME タイプマッピング
@@ -126,6 +133,7 @@ export const MIME_TYPE_MAPPING = {
   [IMAGE_FORMATS.PNG]: "image/png",
   [IMAGE_FORMATS.WEBP]: "image/webp",
   [IMAGE_FORMATS.AVIF]: "image/avif",
+  [IMAGE_FORMATS.JXL]: "image/jxl",
 } as const;
 
 // UI関連の定数

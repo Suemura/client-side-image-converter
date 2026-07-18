@@ -8,7 +8,21 @@
 
 import { pngQualityStrategy } from "./pngQuality";
 
-export type ConversionFormat = "jpeg" | "png" | "webp" | "avif";
+export type ConversionFormat = "jpeg" | "png" | "webp" | "avif" | "jxl";
+
+/**
+ * 出力フォーマットが EXIF 保持（piexifjs / バイナリ挿入）に対応しているかを返す純粋関数。
+ *
+ * AVIF / JXL は WASM エンコーダー（@jsquash/*）が ImageData のみを受け取りメタデータを
+ * 書き込めないため対象外。メインスレッド（imageConverter.ts）・Worker
+ * （imageProcessing.worker.ts）・UI（ConversionSettings.tsx）がこの関数を
+ * 「唯一の真実」として共有する。
+ */
+export const canPreserveExifForFormat = (
+  format: ConversionFormat,
+): format is "jpeg" | "png" | "webp" => {
+  return format === "jpeg" || format === "png" || format === "webp";
+};
 
 /**
  * 処理モード。
@@ -31,7 +45,7 @@ export interface ConversionOptions {
   preserveExif?: boolean;
   /**
    * 目標ファイルサイズ（KB）。指定すると品質値を二分探索し、目標サイズ以下で最大品質の結果を採用する。
-   * JPEG / WebP でのみ有効（PNG は可逆・AVIF は WASM エンコードが低速なため対象外）。
+   * JPEG / WebP でのみ有効（PNG は可逆・AVIF / JXL は WASM エンコードが低速なため対象外）。
    * 未指定または 0 以下の場合は quality をそのまま使う。
    */
   targetFileSizeKB?: number;
@@ -173,7 +187,7 @@ export const resolveFlattenBackground = (
   ) {
     return FLATTEN_BACKGROUND_COLOR;
   }
-  // PNG（lossless / compressed）・WebP・AVIF はアルファを保持できるため合成しない
+  // PNG（lossless / compressed）・WebP・AVIF・JXL はアルファを保持できるため合成しない
   return null;
 };
 

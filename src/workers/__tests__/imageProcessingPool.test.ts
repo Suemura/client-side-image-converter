@@ -47,4 +47,22 @@ describe("resolveWorkerTimeoutMs", () => {
       ),
     ).toBe(60_000);
   });
+
+  it("JXL 出力はデコード種別によらず重量ジョブとして延長する", () => {
+    expect(resolveWorkerTimeoutMs("standard", options({ format: "jxl" }))).toBe(
+      300_000,
+    );
+    expect(resolveWorkerTimeoutMs("heic", options({ format: "jxl" }))).toBe(
+      300_000,
+    );
+  });
+
+  it("optimize モードでは JXL 指定でも延長しない", () => {
+    expect(
+      resolveWorkerTimeoutMs(
+        "standard",
+        options({ format: "jxl", mode: "optimize" }),
+      ),
+    ).toBe(60_000);
+  });
 });

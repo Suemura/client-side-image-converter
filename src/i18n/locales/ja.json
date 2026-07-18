@@ -34,7 +34,7 @@
     "features": {
       "formatConversion": {
         "title": "フォーマット変換",
-        "description": "JPEG、PNG、WebP、AVIF などの画像フォーマット間で、品質・サイズを調整しながら変換できます。",
+        "description": "JPEG、PNG、WebP、AVIF、JPEG XL などの画像フォーマット間で、品質・サイズを調整しながら変換できます。",
         "iconAlt": "フォーマット変換アイコン"
       },
       "imageCropping": {
@@ -87,7 +87,7 @@
     "metadataSettings": "メタデータ設定",
     "preserveExif": "EXIF情報を保持",
     "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が変換後の画像に保持されます。JPEG / PNG / WebP で有効です。",
-    "preserveExifUnsupported": "EXIF情報の保持は AVIF では対応していません。"
+    "preserveExifUnsupported": "EXIF情報の保持は AVIF / JPEG XL では対応していません。"
   },
   "crop": {
     "title": "トリミングツール",
@@ -167,7 +167,7 @@
     "formatOriginal": "元の形式を維持",
     "preserveExif": "EXIF情報を保持",
     "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が編集後の画像に保持されます。JPEG / PNG / WebP 出力で有効です。",
-    "preserveExifUnsupported": "EXIF情報の保持は AVIF では対応していません。",
+    "preserveExifUnsupported": "EXIF情報の保持は AVIF / JPEG XL では対応していません。",
     "apply": "編集を適用",
     "reEdit": "再編集",
     "editingInProgress": "編集中...",
