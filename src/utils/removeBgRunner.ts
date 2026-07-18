@@ -186,6 +186,10 @@ const runWithWorker = (
           results.push(toFailure(file, new Error(response.error)));
         }
       }
+      if (!cancelled && files.length > 0) {
+        // 最後の 1 枚の完了を UI へ伝える（体感進捗を 100% まで進める）
+        callbacks.onFileProgress?.(files.length, files.length);
+      }
     } finally {
       worker.terminate();
     }
@@ -342,6 +346,10 @@ const runOnMainThread = (
         }
         results.push(toFailure(files[i], error));
       }
+    }
+    if (!cancelled && files.length > 0) {
+      // 最後の 1 枚の完了を UI へ伝える（体感進捗を 100% まで進める）
+      callbacks.onFileProgress?.(files.length, files.length);
     }
     return { results, cancelled };
   })();

@@ -97,7 +97,7 @@ export default function RemoveBgPage() {
         onFileProgress: (fileIndex, totalFiles) => {
           setProgress({
             stage: "inference",
-            currentFile: fileIndex + 1,
+            currentFile: Math.min(fileIndex + 1, totalFiles),
             totalFiles,
             percent: Math.round((fileIndex / totalFiles) * 100),
           });
