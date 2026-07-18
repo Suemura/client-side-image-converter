@@ -99,3 +99,13 @@
   padding: 12px 16px 16px 16px;
   justify-content: end;
 }
+
+/* 768px 以下: 変換 CTA を全幅・高さ 48px にする（モバイルデザイン準拠） */
+@media (max-width: 768px) {
+  .buttonContainer button {
+    width: 100%;
+    max-width: none;
+    height: 48px;
+    font-size: 16px;
+  }
+}

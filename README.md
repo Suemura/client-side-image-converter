@@ -60,6 +60,10 @@ This application supports the following languages:
 
 You can switch languages in real-time using the language toggle button in the header.
 
+## 📱 Mobile Support
+
+The app is fully responsive and optimized for mobile devices. On screens under 768px, the header navigation collapses into a slide-out menu (accessed via a hamburger button) for a cleaner mobile experience, while all tools maintain their full functionality across all device sizes.
+
 ## 🚀 Deployment
 
 ### Deploy to Cloudflare Pages
