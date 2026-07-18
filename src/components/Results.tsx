@@ -77,6 +77,13 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     setCanSaveToFolder(isFolderSaveSupported());
   }, []);
 
+  // 新しい結果セットに変わったら、前回のダウンロード/フォルダ保存の通知は残さない
+  useEffect(() => {
+    if (!results && !cropResults) return;
+    setDownloadError(false);
+    setFolderSaveMessage(null);
+  }, [results, cropResults]);
+
   // シンプルな条件チェック
   const isConversionMode = results && results.length > 0;
   const isCropMode = cropResults && cropResults.length > 0;
