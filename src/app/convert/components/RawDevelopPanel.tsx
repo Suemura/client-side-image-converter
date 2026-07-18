@@ -43,7 +43,9 @@ export const RawDevelopPanel: React.FC<RawDevelopPanelProps> = ({
 }) => {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // ファイル内容のキャッシュ（パラメータ変更のたびに File を読み直さない）
+  // ファイル内容のキャッシュ（パラメータ変更のたびに File を読み直さない）。
+  // decodeRawToImageData 呼び出し側で postMessage transfer により detach されるため、
+  // 渡す直前に slice(0) で複製してキャッシュ自体は使い回す
   const bufferRef = useRef<{ file: File; buffer: ArrayBuffer } | null>(null);
   // latest-wins 制御: 現像中フラグと、現像中に届いた最新パラメータの保留枠
   const busyRef = useRef(false);
@@ -80,7 +82,7 @@ export const RawDevelopPanel: React.FC<RawDevelopPanelProps> = ({
           }
           // half-size 現像で軽量化する（demosaic 省略・面積 1/4。Issue #132）
           const { data, width, height } = await decodeRawToImageData(
-            bufferRef.current.buffer,
+            bufferRef.current.buffer.slice(0),
             current,
             { halfSize: true },
           );

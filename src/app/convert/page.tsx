@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
@@ -124,10 +124,13 @@ export default function Home() {
 
   // RAW 現像パネルは convert モードで RAW ファイルが投入されているときのみ表示する。
   // プレビュー対象は先頭の RAW ファイル 1 件（パラメータは全 RAW ファイルへ一括適用）
-  const firstRawFile =
-    conversionSettings.mode === "convert"
-      ? selectedFiles.find(isRawFile)
-      : undefined;
+  const firstRawFile = useMemo(
+    () =>
+      conversionSettings.mode === "convert"
+        ? selectedFiles.find(isRawFile)
+        : undefined,
+    [selectedFiles, conversionSettings.mode],
+  );
 
   const handleClearResults = useCallback(() => {
     setConversionResults([]);
