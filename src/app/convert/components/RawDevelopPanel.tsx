@@ -162,6 +162,9 @@ export const RawDevelopPanel: React.FC<RawDevelopPanelProps> = ({
           resetLabel={t("convert.rawDevelop.resetItem")}
         />
       </div>
+      <div className={styles.helpText}>
+        {t("convert.rawDevelop.exposureHelp")}
+      </div>
 
       <h3 className={styles.sectionTitle}>
         {t("convert.rawDevelop.whiteBalance")}

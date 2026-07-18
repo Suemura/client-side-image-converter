@@ -95,6 +95,7 @@
       "description": "Applies development parameters to the RAW sensor data. This preserves far more tonal range than editing after development, which helps recover highlights and shadows. Settings apply to all RAW files at once.",
       "exposure": "Exposure Compensation",
       "exposureLabel": "Exposure (EV)",
+      "exposureHelp": "Shifts exposure on the linear sensor data. Any non-zero value disables automatic brightening so the shift is not cancelled out.",
       "whiteBalance": "White Balance",
       "wbCamera": "As Shot",
       "wbAuto": "Auto",

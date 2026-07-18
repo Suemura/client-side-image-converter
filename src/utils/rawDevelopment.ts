@@ -140,7 +140,9 @@ export const buildLibRawSettings = (
     settings.userMul = kelvinToWbMultipliers(params.kelvin);
   }
 
-  // 露出補正（EV → リニア倍率）。expCorrec を立てないと expShift は無視される
+  // 露出補正（EV → リニア倍率）。expCorrec を立てないと expShift は無視される。
+  // LibRaw デフォルトの自動明るさ調整は出力ヒストグラムから白点を決めるため
+  // リニア域の露出シフトを大きく相殺してしまう。露出補正時は無効化する
   if (params.exposureEV !== 0) {
     settings.expCorrec = true;
     settings.expShift = clamp(
@@ -148,6 +150,7 @@ export const buildLibRawSettings = (
       0.25,
       8,
     );
+    settings.noAutoBright = true;
   }
 
   // ハイライト復元（0 = クリップは LibRaw デフォルトのため省略）

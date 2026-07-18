@@ -44,6 +44,8 @@ describe("buildLibRawSettings", () => {
     const settings = buildLibRawSettings(params);
     expect(settings.expCorrec).toBe(true);
     expect(settings.expShift).toBeCloseTo(2);
+    // 自動明るさ調整は露出シフトを相殺するため、露出補正時は無効化される
+    expect(settings.noAutoBright).toBe(true);
 
     expect(
       buildLibRawSettings({ ...params, exposureEV: -1 }).expShift,
@@ -53,10 +55,11 @@ describe("buildLibRawSettings", () => {
     ).toBeCloseTo(8);
   });
 
-  it("露出補正 0 のときは expCorrec / expShift を設定しない", () => {
+  it("露出補正 0 のときは expCorrec / expShift / noAutoBright を設定しない", () => {
     const settings = buildLibRawSettings(DEFAULT_RAW_DEVELOP_PARAMS);
     expect(settings.expCorrec).toBeUndefined();
     expect(settings.expShift).toBeUndefined();
+    expect(settings.noAutoBright).toBeUndefined();
   });
 
   it("範囲外の EV は expShift の有効域 0.25〜8 にクランプされる", () => {
