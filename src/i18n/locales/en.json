@@ -36,7 +36,7 @@
     "features": {
       "formatConversion": {
         "title": "Format Conversion",
-        "description": "Convert between image formats such as JPEG, PNG, WebP, and AVIF while adjusting quality and size.",
+        "description": "Convert between image formats such as JPEG, PNG, WebP, AVIF, and JPEG XL while adjusting quality and size.",
         "iconAlt": "Format conversion icon"
       },
       "imageCropping": {
@@ -89,7 +89,7 @@
     "metadataSettings": "Metadata Settings",
     "preserveExif": "Preserve EXIF Information",
     "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the converted image. Available for JPEG / PNG / WebP.",
-    "preserveExifUnsupported": "EXIF preservation is not supported for AVIF."
+    "preserveExifUnsupported": "EXIF preservation is not supported for AVIF / JPEG XL."
   },
   "crop": {
     "title": "Image Cropping Tool",
@@ -169,7 +169,7 @@
     "formatOriginal": "Keep original format",
     "preserveExif": "Preserve EXIF",
     "preserveExifHelp": "When checked, the original EXIF data (capture date, camera info, etc.) is preserved in the edited image. Available for JPEG / PNG / WebP output.",
-    "preserveExifUnsupported": "Preserving EXIF is not supported for AVIF.",
+    "preserveExifUnsupported": "Preserving EXIF is not supported for AVIF / JPEG XL.",
     "apply": "Apply edits",
     "reEdit": "Re-edit",
     "editingInProgress": "Editing...",

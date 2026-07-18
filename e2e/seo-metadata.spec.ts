@@ -15,7 +15,8 @@ const PAGES = [
     name: "変換",
     path: "/convert/",
     title: "画像フォーマット変換 | Client-Side Image Converter",
-    descriptionContains: "JPEG・PNG・WebP・AVIF 形式へブラウザ内で画像を変換",
+    descriptionContains:
+      "JPEG・PNG・WebP・AVIF・JPEG XL 形式へブラウザ内で画像を変換",
   },
   {
     name: "トリミング",
