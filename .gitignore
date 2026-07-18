@@ -45,6 +45,9 @@ next-env.d.ts
 /public/sitemap*.xml
 /public/robots.txt
 
+# onnxruntime-web ランタイムアセット（scripts/copy-ort-assets.ts が prebuild/predev で生成）
+/public/ort/
+
 # Claude Code の個人設定（共有しない）
 .claude/settings.local.json
 
