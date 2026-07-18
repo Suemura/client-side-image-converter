@@ -47,6 +47,10 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   );
   const [selectedCropResult, setSelectedCropResult] =
     useState<CropResult | null>(null);
+  // 比較モーダルで URL マップ（fileName-index キー）を引くための選択インデックス
+  const [selectedCropIndex, setSelectedCropIndex] = useState<number | null>(
+    null,
+  );
   const [originalImageUrls, setOriginalImageUrls] = useState<
     Record<string, string>
   >({});
@@ -74,11 +78,29 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   const isConversionMode = results && results.length > 0;
   const isCropMode = cropResults && cropResults.length > 0;
 
-  // 元画像のURL生成（変換モードのみ）
+  // 元画像のURL生成（比較モーダル用）。
+  // 変換モードは originalFiles（ファイル名キー）、CropResult 系モードは
+  // 各結果の originalFile（fileName-index キー。プレビュー URL と同じ規則）から生成する。
   useEffect(() => {
-    // トリミングモードでは元画像のURL生成をスキップ
     if (isCropMode) {
-      return;
+      if (!showComparison || !cropResults) {
+        setOriginalImageUrls({});
+        return;
+      }
+      const urls: Record<string, string> = {};
+      cropResults.forEach((result, index) => {
+        if (result.success && result.originalFile.type.startsWith("image/")) {
+          urls[`${result.fileName}-${index}`] = URL.createObjectURL(
+            result.originalFile,
+          );
+        }
+      });
+      setOriginalImageUrls(urls);
+      return () => {
+        for (const url of Object.values(urls)) {
+          URL.revokeObjectURL(url);
+        }
+      };
     }
 
     if (!isConversionMode || !originalFiles.length) {
@@ -100,7 +122,13 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
         URL.revokeObjectURL(url);
       }
     };
-  }, [originalFiles, isConversionMode, isCropMode]);
+  }, [
+    originalFiles,
+    isConversionMode,
+    isCropMode,
+    cropResults,
+    showComparison,
+  ]);
 
   // トリミング結果のプレビューURL生成（トリミングモードのみ）
   useEffect(() => {
@@ -235,16 +263,21 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     setIsModalOpen(true);
   }, []);
 
-  const handleCropImageClick = useCallback((result: CropResult) => {
-    if (!result.success) return;
-    setSelectedCropResult(result);
-    setIsModalOpen(true);
-  }, []);
+  const handleCropImageClick = useCallback(
+    (result: CropResult, index: number) => {
+      if (!result.success) return;
+      setSelectedCropResult(result);
+      setSelectedCropIndex(index);
+      setIsModalOpen(true);
+    },
+    [],
+  );
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedResult(null);
     setSelectedCropResult(null);
+    setSelectedCropIndex(null);
   }, []);
 
   const resultsToShow = useMemo(() => results || [], [results]);
@@ -418,10 +451,13 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                     <button
                       type="button"
                       className={styles.previewImage}
-                      onClick={() => handleCropImageClick(result)}
-                      aria-label={t("results.viewDetails", {
-                        name: result.fileName,
-                      })}
+                      onClick={() => handleCropImageClick(result, index)}
+                      aria-label={t(
+                        showComparison
+                          ? "results.viewComparison"
+                          : "results.viewDetails",
+                        { name: result.fileName },
+                      )}
                     >
                       {result.success &&
                       cropPreviewUrls[`${result.fileName}-${index}`] ? (
@@ -554,22 +590,54 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
             })}
       </div>
 
-      {/* モーダル表示 */}
+      {/* モーダル表示（変換結果の比較） */}
       {showComparison && selectedResult && isModalOpen && (
         <ImageComparisonModal
-          result={selectedResult}
+          fileName={selectedResult.filename}
           originalImageUrl={
             originalImageUrls[selectedResult.originalFilename] || ""
           }
-          convertedImageUrl={
+          resultImageUrl={
+            // JXL は <img> で直接表示できないため、WASM デコード済みの
+            // プレビュー URL があればそちらを表示する（未生成時は元 URL）
             jxlPreviewUrls[
               `${selectedResult.filename}-${resultsToShow.indexOf(selectedResult)}`
-            ]
+            ] ?? selectedResult.url
           }
+          originalSize={selectedResult.originalSize}
+          resultSize={selectedResult.convertedSize}
+          onDownload={() => handleDownloadSingle(selectedResult)}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
         />
       )}
+
+      {/* CropResult 系（拡大等）の比較モーダル。サイズ増が前提のツールのため削減率バッジは出さない */}
+      {showComparison &&
+        selectedCropResult &&
+        selectedCropIndex !== null &&
+        isModalOpen && (
+          <ImageComparisonModal
+            fileName={selectedCropResult.fileName}
+            originalImageUrl={
+              originalImageUrls[
+                `${selectedCropResult.fileName}-${selectedCropIndex}`
+              ] || ""
+            }
+            resultImageUrl={
+              cropPreviewUrls[
+                `${selectedCropResult.fileName}-${selectedCropIndex}`
+              ] || ""
+            }
+            originalSize={selectedCropResult.originalFile.size}
+            resultSize={selectedCropResult.croppedBlob.size}
+            showCompressionRatio={false}
+            resultLabel={t("comparison.processed")}
+            onDownload={() => handleCropDownload(selectedCropResult)}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+          />
+        )}
 
       {/* トリミング結果用のFileDetailModal */}
       {!showComparison && selectedCropResult && isModalOpen && (

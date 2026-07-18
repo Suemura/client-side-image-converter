@@ -18,6 +18,7 @@
     "top": "トップ",
     "crop": "トリミング",
     "convert": "変換",
+    "upscale": "AI拡大",
     "edit": "編集",
     "redact": "モザイク",
     "metadata": "メタデータ"
@@ -26,6 +27,7 @@
     "title": "Client-Side Image Converter",
     "subtitle": "クライアントサイドで画像を一括で変換・トリミングできます。\nサーバに画像を送信しないプライバシー重視の画像変換ツールです。",
     "startConverting": "変換",
+    "tryUpscaleTool": "AI画像拡大",
     "tryCropTool": "トリミング",
     "tryEditTool": "画像編集",
     "tryRedactTool": "モザイク・ぼかし",
@@ -247,6 +249,28 @@
     "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報、位置情報など）が処理後の画像に保持されます。JPEG / PNG / WebP で有効です。EXIF内の埋め込みサムネイルにはレタッチ前の画像が残るため、常に削除されます。",
     "reset": "リセット"
   },
+  "upscale": {
+    "title": "AI画像拡大ツール",
+    "subtitle": "AI（超解像モデル Real-ESRGAN）で画像を2倍・4倍に高精細に拡大します。処理はすべてブラウザ内で完結し、画像はサーバーに送信されません。",
+    "settings": "拡大設定",
+    "scaleLabel": "拡大倍率",
+    "scale2x": "2倍",
+    "scale4x": "4倍",
+    "preserveExif": "EXIF情報を保持",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報、位置情報など）が拡大後の画像に保持されます。JPEG / PNG / WebP で有効です。",
+    "modelNote": "初回実行時にAIモデル（約31MB）をダウンロードします。2回目以降はキャッシュから読み込むためダウンロードは不要です。",
+    "sizeLimitNote": "長辺 {{max}}px までの画像を処理できます。",
+    "selectImageFirst": "画像を選択してください",
+    "startUpscaling": "拡大を実行",
+    "reUpscale": "再実行",
+    "cancel": "キャンセル",
+    "preparingModel": "AIモデルを準備中... {{percent}}%",
+    "upscalingProgress": "拡大中（{{current}} / {{total}} 枚）",
+    "processedFiles": "処理済みファイル",
+    "processingPlaceholder": "処理後にここに結果が表示されます",
+    "selectNewImage": "新しい画像を選択",
+    "cancelledNotice": "処理をキャンセルしました。完了済みのファイルのみ表示しています。"
+  },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",
     "dropMoreFiles": "さらにファイルを追加",
@@ -333,7 +357,8 @@
   "comparison": {
     "original": "変換前",
     "converted": "変換後",
-    "instruction": "境界線をドラッグして変換前後の画像を比較"
+    "instruction": "境界線をドラッグして変換前後の画像を比較",
+    "processed": "処理後"
   },
   "common": {
     "files": "個",

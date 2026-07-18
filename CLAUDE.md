@@ -93,7 +93,7 @@ npm run preview
 
 各ファイルの詳細な責務・関数一覧は `docs/ARCHITECTURE.md` を参照。
 
-- `src/app/` - Next.js App Router ページ（`convert/` 変換、`crop/` トリミング、`edit/` 画像編集、`redact/` モザイク / ぼかしレタッチ、`metadata/` EXIF エディター、`share/` 共有シート受け口、`manifest.ts` PWA マニフェスト。ページ固有の UI 部品は `src/app/<page>/components/` 配下）
+- `src/app/` - Next.js App Router ページ（`convert/` 変換、`crop/` トリミング、`edit/` 画像編集、`redact/` モザイク / ぼかしレタッチ、`upscale/` AI 超解像、`metadata/` EXIF エディター、`share/` 共有シート受け口、`manifest.ts` PWA マニフェスト。ページ固有の UI 部品は `src/app/<page>/components/` 配下）
 - `src/components/` - 再利用可能な React コンポーネント（PWA 関連・ツール連携（ハンドオフ）の送出/到着 UI・汎用スライダー等）
 - `src/contexts/` - React Context（テーマ・ツール連携の共有ストア）
 - `src/utils/` - コアユーティリティ。Canvas / WebGL / WASM 依存のオーケストレーションと、Canvas 非依存の純粋ロジック（単体テスト対象）をファイル単位で分離して配置する
@@ -121,11 +121,12 @@ npm run preview
 2. **画像トリミング**（`/crop`）- アスペクト比プリセット・回転 / 反転・適用範囲切替（全画像一括 / 画像ごと）。EXIF Orientation は焼き込みで補正
 3. **画像編集**（`/edit`）- ライト / カラー / ディテール（シャープネス / 明瞭度 / ビネット / グレイン）調整・効果（モノクロ / ガンマ）・自動補正（WB スポイト含む）・トーンカーブ・LUT フィルタ・ヒストグラム表示。WebGL2 プレビュー + Canvas2D CPU フォールバック（WYSIWYG）
 4. **モザイク / ぼかしレタッチ**（`/redact`）- 複数の矩形領域をドラッグ指定してモザイク / ぼかし / 塗りつぶしを焼き込む（既定はモザイク。領域は画像ごとに保持・出力は `_redacted` サフィックスで元形式維持）
-5. **EXIF メタデータ管理**（`/metadata`）- 表示（JPEG / PNG / WebP）・編集・選択的削除・GPS 丸め（約 1km 精度）
-6. **ツール連携（ハンドオフ）** - 各ツールの処理結果をダウンロードせずに次のツールへ引き継いで続けて処理できる（全 5 ツールの相互連携。送り先候補は「現在のツール以外」かつ「全結果 MIME を受理できるツール」）
-7. **バッチ処理・ファイル保存** - 複数画像の一括処理（投入上限 `MAX_INPUT_FILES` = 200 件。変換はワーカープールで並列）。結果は ZIP ダウンロードまたは Chromium 系では File System Access API でフォルダへ直接保存可
-8. **プライバシーファースト** - Canvas API / WASM / WebGL によるクライアントサイドでの全処理（サーバー送信なし）
-9. **PWA** - オフライン対応・ホーム画面 / デスクトップへインストール可能。インストール済み PWA はスマホの共有シートから画像を直接受け取れる（Web Share Target、受け口 `/share`）
+5. **AI 超解像（アップスケール）**（`/upscale`）- Real-ESRGAN モデルを ONNX Runtime Web（WebGPU 優先・WASM フォールバック）でブラウザ内実行し、画像を 2x/4x に拡大。モデル・WASM は初回実行時に取得してキャッシュ。タイル分割・フェザー合成で大画像対応（長辺 4096px まで）。出力は `_upscaled` サフィックスで元形式維持
+6. **EXIF メタデータ管理**（`/metadata`）- 表示（JPEG / PNG / WebP）・編集・選択的削除・GPS 丸め（約 1km 精度）
+7. **ツール連携（ハンドオフ）** - 各ツールの処理結果をダウンロードせずに次のツールへ引き継いで続けて処理できる（全 6 ツールの相互連携。送り先候補は「現在のツール以外」かつ「全結果 MIME を受理できるツール」）
+8. **バッチ処理・ファイル保存** - 複数画像の一括処理（投入上限 `MAX_INPUT_FILES` = 200 件。変換はワーカープールで並列）。結果は ZIP ダウンロードまたは Chromium 系では File System Access API でフォルダへ直接保存可
+9. **プライバシーファースト** - Canvas API / WASM / WebGL によるクライアントサイドでの全処理（サーバー送信なし）
+10. **PWA** - オフライン対応・ホーム画面 / デスクトップへインストール可能。インストール済み PWA はスマホの共有シートから画像を直接受け取れる（Web Share Target、受け口 `/share`）
 
 ### 重要な設計原則
 
