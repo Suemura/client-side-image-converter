@@ -133,7 +133,9 @@
     "applyMode": "Apply To",
     "applyToAll": "All images",
     "perImage": "Per image",
-    "applyModeHelp": "\"All images\" applies the current settings to every image. \"Per image\" lets you set the crop area and rotation individually while switching images with ←/→."
+    "applyModeHelp": "\"All images\" applies the current settings to every image. \"Per image\" lets you set the crop area and rotation individually while switching images with ←/→.",
+    "cropError": "An error occurred while cropping.",
+    "previewError": "Failed to generate the preview (unsupported format or possibly corrupted)."
   },
   "edit": {
     "title": "Image Editor",
@@ -179,6 +181,8 @@
     "compareHint": "Drag the divider in the middle to compare before and after.",
     "applyModeHelp": "\"All images\" applies the current adjustments to every image. \"Per image\" lets you set adjustments individually while switching images with ←/→.",
     "editFailures": "The following files could not be edited (unsupported format or possibly corrupted)",
+    "editError": "An error occurred while editing.",
+    "previewError": "Failed to generate the preview (unsupported format or possibly corrupted).",
     "auto": {
       "title": "Auto Enhance",
       "levels": "Auto Levels",
@@ -247,7 +251,9 @@
     "noRegionHelp": "Images without any selected areas are re-saved without redaction.",
     "preserveExif": "Preserve EXIF Information",
     "preserveExifHelp": "When checked, EXIF information (date taken, camera info, location, etc.) from the original image will be preserved in the processed image. Available for JPEG / PNG / WebP. The embedded EXIF thumbnail is always removed because it contains the image before redaction.",
-    "reset": "Reset"
+    "reset": "Reset",
+    "redactError": "An error occurred while redacting.",
+    "previewError": "Failed to generate the preview (unsupported format or possibly corrupted)."
   },
   "upscale": {
     "title": "AI Image Upscaler",
@@ -269,7 +275,8 @@
     "processedFiles": "Processed Files",
     "processingPlaceholder": "Results will appear here after processing",
     "selectNewImage": "Select New Images",
-    "cancelledNotice": "Processing was cancelled. Only completed files are shown."
+    "cancelledNotice": "Processing was cancelled. Only completed files are shown.",
+    "upscaleError": "An error occurred while upscaling."
   },
   "fileUpload": {
     "dropFiles": "Drop files here",
@@ -385,6 +392,9 @@
     "noMetadataFound": "No metadata found",
     "metadataRemoved": "Metadata removed successfully",
     "analyzingMetadata": "Analyzing metadata...",
+    "analysisError": "Failed to analyze metadata. Please try again later.",
+    "analysisFailures": "Metadata could not be analyzed for the following files (metadata may still be present)",
+    "removeError": "An error occurred while removing metadata.",
     "processingNote": "* JPEG format: Only selected tags removed, Other formats: All metadata removed",
     "processingMethod": {
       "selective": "Selective",

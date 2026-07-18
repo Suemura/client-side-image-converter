@@ -1,6 +1,7 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ErrorNotice } from "../../../components/ErrorNotice";
 import {
   type AdjustmentState,
   clampAdjustments,
@@ -75,6 +76,8 @@ export const CompareView: React.FC<CompareViewProps> = ({
   const draggingRef = useRef(false);
   // 分割位置（%）。左が編集前、右が編集後
   const [divider, setDivider] = useState(50);
+  // 編集後プレビューの描画失敗通知（次の描画成功でクリアする）
+  const [renderError, setRenderError] = useState(false);
 
   // onEditedFrame は ref 経由で最新を参照し、コールバックの identity 変化が
   // 編集後描画 effect（GPU 再描画）を誘発しないようにする
@@ -179,8 +182,10 @@ export const CompareView: React.FC<CompareViewProps> = ({
       ctx.clearRect(0, 0, width, height);
       ctx.drawImage(out, 0, 0);
       scheduleEditedFrameSample(canvas);
+      setRenderError(false);
     } catch (error) {
       console.error("Preview render failed:", error);
+      setRenderError(true);
     }
   }, [
     source,
@@ -257,6 +262,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
 
   return (
     <div className={styles.container}>
+      <ErrorNotice message={renderError ? t("edit.previewError") : null} />
       <div
         ref={stageRef}
         className={`${styles.stage}${eyedropperActive ? ` ${styles.stageEyedropper}` : ""}`}

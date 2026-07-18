@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ErrorNotice } from "../../components/ErrorNotice";
 import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
@@ -42,6 +43,10 @@ export default function CropPage() {
   const [progressTotal, setProgressTotal] = useState(0);
   const [cropResults, setCropResults] = useState<CropResult[]>([]);
   const [preserveExif, setPreserveExif] = useState(false);
+  // バッチ全体が失敗した場合のエラー通知（個別ファイルの失敗は results 側で表示）
+  const [batchError, setBatchError] = useState(false);
+  // プレビュー生成の失敗通知（次の生成成功でクリアする）
+  const [previewError, setPreviewError] = useState(false);
 
   // トリミング設定
   const [aspectRatioId, setAspectRatioId] = useState("free");
@@ -128,9 +133,13 @@ export default function CropPage() {
           }
           return generated;
         });
+        setPreviewError(false);
       })
       .catch((error) => {
         console.error("Preview generation failed:", error);
+        if (!cancelled) {
+          setPreviewError(true);
+        }
       });
     return () => {
       cancelled = true;
@@ -161,6 +170,8 @@ export default function CropPage() {
       setFiles(imageFiles);
       setCurrentPreviewIndex(0);
       setCropResults([]);
+      setBatchError(false);
+      setPreviewError(false);
       resetCropSettings();
     },
     [resetCropSettings],
@@ -177,6 +188,8 @@ export default function CropPage() {
     setFiles([]);
     setCurrentPreviewIndex(0);
     setCropResults([]);
+    setBatchError(false);
+    setPreviewError(false);
     resetCropSettings();
     clearHandoffNotice();
     if (previewUrl) {
@@ -265,6 +278,7 @@ export default function CropPage() {
     setIsProcessing(true);
     setProgressCurrent(0);
     setProgressTotal(files.length);
+    setBatchError(false);
 
     try {
       const state: CropState = {
@@ -291,6 +305,7 @@ export default function CropPage() {
       setCropResults(results);
     } catch (error) {
       console.error("Crop error:", error);
+      setBatchError(true);
     } finally {
       setIsProcessing(false);
     }
@@ -356,6 +371,10 @@ export default function CropPage() {
                   <p className={styles.centerDescription}>
                     {t("crop.dragToSelectArea")}
                   </p>
+
+                  <ErrorNotice
+                    message={previewError ? t("crop.previewError") : null}
+                  />
 
                   <CropToolbar
                     aspectRatioId={aspectRatioId}
@@ -448,6 +467,8 @@ export default function CropPage() {
                   />
                 </div>
               )}
+
+              <ErrorNotice message={batchError ? t("crop.cropError") : null} />
 
               {hasResults ? (
                 <ConversionResults
