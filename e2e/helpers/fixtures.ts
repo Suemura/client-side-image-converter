@@ -479,6 +479,26 @@ export const checkerPngFile = (
   return { name, mimeType: "image/png", buffer: Buffer.from(png) };
 };
 
+/**
+ * 明るい背景の中央に暗い矩形（顕著物体）を置いた RGB PNG を実行時生成する。
+ * 背景除去（/remove-bg）のサリエンシー検出が「中央 = 前景・隅 = 背景」と
+ * 判定しやすい高コントラストな構図にしてある。
+ */
+export const salientRectPngFile = (
+  name = "salient.png",
+  width = 320,
+  height = 320,
+) => {
+  const x0 = Math.floor(width * 0.3);
+  const x1 = Math.floor(width * 0.7);
+  const y0 = Math.floor(height * 0.3);
+  const y1 = Math.floor(height * 0.7);
+  const png = buildPng(width, height, 2, (x, y) =>
+    x >= x0 && x < x1 && y >= y0 && y < y1 ? [140, 30, 30] : [235, 235, 235],
+  );
+  return { name, mimeType: "image/png", buffer: Buffer.from(png) };
+};
+
 /** PNG を装った破損ファイル（デコード失敗時の通知表示の検証に使用） */
 export const brokenImageFile = (name = "broken.png") => ({
   name,

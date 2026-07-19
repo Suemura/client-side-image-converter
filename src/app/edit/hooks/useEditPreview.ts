@@ -43,6 +43,8 @@ export interface EditPreview {
   previewSize: { width: number; height: number };
   /** 編集前（カーブ適用前）の輝度ヒストグラム（デコード中は null） */
   sourceHistogram: HistogramData | null;
+  /** プレビューソース生成の失敗通知（次の生成開始・成功でクリアする） */
+  previewError: boolean;
   /** リストクリア時にプレビュー・ヒストグラムを破棄する */
   resetPreview: () => void;
 }
@@ -68,6 +70,7 @@ export function useEditPreview(
   const [sourceHistogram, setSourceHistogram] = useState<HistogramData | null>(
     null,
   );
+  const [previewError, setPreviewError] = useState(false);
 
   useEffect(() => {
     if (files.length === 0) {
@@ -92,9 +95,15 @@ export function useEditPreview(
         setPreviewSource(canvas);
         setPreviewSize({ width: canvas.width, height: canvas.height });
         setSourceHistogram(computeSourceHistogram(canvas));
+        setPreviewError(false);
       })
       .catch((error) => {
         console.error("Preview generation failed:", error);
+        if (!cancelled) {
+          // 失敗時に前の画像のプレビューを残すと編集対象を誤認させるため破棄する
+          setPreviewSource(null);
+          setPreviewError(true);
+        }
       });
     return () => {
       cancelled = true;
@@ -104,7 +113,14 @@ export function useEditPreview(
   const resetPreview = useCallback(() => {
     setPreviewSource(null);
     setSourceHistogram(null);
+    setPreviewError(false);
   }, []);
 
-  return { previewSource, previewSize, sourceHistogram, resetPreview };
+  return {
+    previewSource,
+    previewSize,
+    sourceHistogram,
+    previewError,
+    resetPreview,
+  };
 }

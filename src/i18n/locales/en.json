@@ -19,6 +19,7 @@
     "crop": "Crop",
     "convert": "Convert",
     "upscale": "AI Upscale",
+    "remove-bg": "Background Removal",
     "edit": "Edit",
     "redact": "Redact",
     "metadata": "Metadata"
@@ -28,6 +29,7 @@
     "subtitle": "Convert and crop images in batches on the client-side.\nA privacy-focused image conversion tool that never sends images to servers.",
     "startConverting": "Start Converting",
     "tryUpscaleTool": "AI Upscaler",
+    "tryRemoveBgTool": "Background Remover",
     "tryCropTool": "Try Crop Tool",
     "tryEditTool": "Image Editor",
     "tryRedactTool": "Mosaic / Blur",
@@ -133,7 +135,9 @@
     "applyMode": "Apply To",
     "applyToAll": "All images",
     "perImage": "Per image",
-    "applyModeHelp": "\"All images\" applies the current settings to every image. \"Per image\" lets you set the crop area and rotation individually while switching images with ←/→."
+    "applyModeHelp": "\"All images\" applies the current settings to every image. \"Per image\" lets you set the crop area and rotation individually while switching images with ←/→.",
+    "cropError": "An error occurred while cropping.",
+    "previewError": "Failed to generate the preview (unsupported format or possibly corrupted)."
   },
   "edit": {
     "title": "Image Editor",
@@ -179,6 +183,8 @@
     "compareHint": "Drag the divider in the middle to compare before and after.",
     "applyModeHelp": "\"All images\" applies the current adjustments to every image. \"Per image\" lets you set adjustments individually while switching images with ←/→.",
     "editFailures": "The following files could not be edited (unsupported format or possibly corrupted)",
+    "editError": "An error occurred while editing.",
+    "previewError": "Failed to generate the preview (unsupported format or possibly corrupted).",
     "auto": {
       "title": "Auto Enhance",
       "levels": "Auto Levels",
@@ -247,7 +253,9 @@
     "noRegionHelp": "Images without any selected areas are re-saved without redaction.",
     "preserveExif": "Preserve EXIF Information",
     "preserveExifHelp": "When checked, EXIF information (date taken, camera info, location, etc.) from the original image will be preserved in the processed image. Available for JPEG / PNG / WebP. The embedded EXIF thumbnail is always removed because it contains the image before redaction.",
-    "reset": "Reset"
+    "reset": "Reset",
+    "redactError": "An error occurred while redacting.",
+    "previewError": "Failed to generate the preview (unsupported format or possibly corrupted)."
   },
   "upscale": {
     "title": "AI Image Upscaler",
@@ -266,6 +274,30 @@
     "cancel": "Cancel",
     "preparingModel": "Preparing AI model... {{percent}}%",
     "upscalingProgress": "Upscaling ({{current}} / {{total}})",
+    "processedFiles": "Processed Files",
+    "processingPlaceholder": "Results will appear here after processing",
+    "selectNewImage": "Select New Images",
+    "cancelledNotice": "Processing was cancelled. Only completed files are shown.",
+    "upscaleError": "An error occurred while upscaling."
+  },
+  "removeBg": {
+    "title": "Background Remover",
+    "subtitle": "Cut out image backgrounds with an AI segmentation model (U²-Net) and create transparent images. Everything runs in your browser — your images are never uploaded.",
+    "settings": "Output Settings",
+    "formatLabel": "Output format",
+    "formatPng": "PNG",
+    "formatWebp": "WebP",
+    "preserveExif": "Preserve EXIF data",
+    "preserveExifHelp": "When checked, EXIF data from the original image (date taken, camera info, location, etc.) is preserved in the output image.",
+    "modelNote": "The AI model (about 31MB) is downloaded on first run. Subsequent runs load it from the cache, so it also works offline.",
+    "sizeLimitNote": "Images up to {{max}}px on the long side can be processed.",
+    "transparentNote": "The background becomes transparent, so the output is PNG or WebP (JPEG does not support transparency).",
+    "selectImageFirst": "Please select images first",
+    "startRemoving": "Remove Background",
+    "reRemove": "Run Again",
+    "cancel": "Cancel",
+    "preparingModel": "Preparing AI model... {{percent}}%",
+    "removingProgress": "Removing background ({{current}} / {{total}})",
     "processedFiles": "Processed Files",
     "processingPlaceholder": "Results will appear here after processing",
     "selectNewImage": "Select New Images",
@@ -385,6 +417,9 @@
     "noMetadataFound": "No metadata found",
     "metadataRemoved": "Metadata removed successfully",
     "analyzingMetadata": "Analyzing metadata...",
+    "analysisError": "Failed to analyze metadata. Please try again later.",
+    "analysisFailures": "Metadata could not be analyzed for the following files (metadata may still be present)",
+    "removeError": "An error occurred while removing metadata.",
     "processingNote": "* JPEG format: Only selected tags removed, Other formats: All metadata removed",
     "processingMethod": {
       "selective": "Selective",

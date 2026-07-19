@@ -19,6 +19,7 @@
     "crop": "トリミング",
     "convert": "変換",
     "upscale": "AI拡大",
+    "remove-bg": "背景除去",
     "edit": "編集",
     "redact": "モザイク",
     "metadata": "メタデータ"
@@ -28,6 +29,7 @@
     "subtitle": "クライアントサイドで画像を一括で変換・トリミングできます。\nサーバに画像を送信しないプライバシー重視の画像変換ツールです。",
     "startConverting": "変換",
     "tryUpscaleTool": "AI画像拡大",
+    "tryRemoveBgTool": "背景除去",
     "tryCropTool": "トリミング",
     "tryEditTool": "画像編集",
     "tryRedactTool": "モザイク・ぼかし",
@@ -133,7 +135,9 @@
     "applyMode": "適用範囲",
     "applyToAll": "全画像一括",
     "perImage": "画像ごと",
-    "applyModeHelp": "「全画像一括」は現在の設定を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に領域・回転を指定できます。"
+    "applyModeHelp": "「全画像一括」は現在の設定を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に領域・回転を指定できます。",
+    "cropError": "トリミング処理中にエラーが発生しました。",
+    "previewError": "プレビューを生成できませんでした（未対応の形式、または破損している可能性があります）。"
   },
   "edit": {
     "title": "画像編集",
@@ -179,6 +183,8 @@
     "compareHint": "中央の境界をドラッグして編集前後を比較できます。",
     "applyModeHelp": "「全画像一括」は現在の調整を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に調整を指定できます。",
     "editFailures": "以下のファイルは編集できませんでした（未対応の形式、または破損している可能性があります）",
+    "editError": "編集処理中にエラーが発生しました。",
+    "previewError": "プレビューを生成できませんでした（未対応の形式、または破損している可能性があります）。",
     "auto": {
       "title": "自動補正",
       "levels": "オートレベル",
@@ -247,7 +253,9 @@
     "noRegionHelp": "領域を指定していない画像は加工されずに再保存されます。",
     "preserveExif": "EXIF情報を保持",
     "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報、位置情報など）が処理後の画像に保持されます。JPEG / PNG / WebP で有効です。EXIF内の埋め込みサムネイルにはレタッチ前の画像が残るため、常に削除されます。",
-    "reset": "リセット"
+    "reset": "リセット",
+    "redactError": "レタッチ処理中にエラーが発生しました。",
+    "previewError": "プレビューを生成できませんでした（未対応の形式、または破損している可能性があります）。"
   },
   "upscale": {
     "title": "AI画像拡大ツール",
@@ -266,6 +274,30 @@
     "cancel": "キャンセル",
     "preparingModel": "AIモデルを準備中... {{percent}}%",
     "upscalingProgress": "拡大中（{{current}} / {{total}} 枚）",
+    "processedFiles": "処理済みファイル",
+    "processingPlaceholder": "処理後にここに結果が表示されます",
+    "selectNewImage": "新しい画像を選択",
+    "cancelledNotice": "処理をキャンセルしました。完了済みのファイルのみ表示しています。",
+    "upscaleError": "拡大処理中にエラーが発生しました。"
+  },
+  "removeBg": {
+    "title": "背景除去ツール",
+    "subtitle": "AI（セグメンテーションモデル U²-Net）で画像の背景を切り抜き、透過画像を作成します。処理はすべてブラウザ内で完結し、画像はサーバーに送信されません。",
+    "settings": "出力設定",
+    "formatLabel": "出力形式",
+    "formatPng": "PNG",
+    "formatWebp": "WebP",
+    "preserveExif": "EXIF情報を保持",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報、位置情報など）が背景除去後の画像に保持されます。",
+    "modelNote": "初回実行時にAIモデル（約31MB）をダウンロードします。2回目以降はキャッシュから読み込むためダウンロードは不要で、オフラインでも動作します。",
+    "sizeLimitNote": "長辺 {{max}}px までの画像を処理できます。",
+    "transparentNote": "背景が透過になるため、出力は PNG または WebP です（JPEG は透過非対応）。",
+    "selectImageFirst": "画像を選択してください",
+    "startRemoving": "背景除去を実行",
+    "reRemove": "再実行",
+    "cancel": "キャンセル",
+    "preparingModel": "AIモデルを準備中... {{percent}}%",
+    "removingProgress": "背景除去中（{{current}} / {{total}} 枚）",
     "processedFiles": "処理済みファイル",
     "processingPlaceholder": "処理後にここに結果が表示されます",
     "selectNewImage": "新しい画像を選択",
@@ -384,6 +416,9 @@
     "noMetadataFound": "メタデータが見つかりませんでした",
     "metadataRemoved": "メタデータが削除されました",
     "analyzingMetadata": "メタデータを分析中...",
+    "analysisError": "メタデータの解析に失敗しました。時間をおいて再度お試しください。",
+    "analysisFailures": "以下のファイルはメタデータを解析できませんでした（メタデータが残っている可能性があります）",
+    "removeError": "メタデータの削除処理中にエラーが発生しました。",
     "processingNote": "※ JPEG形式: 選択されたタグのみ削除、その他の形式: すべてのメタデータを削除",
     "processingMethod": {
       "selective": "選択的削除",

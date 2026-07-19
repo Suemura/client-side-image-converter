@@ -1,5 +1,5 @@
 import piexif from "piexifjs";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { dataUrlToBlob } from "../imageUtils";
 import {
   assessPrivacyRisk,
@@ -208,6 +208,70 @@ describe("removeMetadataFromImage", () => {
     expect(exif["0th"]?.[piexif.ImageIFD.Make]).toBeUndefined();
     // 選択されていない Model は残る
     expect(exif["0th"]?.[piexif.ImageIFD.Model]).toBe("TestModel");
+  });
+});
+
+describe("analyzeMetadata の失敗記録", () => {
+  afterEach(() => {
+    vi.doUnmock("exif-js");
+    vi.resetModules();
+  });
+
+  /** ファイル読み取り（arrayBuffer）が失敗する WebP ファイルを作る（解析失敗の再現用） */
+  const createUnreadableWebpFile = (name: string): File => {
+    const file = new File(["x"], name, { type: "image/webp" });
+    Object.defineProperty(file, "arrayBuffer", {
+      value: () => Promise.reject(new Error("read failed")),
+    });
+    return file;
+  };
+
+  it("exif-js の読み込みに失敗した場合、reject せず analysisFailures に記録する", async () => {
+    // 動的 import の失敗（デプロイ直後のチャンクハッシュ入れ替わり等）を再現する。
+    // vitest のモジュールモックは並列の動的 import と競合するため 1 ファイルで検証する
+    vi.doMock("exif-js", () => {
+      throw new Error("chunk load failed");
+    });
+    vi.resetModules();
+    const { analyzeMetadata } = await import("../metadataManager");
+
+    const result = await analyzeMetadata([
+      new File(["a"], "a.jpg", { type: "image/jpeg" }),
+    ]);
+
+    expect(result.analysisFailures).toEqual(["a.jpg"]);
+    // 失敗ファイルも fileMetadata に残る（後段の削除処理の対象から外さない）
+    expect(result.fileMetadata).toHaveLength(1);
+    expect(result.fileMetadata[0].exifData).toEqual({});
+    expect(result.allTags.size).toBe(0);
+  });
+
+  it("一部ファイルのみ解析に失敗した場合、成功分の結果と失敗ファイル名の両方を返す", async () => {
+    const { analyzeMetadata } = await import("../metadataManager");
+
+    const files = [
+      createJpegFileWithExif(),
+      createUnreadableWebpFile("bad.webp"),
+    ];
+    const result = await analyzeMetadata(files);
+
+    expect(result.analysisFailures).toEqual(["bad.webp"]);
+    expect(result.fileMetadata).toHaveLength(2);
+    expect(
+      result.fileMetadata.find((fm) => fm.file.name === "bad.webp")?.exifData,
+    ).toEqual({});
+  });
+
+  it("全ファイルの解析に成功した場合、analysisFailures は空になる", async () => {
+    const { analyzeMetadata } = await import("../metadataManager");
+
+    const result = await analyzeMetadata([
+      createJpegFileWithExif(),
+      createJpegFileWithExif(),
+    ]);
+
+    expect(result.analysisFailures).toEqual([]);
+    expect(result.fileMetadata).toHaveLength(2);
   });
 });
 

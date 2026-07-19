@@ -30,6 +30,15 @@ const UPSCALE_MODEL_VERSION = "1";
 /** 超解像モデルの配信 URL（public/models/ に同梱。出所は public/models/CREDITS.md） */
 export const UPSCALE_MODEL_URL = `/models/realesr-general-x4v3.onnx?v=${UPSCALE_MODEL_VERSION}`;
 
+/**
+ * 背景除去モデルのバージョン識別子。
+ * モデル差し替え時の扱いは UPSCALE_MODEL_VERSION と同じ（クエリでキャッシュキーを分離）。
+ */
+const REMOVE_BG_MODEL_VERSION = "1";
+
+/** 背景除去モデルの配信 URL（public/models/ に同梱。出所は public/models/CREDITS.md） */
+export const REMOVE_BG_MODEL_URL = `/models/u2netp.onnx?v=${REMOVE_BG_MODEL_VERSION}`;
+
 /** copy-ort-assets.ts が生成する分割マニフェストの形 */
 export interface OrtAssetsManifest {
   version: string;

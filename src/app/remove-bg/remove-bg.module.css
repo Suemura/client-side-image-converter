@@ -1,0 +1,140 @@
+.removeBgPageContainer {
+  display: grid;
+  grid-template-columns: 2fr 4fr 2fr;
+  gap: 1.5rem;
+  align-items: start;
+  width: 100%;
+  max-width: 1400px;
+  min-height: 600px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* DESIGN.md「カード / パネル」規定 */
+.removeBgColumn {
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+  overflow: hidden;
+}
+
+.removeBgColumnCenter {
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+}
+
+/* 小見出し規定（16px / 500） */
+.removeBgColumnTitle {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--foreground);
+  margin-bottom: 1rem;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+/* セクション見出し規定（20px / 700 / letter-spacing -0.01em） */
+.removeBgCenterTitle {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.placeholder {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 2rem 1rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.centerButton {
+  margin-top: auto;
+  padding-top: 2rem;
+  text-align: center;
+}
+
+.processingArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.processingText {
+  text-align: center;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.progressWrapper {
+  margin-bottom: 1rem;
+}
+
+.cancelledNotice {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.pageContainer {
+  padding: 2rem;
+}
+
+/* DESIGN.md「3. Typography」ページタイトル規定（28px / 700 / letter-spacing -0.01em） */
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.pageSubtitle {
+  font-size: 16px;
+  color: var(--muted-foreground);
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto 3rem;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* レスポンシブ: 中間幅では 1 カラムに畳む（redact と同じ挙動） */
+@media (max-width: 1024px) {
+  .removeBgPageContainer {
+    grid-template-columns: 1fr;
+    padding: 0 1rem;
+  }
+
+  .removeBgColumnCenter {
+    min-height: auto;
+  }
+
+  .pageContainer {
+    padding: 1rem;
+  }
+}

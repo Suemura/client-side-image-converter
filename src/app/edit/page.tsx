@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ErrorNotice } from "../../components/ErrorNotice";
 import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
@@ -19,7 +20,6 @@ import type {
   ConversionResult,
 } from "../../utils/imageConverter";
 import { type EditOutputFormat, editImages } from "../../utils/imageEditor";
-import { ConversionErrors } from "../convert/components/ConversionErrors";
 import { ImageUploadSection } from "../convert/components/ImageUploadSection";
 import { ProgressBar } from "../convert/components/ProgressBar";
 import { AdjustmentPanel } from "./components/AdjustmentPanel";
@@ -48,6 +48,8 @@ export default function EditPage() {
   const [progressTotal, setProgressTotal] = useState(0);
   const [editResults, setEditResults] = useState<ConversionResult[]>([]);
   const [editFailures, setEditFailures] = useState<ConversionFailure[]>([]);
+  // バッチ全体が失敗した場合のエラー通知（個別ファイルの失敗は editFailures で表示）
+  const [batchError, setBatchError] = useState(false);
 
   // 調整・LUT 適用後のプレビューから算出したヒストグラム（CompareView からフレームを受け取る）
   const [histogram, setHistogram] = useState<HistogramData | null>(null);
@@ -80,8 +82,13 @@ export default function EditPage() {
   } = useLutRegistry(currentLutSelection);
 
   // EXIF 補正済みプレビューソースと編集前ヒストグラムの生成
-  const { previewSource, previewSize, sourceHistogram, resetPreview } =
-    useEditPreview(files, currentPreviewIndex);
+  const {
+    previewSource,
+    previewSize,
+    sourceHistogram,
+    previewError,
+    resetPreview,
+  } = useEditPreview(files, currentPreviewIndex);
 
   // 自動補正（レベル / WB）と WB スポイト
   const {
@@ -120,6 +127,7 @@ export default function EditPage() {
       setFiles(imageFiles);
       setEditResults([]);
       setEditFailures([]);
+      setBatchError(false);
     },
     [revokeResultUrls, editResults],
   );
@@ -138,6 +146,7 @@ export default function EditPage() {
     setCurrentPreviewIndex(0);
     setEditResults([]);
     setEditFailures([]);
+    setBatchError(false);
     resetPreview();
     setHistogram(null);
     resetAdjustments();
@@ -174,6 +183,7 @@ export default function EditPage() {
     revokeResultUrls(editResults);
     setEditResults([]);
     setEditFailures([]);
+    setBatchError(false);
 
     try {
       const jobs = buildEditJobs(
@@ -198,6 +208,7 @@ export default function EditPage() {
       setEditFailures(failures);
     } catch (error) {
       console.error("Edit error:", error);
+      setBatchError(true);
     } finally {
       setIsProcessing(false);
     }
@@ -255,6 +266,9 @@ export default function EditPage() {
                 </div>
               ) : (
                 <>
+                  <ErrorNotice
+                    message={previewError ? t("edit.previewError") : null}
+                  />
                   <CompareView
                     source={previewSource}
                     width={previewSize.width}
@@ -360,9 +374,10 @@ export default function EditPage() {
                 isVisible={true}
               />
             )}
-            <ConversionErrors
-              failures={editFailures}
-              titleKey="edit.editFailures"
+            <ErrorNotice message={batchError ? t("edit.editError") : null} />
+            <ErrorNotice
+              message={editFailures.length > 0 ? t("edit.editFailures") : null}
+              fileNames={editFailures.map((failure) => failure.fileName)}
             />
             {hasResults && (
               <ConversionResults
