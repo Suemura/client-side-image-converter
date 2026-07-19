@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ErrorNotice } from "../../components/ErrorNotice";
 import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
@@ -40,6 +41,8 @@ export default function UpscalePage() {
   const [progress, setProgress] = useState<ProgressState | null>(null);
   const [upscaleResults, setUpscaleResults] = useState<CropResult[]>([]);
   const [wasCancelled, setWasCancelled] = useState(false);
+  // バッチ全体が失敗した場合のエラー通知
+  const [batchError, setBatchError] = useState(false);
 
   // 実行中バッチのハンドル（キャンセル用）
   const batchHandleRef = useRef<UpscaleBatchHandle | null>(null);
@@ -58,6 +61,7 @@ export default function UpscalePage() {
     setFiles(imageFiles);
     setUpscaleResults([]);
     setWasCancelled(false);
+    setBatchError(false);
   }, []);
 
   // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
@@ -71,6 +75,7 @@ export default function UpscalePage() {
     setFiles([]);
     setUpscaleResults([]);
     setWasCancelled(false);
+    setBatchError(false);
     clearHandoffNotice();
   }, [clearHandoffNotice]);
 
@@ -80,6 +85,7 @@ export default function UpscalePage() {
     setIsProcessing(true);
     setWasCancelled(false);
     setUpscaleResults([]);
+    setBatchError(false);
     setProgress({ stage: "download", percent: 0 });
 
     const handle = runUpscaleBatch(
@@ -114,6 +120,7 @@ export default function UpscalePage() {
       setWasCancelled(cancelled);
     } catch (error) {
       console.error("Upscale error:", error);
+      setBatchError(true);
     } finally {
       batchHandleRef.current = null;
       setIsProcessing(false);
@@ -240,6 +247,10 @@ export default function UpscalePage() {
                   {t("upscale.cancelledNotice")}
                 </div>
               )}
+
+              <ErrorNotice
+                message={batchError ? t("upscale.upscaleError") : null}
+              />
 
               {hasResults ? (
                 <ConversionResults

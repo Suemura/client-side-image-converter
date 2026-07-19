@@ -58,6 +58,11 @@ export interface MetadataAnalysis {
   allTags: Set<string>;
   privacyRiskTags: Set<string>;
   fileMetadata: FileMetadata[];
+  /**
+   * EXIF 解析に失敗したファイル名の一覧。空 exifData を「メタデータなし = 安全」と
+   * 誤認させないため、失敗は握りつぶさず明示的に返す（Issue #118）
+   */
+  analysisFailures: string[];
 }
 
 // プライバシーリスクのあるEXIFタグ
@@ -278,7 +283,9 @@ const removeAllMetadataWithCanvas = async (file: File): Promise<File> => {
 };
 
 /**
- * ファイルからEXIF情報を抽出する
+ * ファイルからEXIF情報を抽出する。
+ * 解析の失敗（exif-js のロード失敗・ファイル読み取り失敗等）は reject で明示し、
+ * 空の EXIF（メタデータなし = 正常）と区別できるようにする（Issue #118）
  */
 export const extractExifData = async (file: File): Promise<ExifData> => {
   if (!file.type.startsWith("image/")) {
@@ -288,22 +295,26 @@ export const extractExifData = async (file: File): Promise<ExifData> => {
   // exif-js は EXIF 解析時のみロードし、初期バンドルへ影響させない
   const { default: EXIF } = await import("exif-js");
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     // exif-js の getAllTags 結果を ExifData に整形する（JPEG / WebP 共通）
     const collectTags = (source: File): void => {
-      EXIF.getData(source, function (this) {
-        const allMetaData = EXIF.getAllTags(this);
-        const relevantData: ExifData = {};
+      try {
+        EXIF.getData(source, function (this) {
+          const allMetaData = EXIF.getAllTags(this);
+          const relevantData: ExifData = {};
 
-        // すべてのEXIF情報を抽出（元のFileDetailModalより包括的）
-        for (const [key, value] of Object.entries(allMetaData)) {
-          if (value !== undefined && value !== null) {
-            relevantData[key] = value as string | number;
+          // すべてのEXIF情報を抽出（元のFileDetailModalより包括的）
+          for (const [key, value] of Object.entries(allMetaData)) {
+            if (value !== undefined && value !== null) {
+              relevantData[key] = value as string | number;
+            }
           }
-        }
 
-        resolve(relevantData);
-      });
+          resolve(relevantData);
+        });
+      } catch (error) {
+        reject(error);
+      }
     };
 
     // WebP / PNG はコンテナの EXIF チャンク（RIFF EXIF / PNG eXIf）を取り出し、
@@ -330,7 +341,8 @@ export const extractExifData = async (file: File): Promise<ExifData> => {
           });
           collectTags(jpegFile);
         })
-        .catch(() => resolve({}));
+        // ファイル読み取り失敗は「メタデータなし」と区別するため握りつぶさず reject する
+        .catch(reject);
       return;
     }
 
@@ -340,18 +352,28 @@ export const extractExifData = async (file: File): Promise<ExifData> => {
 };
 
 /**
- * 複数ファイルのメタデータを分析する
+ * 複数ファイルのメタデータを分析する。
+ * 個別ファイルの解析失敗（exif-js の動的 import 失敗を含む）は全体を reject させず、
+ * analysisFailures に失敗ファイル名を記録して UI 側で通知できるようにする（Issue #118）
  */
 export const analyzeMetadata = async (
   files: File[],
 ): Promise<MetadataAnalysis> => {
   const allTags = new Set<string>();
   const privacyRiskTags = new Set<string>();
+  const analysisFailures: string[] = [];
 
   // 並列処理でEXIFデータを取得
   const metadataPromises = files.map(async (file) => {
-    const exifData = await extractExifData(file);
-    return { file, exifData };
+    try {
+      const exifData = await extractExifData(file);
+      return { file, exifData };
+    } catch (error) {
+      console.error(`Failed to extract EXIF from ${file.name}:`, error);
+      analysisFailures.push(file.name);
+      // 失敗ファイルも fileMetadata に残し、後段の削除処理の対象から外さない
+      return { file, exifData: {} };
+    }
   });
 
   const fileMetadata = await Promise.all(metadataPromises);
@@ -370,6 +392,7 @@ export const analyzeMetadata = async (
     allTags,
     privacyRiskTags,
     fileMetadata,
+    analysisFailures,
   };
 };
 

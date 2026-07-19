@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ErrorNotice } from "../../components/ErrorNotice";
 import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
@@ -19,7 +20,6 @@ import {
   DEFAULT_RAW_DEVELOP_PARAMS,
   type RawDevelopParams,
 } from "../../utils/rawDevelopment";
-import { ConversionErrors } from "./components/ConversionErrors";
 import {
   ConversionSettings,
   type ConversionSettings as ConversionSettingsType,
@@ -49,6 +49,8 @@ export default function Home() {
   const [rawDevelopParams, setRawDevelopParams] = useState<RawDevelopParams>(
     DEFAULT_RAW_DEVELOP_PARAMS,
   );
+  // バッチ全体が失敗した場合などのページレベルのエラー（i18n キーを保持し表示時に翻訳する）
+  const [pageErrorKey, setPageErrorKey] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [conversionProgress, setConversionProgress] = useState({
     current: 0,
@@ -57,7 +59,6 @@ export default function Home() {
 
   const handleFilesSelected = (files: File[]) => {
     setSelectedFiles(files);
-    console.log("Selected files:", files);
   };
 
   // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
@@ -73,8 +74,8 @@ export default function Home() {
     setConversionFailures([]);
     // RAW 現像パラメータもファイルに紐づく調整のためリセットする
     setRawDevelopParams(DEFAULT_RAW_DEVELOP_PARAMS);
+    setPageErrorKey(null);
     clearHandoffNotice();
-    console.log("Files cleared");
   };
 
   const handleSettingsChange = (settings: ConversionSettingsType) => {
@@ -83,7 +84,7 @@ export default function Home() {
 
   const handleConvert = useCallback(async () => {
     if (selectedFiles.length === 0) {
-      alert(t("convert.pleaseSelectFiles"));
+      setPageErrorKey("convert.pleaseSelectFiles");
       return;
     }
 
@@ -91,6 +92,7 @@ export default function Home() {
     setConversionProgress({ current: 0, total: selectedFiles.length });
     setConversionResults([]);
     setConversionFailures([]);
+    setPageErrorKey(null);
 
     try {
       const { results, failures } = await convertMultipleImages(
@@ -115,12 +117,12 @@ export default function Home() {
       setConversionFailures(failures);
     } catch (error) {
       console.error("Conversion error:", error);
-      alert(t("convert.conversionError"));
+      setPageErrorKey("convert.conversionError");
     } finally {
       setIsConverting(false);
       setConversionProgress({ current: 0, total: 0 });
     }
-  }, [selectedFiles, conversionSettings, rawDevelopParams, t]);
+  }, [selectedFiles, conversionSettings, rawDevelopParams]);
 
   // RAW 現像パネルは convert モードで RAW ファイルが投入されているときのみ表示する。
   // プレビュー対象は先頭の RAW ファイル 1 件（パラメータは全 RAW ファイルへ一括適用）
@@ -171,7 +173,15 @@ export default function Home() {
           total={conversionProgress.total}
           isVisible={isConverting}
         />
-        <ConversionErrors failures={conversionFailures} />
+        <ErrorNotice message={pageErrorKey ? t(pageErrorKey) : null} />
+        <ErrorNotice
+          message={
+            conversionFailures.length > 0
+              ? t("convert.conversionFailures")
+              : null
+          }
+          fileNames={conversionFailures.map((failure) => failure.fileName)}
+        />
         <ConversionResults
           results={conversionResults}
           originalFiles={selectedFiles}

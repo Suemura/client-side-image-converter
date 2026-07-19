@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ErrorNotice } from "../../components/ErrorNotice";
 import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
@@ -43,6 +44,10 @@ export default function RedactPage() {
   const [progressTotal, setProgressTotal] = useState(0);
   const [redactResults, setRedactResults] = useState<CropResult[]>([]);
   const [preserveExif, setPreserveExif] = useState(false);
+  // バッチ全体が失敗した場合のエラー通知
+  const [batchError, setBatchError] = useState(false);
+  // プレビュー生成の失敗通知（次の生成成功でクリアする）
+  const [previewError, setPreviewError] = useState(false);
 
   // 隠し方の設定（ページ全体で 1 つ）と画像ごとのレタッチ領域
   const [redactStyle, setRedactStyle] =
@@ -70,6 +75,7 @@ export default function RedactPage() {
       .then((canvas) => {
         if (!cancelled) {
           setSourceCanvas(canvas);
+          setPreviewError(false);
         }
       })
       .catch((error) => {
@@ -78,6 +84,7 @@ export default function RedactPage() {
         // 誤認させるため、プレースホルダー表示へフォールバックする
         if (!cancelled) {
           setSourceCanvas(null);
+          setPreviewError(true);
         }
       });
     return () => {
@@ -98,6 +105,8 @@ export default function RedactPage() {
       setFiles(imageFiles);
       setCurrentPreviewIndex(0);
       setRedactResults([]);
+      setBatchError(false);
+      setPreviewError(false);
       resetRedactSettings();
     },
     [resetRedactSettings],
@@ -114,6 +123,8 @@ export default function RedactPage() {
     setFiles([]);
     setCurrentPreviewIndex(0);
     setRedactResults([]);
+    setBatchError(false);
+    setPreviewError(false);
     setSourceCanvas(null);
     resetRedactSettings();
     clearHandoffNotice();
@@ -195,6 +206,7 @@ export default function RedactPage() {
     setIsProcessing(true);
     setProgressCurrent(0);
     setProgressTotal(files.length);
+    setBatchError(false);
 
     try {
       const results = await redactImages(
@@ -210,6 +222,7 @@ export default function RedactPage() {
       setRedactResults(results);
     } catch (error) {
       console.error("Redact error:", error);
+      setBatchError(true);
     } finally {
       setIsProcessing(false);
     }
@@ -263,6 +276,10 @@ export default function RedactPage() {
                   <p className={styles.centerDescription}>
                     {t("redact.dragToAddRegion")}
                   </p>
+
+                  <ErrorNotice
+                    message={previewError ? t("redact.previewError") : null}
+                  />
 
                   <RedactToolbar
                     redactStyle={redactStyle}
@@ -356,6 +373,10 @@ export default function RedactPage() {
                   />
                 </div>
               )}
+
+              <ErrorNotice
+                message={batchError ? t("redact.redactError") : null}
+              />
 
               {hasResults ? (
                 <ConversionResults

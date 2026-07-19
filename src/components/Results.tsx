@@ -17,6 +17,7 @@ import { calculateCompressionRatio } from "../utils/imageConverter";
 import type { CropResult } from "../utils/imageCropper";
 import { createJxlPreviewUrl } from "../utils/jxlPreview";
 import { Button } from "./Button";
+import { ErrorNotice } from "./ErrorNotice";
 import { FileDetailModal } from "./FileDetailModal";
 import { HandoffSend } from "./HandoffSend";
 import { ImageComparisonModal } from "./ImageComparisonModal";
@@ -69,10 +70,19 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   const [folderSaveMessage, setFolderSaveMessage] = useState<string | null>(
     null,
   );
+  // ZIP ダウンロード失敗の通知（次の試行開始でクリアする）
+  const [downloadError, setDownloadError] = useState(false);
 
   useEffect(() => {
     setCanSaveToFolder(isFolderSaveSupported());
   }, []);
+
+  // 新しい結果セットに変わったら、前回のダウンロード/フォルダ保存の通知は残さない
+  useEffect(() => {
+    if (!results && !cropResults) return;
+    setDownloadError(false);
+    setFolderSaveMessage(null);
+  }, [results, cropResults]);
 
   // シンプルな条件チェック
   const isConversionMode = results && results.length > 0;
@@ -211,6 +221,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     if (isDownloading) return;
 
     setIsDownloading(true);
+    setDownloadError(false);
     try {
       if (isCropMode && cropResults) {
         // トリミング結果の一括ダウンロード（ZIPファイル作成）
@@ -220,11 +231,11 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
       }
     } catch (error) {
       console.error("Download error:", error);
-      alert(t("results.downloadError"));
+      setDownloadError(true);
     } finally {
       setIsDownloading(false);
     }
-  }, [results, cropResults, isCropMode, isDownloading, t]);
+  }, [results, cropResults, isCropMode, isDownloading]);
 
   // 選択したローカルフォルダへ結果を直接書き込む（ZIP を経由しない）
   const handleSaveToFolder = useCallback(async () => {
@@ -387,6 +398,11 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
           {t("results.clear")}
         </Button>
       </div>
+
+      {/* ZIP ダウンロード失敗の通知 */}
+      <ErrorNotice
+        message={downloadError ? t("results.downloadError") : null}
+      />
 
       {/* フォルダ保存の完了 / 失敗フィードバック */}
       {folderSaveMessage && (
