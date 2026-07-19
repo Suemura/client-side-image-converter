@@ -50,9 +50,14 @@ export interface RemoveBgEngine {
 export const createRemoveBgEngine = async (
   onDownloadProgress?: RemoveBgDownloadCallback,
 ): Promise<RemoveBgEngine> => {
+  // u2netp の MaxPool（ceil_mode）は WebGPU EP 未対応で初回実行時に失敗するため、
+  // 検証推論付きでセッションを生成し、失敗時は WASM へフォールバックさせる
   const { ort, session, backend } = await createOnnxSession(
     REMOVE_BG_MODEL_URL,
     onDownloadProgress,
+    {
+      warmupInputShape: [1, 3, REMOVE_BG_INPUT_SIZE, REMOVE_BG_INPUT_SIZE],
+    },
   );
 
   const inputName = session.inputNames[0];
