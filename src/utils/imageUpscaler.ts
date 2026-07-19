@@ -12,12 +12,8 @@
  */
 
 import type { UpscaleAssetStage } from "../workers/upscaleMessages";
-import {
-  fetchAssetWithCache,
-  fetchOrtWasmBinary,
-  ORT_ASSETS_BASE_PATH,
-  UPSCALE_MODEL_URL,
-} from "./modelLoader";
+import { UPSCALE_MODEL_URL } from "./modelLoader";
+import { createOnnxSession } from "./onnxSession";
 import {
   accumulateTile,
   computeFeatherWeights,
@@ -67,55 +63,11 @@ export interface UpscaleEngine {
 export const createUpscaleEngine = async (
   onDownloadProgress?: UpscaleDownloadCallback,
 ): Promise<UpscaleEngine> => {
-  const ort = await import("onnxruntime-web");
-
-  // ランタイムアセットは自己ホスト（scripts/copy-ort-assets.ts が public/ort/ へ配置）。
-  // WASM 本体は Cloudflare Pages の 25MiB 上限のため分割配置されており、
-  // 結合したバイナリを wasmBinary として直接注入する（.mjs ローダーは wasmPaths から取得）
-  ort.env.wasm.wasmPaths = ORT_ASSETS_BASE_PATH;
-  // COOP/COEP（crossOriginIsolated）を導入していないため SharedArrayBuffer は使えない。
-  // シングルスレッドで動かす（主経路の WebGPU には影響しない）
-  ort.env.wasm.numThreads = 1;
-  if (!ort.env.wasm.wasmBinary) {
-    const binary = await fetchOrtWasmBinary((loaded, total) =>
-      onDownloadProgress?.("runtime", loaded, total),
-    );
-    ort.env.wasm.wasmBinary = binary.buffer as ArrayBuffer;
-  }
-
-  const model = await fetchAssetWithCache(UPSCALE_MODEL_URL, (loaded, total) =>
-    onDownloadProgress?.("model", loaded, total),
+  // セッション生成（ランタイム / モデルのロード・EP フォールバック）は共通基盤に委譲する
+  const { ort, session, backend } = await createOnnxSession(
+    UPSCALE_MODEL_URL,
+    onDownloadProgress,
   );
-
-  // WebGPU 優先・WASM フォールバック。navigator.gpu が無い環境は最初から WASM にする
-  let session: Awaited<ReturnType<typeof ort.InferenceSession.create>>;
-  let backend: UpscaleEngine["backend"];
-  const hasWebGpu =
-    typeof navigator !== "undefined" &&
-    "gpu" in navigator &&
-    navigator.gpu !== undefined;
-  if (hasWebGpu) {
-    try {
-      session = await ort.InferenceSession.create(model, {
-        executionProviders: ["webgpu"],
-      });
-      backend = "webgpu";
-    } catch (error) {
-      console.warn(
-        "WebGPU セッションの生成に失敗、WASM へフォールバック:",
-        error,
-      );
-      session = await ort.InferenceSession.create(model, {
-        executionProviders: ["wasm"],
-      });
-      backend = "wasm";
-    }
-  } else {
-    session = await ort.InferenceSession.create(model, {
-      executionProviders: ["wasm"],
-    });
-    backend = "wasm";
-  }
 
   const inputName = session.inputNames[0];
   const outputName = session.outputNames[0];
