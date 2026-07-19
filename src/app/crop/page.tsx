@@ -9,18 +9,20 @@ import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
+import { useApplyScopeStore } from "../../hooks/useApplyScopeStore";
 import { useHandoffReceiver } from "../../hooks/useHandoffReceiver";
+import { useImageNavigation } from "../../hooks/useImageNavigation";
+import { resolveScopedValueForIndex } from "../../utils/applyScope";
 import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import {
   ASPECT_RATIO_PRESETS,
   type CropArea,
-  type CropState,
   type CropTransform,
   IDENTITY_TRANSFORM,
-  resolveCropForIndex,
   rotateLeft,
   rotateRight,
 } from "../../utils/cropGeometry";
+import { isImageFile } from "../../utils/fileUtils";
 import {
   type CropJob,
   type CropResult,
@@ -36,7 +38,12 @@ import styles from "./crop.module.css";
 export default function CropPage() {
   const { t } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
-  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  const {
+    currentIndex: currentPreviewIndex,
+    setCurrentIndex: setCurrentPreviewIndex,
+    handlePrevious: handlePreviousImage,
+    handleNext: handleNextImage,
+  } = useImageNavigation(files.length);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressCurrent, setProgressCurrent] = useState(0);
@@ -48,20 +55,19 @@ export default function CropPage() {
   // プレビュー生成の失敗通知（次の生成成功でクリアする）
   const [previewError, setPreviewError] = useState(false);
 
-  // トリミング設定
+  // トリミング設定（領域・変換の 2 ストアが同じ applyToAll トグルを共有する dual-store）
   const [aspectRatioId, setAspectRatioId] = useState("free");
   const [applyToAll, setApplyToAll] = useState(true);
-  // 一括モードの共有領域・変換
-  const [sharedArea, setSharedArea] = useState<CropArea | null>(null);
-  const [sharedTransform, setSharedTransform] =
-    useState<CropTransform>(IDENTITY_TRANSFORM);
-  // 画像ごとの領域・変換
-  const [perImageArea, setPerImageArea] = useState<
-    Record<number, CropArea | null>
-  >({});
-  const [perImageTransform, setPerImageTransform] = useState<
-    Record<number, CropTransform>
-  >({});
+  const areaStore = useApplyScopeStore<CropArea | null>(
+    applyToAll,
+    currentPreviewIndex,
+    null,
+  );
+  const transformStore = useApplyScopeStore<CropTransform>(
+    applyToAll,
+    currentPreviewIndex,
+    IDENTITY_TRANSFORM,
+  );
 
   const aspectRatio = useMemo(
     () =>
@@ -70,43 +76,21 @@ export default function CropPage() {
   );
 
   // 現在表示中の画像に適用される領域・変換（一括 / 画像ごとで解決）
-  const currentArea = applyToAll
-    ? sharedArea
-    : (perImageArea[currentPreviewIndex] ?? null);
-  const currentTransform = applyToAll
-    ? sharedTransform
-    : (perImageTransform[currentPreviewIndex] ?? IDENTITY_TRANSFORM);
-
-  // 変換設定を一括 / 画像ごとの適切なストアへ書き込む
-  const setCurrentArea = useCallback(
-    (area: CropArea | null) => {
-      if (applyToAll) {
-        setSharedArea(area);
-      } else {
-        setPerImageArea((prev) => ({ ...prev, [currentPreviewIndex]: area }));
-      }
-    },
-    [applyToAll, currentPreviewIndex],
-  );
+  const currentArea = areaStore.current;
+  const currentTransform = transformStore.current;
+  const setCurrentArea = areaStore.setCurrent;
 
   // 変換を適用する。回転（90 度刻みで寸法が入れ替わる）時のみ領域をリセットし、
   // 反転は寸法が変わらないため選択済み領域を保持する。
   const applyTransform = useCallback(
     (next: CropTransform, resetArea = false) => {
-      if (applyToAll) {
-        setSharedTransform(next);
-      } else {
-        setPerImageTransform((prev) => ({
-          ...prev,
-          [currentPreviewIndex]: next,
-        }));
-      }
+      transformStore.setCurrent(next);
       if (resetArea) {
         // 向きが変わり寸法が入れ替わるためトリミング領域はリセットし、再読込時に全体へ初期化する
         setCurrentArea(null);
       }
     },
-    [applyToAll, currentPreviewIndex, setCurrentArea],
+    [transformStore.setCurrent, setCurrentArea],
   );
 
   // 画像 / 変換の変更に合わせて EXIF 補正 + 回転/反転を焼き込んだプレビューを生成する。
@@ -156,17 +140,13 @@ export default function CropPage() {
   }, [previewUrl]);
 
   const resetCropSettings = useCallback(() => {
-    setSharedArea(null);
-    setSharedTransform(IDENTITY_TRANSFORM);
-    setPerImageArea({});
-    setPerImageTransform({});
-  }, []);
+    areaStore.reset();
+    transformStore.reset();
+  }, [areaStore.reset, transformStore.reset]);
 
   const handleFilesSelected = useCallback(
     (selectedFiles: File[]) => {
-      const imageFiles = selectedFiles.filter((file) =>
-        file.type.startsWith("image/"),
-      );
+      const imageFiles = selectedFiles.filter(isImageFile);
       setFiles(imageFiles);
       setCurrentPreviewIndex(0);
       setCropResults([]);
@@ -174,7 +154,7 @@ export default function CropPage() {
       setPreviewError(false);
       resetCropSettings();
     },
-    [resetCropSettings],
+    [resetCropSettings, setCurrentPreviewIndex],
   );
 
   // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
@@ -196,7 +176,12 @@ export default function CropPage() {
       URL.revokeObjectURL(previewUrl);
       setPreviewUrl("");
     }
-  }, [previewUrl, resetCropSettings, clearHandoffNotice]);
+  }, [
+    previewUrl,
+    resetCropSettings,
+    clearHandoffNotice,
+    setCurrentPreviewIndex,
+  ]);
 
   const handleCropAreaChange = useCallback(
     (newCropArea: CropArea) => {
@@ -204,16 +189,6 @@ export default function CropPage() {
     },
     [setCurrentArea],
   );
-
-  const handlePreviousImage = useCallback(() => {
-    if (files.length === 0) return;
-    setCurrentPreviewIndex((i) => (i > 0 ? i - 1 : files.length - 1));
-  }, [files.length]);
-
-  const handleNextImage = useCallback(() => {
-    if (files.length === 0) return;
-    setCurrentPreviewIndex((i) => (i < files.length - 1 ? i + 1 : 0));
-  }, [files.length]);
 
   const handleRotateLeft = useCallback(() => {
     // 回転は寸法が入れ替わるため領域をリセットする
@@ -254,22 +229,11 @@ export default function CropPage() {
   const handleApplyModeChange = useCallback(
     (nextApplyToAll: boolean) => {
       if (nextApplyToAll === applyToAll) return;
-      if (nextApplyToAll) {
-        setSharedArea(currentArea);
-        setSharedTransform(currentTransform);
-      } else {
-        setPerImageArea((prev) => ({
-          ...prev,
-          [currentPreviewIndex]: currentArea,
-        }));
-        setPerImageTransform((prev) => ({
-          ...prev,
-          [currentPreviewIndex]: currentTransform,
-        }));
-      }
+      areaStore.migrate(nextApplyToAll);
+      transformStore.migrate(nextApplyToAll);
       setApplyToAll(nextApplyToAll);
     },
-    [applyToAll, currentArea, currentTransform, currentPreviewIndex],
+    [applyToAll, areaStore.migrate, transformStore.migrate],
   );
 
   const handleStartCropping = useCallback(async () => {
@@ -281,16 +245,14 @@ export default function CropPage() {
     setBatchError(false);
 
     try {
-      const state: CropState = {
-        applyToAll,
-        sharedArea,
-        sharedTransform,
-        perImageArea,
-        perImageTransform,
-      };
-      const jobs: CropJob[] = files.map((_, index) =>
-        resolveCropForIndex(index, state),
-      );
+      const jobs: CropJob[] = files.map((_, index) => ({
+        area: resolveScopedValueForIndex(index, areaStore.state, null),
+        transform: resolveScopedValueForIndex(
+          index,
+          transformStore.state,
+          IDENTITY_TRANSFORM,
+        ),
+      }));
 
       const results = await cropImages(
         files,
@@ -309,16 +271,7 @@ export default function CropPage() {
     } finally {
       setIsProcessing(false);
     }
-  }, [
-    files,
-    currentArea,
-    applyToAll,
-    sharedArea,
-    sharedTransform,
-    perImageArea,
-    perImageTransform,
-    preserveExif,
-  ]);
+  }, [files, currentArea, areaStore.state, transformStore.state, preserveExif]);
 
   const handleClearResults = useCallback(() => {
     setCropResults([]);

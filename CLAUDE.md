@@ -136,7 +136,7 @@ npm run preview
 - **純粋ロジックの分離**: Canvas / WebGL / DOM 依存のオーケストレーションから Canvas 非依存の純粋ロジックを別ファイルへ切り出し、単体テスト対象にする（例: `conversionCore.ts` / `cropGeometry.ts` / `adjustments.ts` / `handoff.ts` / `precache.ts`）
 - **WYSIWYG**: プレビューと出力は同一の描画経路を通す。GPU（GLSL）と CPU（TS）で同じ処理を持つ場合は TS 側の関数を「唯一の真実」とし、GLSL は同順序・同係数でミラーする
 - **動的 import**: WASM コーデック（`@jsquash/*` / libheif / utif2 / libraw-wasm 等）と重量 JS ライブラリ（jszip / piexifjs / exif-js）は使用時のみロードし、初期バンドルへ影響させない
-- **dual-store**: 適用範囲（全画像一括 / 画像ごと）は crop 起源の dual-store パターンを踏襲する（`resolveCropForIndex` / `resolveAdjustmentForIndex` 等）
+- **dual-store**: 適用範囲（全画像一括 / 画像ごと）は汎用フック `useApplyScopeStore` で管理（`applyScope.resolveScopedValueForIndex` 提供）
 - **i18n**: ユーザー向け文言はすべて react-i18next 経由（日英）。ページ別 SEO メタデータのみ静的 HTML（主言語は日本語）
 
 ## テスト方針

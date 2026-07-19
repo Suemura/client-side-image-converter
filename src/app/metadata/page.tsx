@@ -21,6 +21,7 @@ import {
   downloadFile,
   downloadMultipleFiles,
 } from "../../utils/fileDownloader";
+import { isImageFile } from "../../utils/fileUtils";
 import { assessPrivacyRisk } from "../../utils/metadataManager";
 import { ImageUploadSection } from "../convert/components/ImageUploadSection";
 import styles from "./page.module.css";
@@ -71,7 +72,7 @@ export default function MetadataPage() {
   const handleFilesSelected = useCallback(
     async (files: File[]) => {
       // 画像ファイルのみをフィルタリング
-      const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+      const imageFiles = files.filter(isImageFile);
       setSelectedFiles(imageFiles);
 
       // 既存のURLをクリーンアップ

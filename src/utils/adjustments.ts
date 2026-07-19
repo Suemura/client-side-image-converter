@@ -360,28 +360,3 @@ export const applyAdjustmentToPixel = (
   // 10. 最終クランプ
   return [clamp01(cr), clamp01(cg), clamp01(cb)];
 };
-
-/** crop の CropState に相当する、edit ページが保持する調整状態（一括 / 画像ごと） */
-export interface EditState {
-  /** true: 全画像へ共有調整を適用 / false: 画像ごとに保持 */
-  applyToAll: boolean;
-  /** 一括モードの共有調整 */
-  sharedAdjustments: AdjustmentState;
-  /** 画像ごとの調整（未設定インデックスは無調整） */
-  perImageAdjustments: Record<number, AdjustmentState>;
-}
-
-/**
- * 出力時、指定インデックスの画像へ適用する調整を解決する。
- * 一括モードでは共有値を、画像ごとモードでは当該インデックスの値（未設定は無調整）を返す。
- * （cropGeometry.resolveCropForIndex を踏襲）
- */
-export const resolveAdjustmentForIndex = (
-  index: number,
-  state: EditState,
-): AdjustmentState => {
-  if (state.applyToAll) {
-    return state.sharedAdjustments;
-  }
-  return state.perImageAdjustments[index] ?? DEFAULT_ADJUSTMENTS;
-};

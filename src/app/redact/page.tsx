@@ -10,8 +10,10 @@ import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
 import { useHandoffReceiver } from "../../hooks/useHandoffReceiver";
+import { useImageNavigation } from "../../hooks/useImageNavigation";
 import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import type { CropArea } from "../../utils/cropGeometry";
+import { isImageFile } from "../../utils/fileUtils";
 import type { CropResult } from "../../utils/imageCropper";
 import { renderOrientedImage } from "../../utils/imageCropper";
 import { redactImages } from "../../utils/imageRedactor";
@@ -35,7 +37,12 @@ const EMPTY_REGIONS: RedactRegion[] = [];
 export default function RedactPage() {
   const { t } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
-  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  const {
+    currentIndex: currentPreviewIndex,
+    setCurrentIndex: setCurrentPreviewIndex,
+    handlePrevious: handlePreviousImage,
+    handleNext: handleNextImage,
+  } = useImageNavigation(files.length);
   const [sourceCanvas, setSourceCanvas] = useState<HTMLCanvasElement | null>(
     null,
   );
@@ -99,9 +106,7 @@ export default function RedactPage() {
 
   const handleFilesSelected = useCallback(
     (selectedFiles: File[]) => {
-      const imageFiles = selectedFiles.filter((file) =>
-        file.type.startsWith("image/"),
-      );
+      const imageFiles = selectedFiles.filter(isImageFile);
       setFiles(imageFiles);
       setCurrentPreviewIndex(0);
       setRedactResults([]);
@@ -109,7 +114,7 @@ export default function RedactPage() {
       setPreviewError(false);
       resetRedactSettings();
     },
-    [resetRedactSettings],
+    [resetRedactSettings, setCurrentPreviewIndex],
   );
 
   // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
@@ -128,7 +133,7 @@ export default function RedactPage() {
     setSourceCanvas(null);
     resetRedactSettings();
     clearHandoffNotice();
-  }, [resetRedactSettings, clearHandoffNotice]);
+  }, [resetRedactSettings, clearHandoffNotice, setCurrentPreviewIndex]);
 
   // 領域操作（リスト操作は redactCore の純粋関数に委譲する）
   const handleAddRegion = useCallback(
@@ -179,16 +184,6 @@ export default function RedactPage() {
       [currentPreviewIndex]: EMPTY_REGIONS,
     }));
   }, [currentPreviewIndex]);
-
-  const handlePreviousImage = useCallback(() => {
-    if (files.length === 0) return;
-    setCurrentPreviewIndex((i) => (i > 0 ? i - 1 : files.length - 1));
-  }, [files.length]);
-
-  const handleNextImage = useCallback(() => {
-    if (files.length === 0) return;
-    setCurrentPreviewIndex((i) => (i < files.length - 1 ? i + 1 : 0));
-  }, [files.length]);
 
   // 全画像の指定済み領域の合計（実行ボタンの活性判定）
   const totalRegionCount = useMemo(
