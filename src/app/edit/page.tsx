@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ErrorNotice } from "../../components/ErrorNotice";
 import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
@@ -57,7 +58,6 @@ import {
   type ToneCurveState,
 } from "../../utils/toneCurve";
 import type { LutApplication } from "../../utils/webglImageRenderer";
-import { ConversionErrors } from "../convert/components/ConversionErrors";
 import { ImageUploadSection } from "../convert/components/ImageUploadSection";
 import { ProgressBar } from "../convert/components/ProgressBar";
 import { AdjustmentPanel } from "./components/AdjustmentPanel";
@@ -110,6 +110,10 @@ export default function EditPage() {
   const [progressTotal, setProgressTotal] = useState(0);
   const [editResults, setEditResults] = useState<ConversionResult[]>([]);
   const [editFailures, setEditFailures] = useState<ConversionFailure[]>([]);
+  // バッチ全体が失敗した場合のエラー通知（個別ファイルの失敗は editFailures で表示）
+  const [batchError, setBatchError] = useState(false);
+  // プレビューソース生成の失敗通知（次の生成成功でクリアする）
+  const [previewError, setPreviewError] = useState(false);
 
   // 調整・LUT 適用後のプレビューから算出したヒストグラム（CompareView からフレームを受け取る）
   const [histogram, setHistogram] = useState<HistogramData | null>(null);
@@ -298,9 +302,15 @@ export default function EditPage() {
         setPreviewSource(canvas);
         setPreviewSize({ width: canvas.width, height: canvas.height });
         setSourceHistogram(computeSourceHistogram(canvas));
+        setPreviewError(false);
       })
       .catch((error) => {
         console.error("Preview generation failed:", error);
+        if (!cancelled) {
+          // 失敗時に前の画像のプレビューを残すと編集対象を誤認させるため破棄する
+          setPreviewSource(null);
+          setPreviewError(true);
+        }
       });
     return () => {
       cancelled = true;
@@ -406,6 +416,8 @@ export default function EditPage() {
       setFiles(imageFiles);
       setEditResults([]);
       setEditFailures([]);
+      setBatchError(false);
+      setPreviewError(false);
     },
     [revokeResultUrls, editResults],
   );
@@ -424,6 +436,8 @@ export default function EditPage() {
     setCurrentPreviewIndex(0);
     setEditResults([]);
     setEditFailures([]);
+    setBatchError(false);
+    setPreviewError(false);
     setPreviewSource(null);
     setHistogram(null);
     setSourceHistogram(null);
@@ -487,6 +501,7 @@ export default function EditPage() {
     revokeResultUrls(editResults);
     setEditResults([]);
     setEditFailures([]);
+    setBatchError(false);
 
     try {
       const state: EditState = {
@@ -537,6 +552,7 @@ export default function EditPage() {
       setEditFailures(failures);
     } catch (error) {
       console.error("Edit error:", error);
+      setBatchError(true);
     } finally {
       setIsProcessing(false);
     }
@@ -611,6 +627,9 @@ export default function EditPage() {
                 </div>
               ) : (
                 <>
+                  <ErrorNotice
+                    message={previewError ? t("edit.previewError") : null}
+                  />
                   <CompareView
                     source={previewSource}
                     width={previewSize.width}
@@ -716,9 +735,10 @@ export default function EditPage() {
                 isVisible={true}
               />
             )}
-            <ConversionErrors
-              failures={editFailures}
-              titleKey="edit.editFailures"
+            <ErrorNotice message={batchError ? t("edit.editError") : null} />
+            <ErrorNotice
+              message={editFailures.length > 0 ? t("edit.editFailures") : null}
+              fileNames={editFailures.map((failure) => failure.fileName)}
             />
             {hasResults && (
               <ConversionResults

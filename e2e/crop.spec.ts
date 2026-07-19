@@ -1,7 +1,13 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import JSZip from "jszip";
-import { magicNumber, pngFile, pngSize, rectPngFile } from "./helpers/fixtures";
+import {
+  brokenImageFile,
+  magicNumber,
+  pngFile,
+  pngSize,
+  rectPngFile,
+} from "./helpers/fixtures";
 
 test.describe("画像トリミング", () => {
   test("画像をトリミングしてダウンロードできる", async ({ page }) => {
@@ -32,6 +38,20 @@ test.describe("画像トリミング", () => {
     expect(download.suggestedFilename()).toBe("sample_cropped.png");
     const buf = readFileSync(await download.path());
     expect(magicNumber.isPng(buf)).toBe(true);
+  });
+
+  test("破損ファイルはプレビュー生成失敗の通知が表示される", async ({
+    page,
+  }) => {
+    await page.goto("/crop/");
+    // PNG を装った破損ファイルはプレビュー（EXIF 補正焼き込み）の生成に失敗する
+    await page.locator('input[type="file"]').setInputFiles(brokenImageFile());
+
+    // 失敗がユーザーに通知される（従来は console.error のみで無反応だった。Issue #118）
+    const alert = page
+      .getByRole("alert")
+      .filter({ hasText: "プレビューを生成できませんでした" });
+    await expect(alert).toBeVisible({ timeout: 15_000 });
   });
 
   test("対応形式の表示にブラウザで描画できない TIFF が含まれない", async ({

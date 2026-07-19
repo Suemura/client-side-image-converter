@@ -304,6 +304,12 @@ test.describe("画像フォーマット変換", () => {
 
   test("変換に失敗したファイルは失敗通知に表示される", async ({ page }) => {
     await page.goto("/convert/");
+    // ネイティブ alert() に依存しないことを検証する（Issue #118）
+    const dialogs: string[] = [];
+    page.on("dialog", (dialog) => {
+      dialogs.push(dialog.message());
+      void dialog.dismiss();
+    });
     // PNG を装った破損ファイルはデコードに失敗し、失敗通知に表示される
     await page.locator('input[type="file"]').setInputFiles(brokenImageFile());
 
@@ -316,6 +322,32 @@ test.describe("画像フォーマット変換", () => {
     await expect(
       page.getByRole("heading", { name: /変換結果/ }),
     ).not.toBeVisible();
+    expect(dialogs).toEqual([]);
+  });
+
+  test("正常ファイルと破損ファイルの混在バッチで、成功結果と失敗通知の両方が表示される", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    const dialogs: string[] = [];
+    page.on("dialog", (dialog) => {
+      dialogs.push(dialog.message());
+      void dialog.dismiss();
+    });
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles([pngFile(), brokenImageFile()]);
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+
+    // 破損ファイルは失敗通知に表示され、正常ファイルは変換結果に表示される
+    const alert = page.getByRole("alert").filter({ hasText: "broken.png" });
+    await expect(alert).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+    // 失敗の通知はネイティブ alert() に依存しない（Issue #118）
+    expect(dialogs).toEqual([]);
   });
 
   test("対応形式の表示と実際に変換可能な形式が一致している", async ({
