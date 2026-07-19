@@ -47,9 +47,12 @@ export const RawDevelopPanel: React.FC<RawDevelopPanelProps> = ({
   // decodeRawToImageData 呼び出し側で postMessage transfer により detach されるため、
   // 渡す直前に slice(0) で複製してキャッシュ自体は使い回す
   const bufferRef = useRef<{ file: File; buffer: ArrayBuffer } | null>(null);
-  // latest-wins 制御: 現像中フラグと、現像中に届いた最新パラメータの保留枠
+  // latest-wins 制御: 現像中フラグと、現像中に届いた最新の要求（パラメータ + 対象ファイル）の保留枠
   const busyRef = useRef(false);
-  const pendingRef = useRef<RawDevelopParams | null>(null);
+  const pendingRef = useRef<{
+    params: RawDevelopParams;
+    file: File;
+  } | null>(null);
   const mountedRef = useRef(true);
   const [isRendering, setIsRendering] = useState(false);
   const [previewFailed, setPreviewFailed] = useState(false);
@@ -64,26 +67,29 @@ export const RawDevelopPanel: React.FC<RawDevelopPanelProps> = ({
   const renderPreview = useCallback(
     async (requested: RawDevelopParams, targetFile: File) => {
       if (busyRef.current) {
-        // 現像中: 最新のパラメータだけを保留し、完了後に 1 回だけ再現像する
-        pendingRef.current = requested;
+        // 現像中: 最新の要求（パラメータ + ファイル）だけを保留し、完了後に 1 回だけ再現像する
+        pendingRef.current = { params: requested, file: targetFile };
         return;
       }
       busyRef.current = true;
       setIsRendering(true);
       try {
-        let current: RawDevelopParams | null = requested;
+        let current: { params: RawDevelopParams; file: File } | null = {
+          params: requested,
+          file: targetFile,
+        };
         while (current) {
           pendingRef.current = null;
-          if (bufferRef.current?.file !== targetFile) {
+          if (bufferRef.current?.file !== current.file) {
             bufferRef.current = {
-              file: targetFile,
-              buffer: await targetFile.arrayBuffer(),
+              file: current.file,
+              buffer: await current.file.arrayBuffer(),
             };
           }
           // half-size 現像で軽量化する（demosaic 省略・面積 1/4。Issue #132）
           const { data, width, height } = await decodeRawToImageData(
             bufferRef.current.buffer.slice(0),
-            current,
+            current.params,
             { halfSize: true },
           );
           if (!mountedRef.current) {
@@ -130,10 +136,11 @@ export const RawDevelopPanel: React.FC<RawDevelopPanelProps> = ({
     { label: t("convert.rawDevelop.wbManual"), value: "manual" },
   ];
 
-  const highlightOptions: { label: string; value: string }[] = [
-    { label: t("convert.rawDevelop.highlightClip"), value: "0" },
-    { label: t("convert.rawDevelop.highlightBlend"), value: "2" },
-    { label: t("convert.rawDevelop.highlightRebuild"), value: "5" },
+  // 値と型を紐づけ、RadioButtonGroup（string ベース）とは String()/逆引きで往復する
+  const highlightOptions: { label: string; value: RawHighlightMode }[] = [
+    { label: t("convert.rawDevelop.highlightClip"), value: 0 },
+    { label: t("convert.rawDevelop.highlightBlend"), value: 2 },
+    { label: t("convert.rawDevelop.highlightRebuild"), value: 5 },
   ];
 
   return (
@@ -207,14 +214,19 @@ export const RawDevelopPanel: React.FC<RawDevelopPanelProps> = ({
       </h3>
       <RadioButtonGroup
         name="rawHighlightMode"
-        options={highlightOptions}
+        options={highlightOptions.map((option) => ({
+          label: option.label,
+          value: String(option.value),
+        }))}
         selectedValue={String(params.highlightMode)}
-        onChange={(value) =>
-          onParamsChange({
-            ...params,
-            highlightMode: Number(value) as RawHighlightMode,
-          })
-        }
+        onChange={(value) => {
+          const mode = highlightOptions.find(
+            (option) => String(option.value) === value,
+          )?.value;
+          if (mode !== undefined) {
+            onParamsChange({ ...params, highlightMode: mode });
+          }
+        }}
       />
 
       <h3 className={styles.sectionTitle}>{t("convert.rawDevelop.preview")}</h3>

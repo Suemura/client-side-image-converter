@@ -59,6 +59,11 @@ export default function Home() {
 
   const handleFilesSelected = (files: File[]) => {
     setSelectedFiles(files);
+    // RAW ファイルが 1 件もなくなったら現像パラメータをリセットする
+    // （個別削除後の再投入で前回の調整値が意図せず適用されるのを防ぐ）
+    if (!files.some(isRawFile)) {
+      setRawDevelopParams(DEFAULT_RAW_DEVELOP_PARAMS);
+    }
   };
 
   // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
