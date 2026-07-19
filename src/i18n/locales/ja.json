@@ -91,7 +91,30 @@
     "metadataSettings": "メタデータ設定",
     "preserveExif": "EXIF情報を保持",
     "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が変換後の画像に保持されます。JPEG / PNG / WebP で有効です。",
-    "preserveExifUnsupported": "EXIF情報の保持は AVIF / JPEG XL では対応していません。"
+    "preserveExifUnsupported": "EXIF情報の保持は AVIF / JPEG XL では対応していません。",
+    "rawDevelop": {
+      "title": "RAW 現像設定",
+      "description": "RAW の生データに対して現像パラメータを適用します。現像後の編集より階調の余地が大きく、白飛び・黒つぶれの復元に有利です。設定はすべての RAW ファイルに一括で適用されます。",
+      "exposure": "露出補正",
+      "exposureLabel": "露出 (EV)",
+      "exposureHelp": "リニアな生データ上で露出をシフトします。0 以外を指定すると、補正を打ち消さないよう自動明るさ調整が無効になります。",
+      "whiteBalance": "ホワイトバランス",
+      "wbCamera": "カメラ設定",
+      "wbAuto": "自動",
+      "wbManual": "色温度指定",
+      "colorTemperature": "色温度 (K)",
+      "colorTemperatureHelp": "撮影時の光源の色温度を指定して中和します（低い値で寒色寄り、高い値で暖色寄りの仕上がり）。カメラ実測値の再現ではなく相対的な調整用です。",
+      "highlight": "ハイライト復元",
+      "highlightClip": "クリップ（標準）",
+      "highlightBlend": "ブレンド",
+      "highlightRebuild": "再構築",
+      "preview": "プレビュー",
+      "previewLoading": "現像中...",
+      "previewNote": "プレビューは先頭の RAW ファイルを半分サイズで簡易現像したものです。",
+      "previewError": "プレビューの現像に失敗しました。変換は実行できる場合があります。",
+      "reset": "現像設定をリセット",
+      "resetItem": "リセット"
+    }
   },
   "crop": {
     "title": "トリミングツール",

@@ -217,7 +217,7 @@ export const convertImage = async (
     // RAW もブラウザの Image でデコードできないため LibRaw（WASM）デコーダーで Canvas に展開する。
     // NEF / DNG 等は MIME が image/tiff に誤報告されることがあるため isTiffFile より先に判定する
     if (isRawFile(file)) {
-      decodeRawToCanvas(file)
+      decodeRawToCanvas(file, options.rawDevelopParams)
         .then((decoded) =>
           processSource(decoded, decoded.width, decoded.height, null),
         )

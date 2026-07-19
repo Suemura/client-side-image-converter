@@ -29,6 +29,7 @@ import {
   pngQualityStrategy,
 } from "../utils/pngQuality";
 import { decodeRawToImageData } from "../utils/rawDecoder";
+import type { RawDevelopParams } from "../utils/rawDevelopment";
 import { decodeTiffToImageData } from "../utils/tiffDecoder";
 import type { DecodeKind, WorkerRequest, WorkerResponse } from "./messages";
 
@@ -37,6 +38,7 @@ const decodeToBitmap = async (
   buffer: ArrayBuffer,
   fileType: string,
   decodeKind: DecodeKind,
+  rawDevelopParams?: RawDevelopParams,
 ): Promise<ImageBitmap> => {
   if (decodeKind === "heic") {
     const { data, width, height } = await decodeHeicToImageData(
@@ -51,7 +53,10 @@ const decodeToBitmap = async (
   if (decodeKind === "raw") {
     // libraw-wasm は内部で自前の Worker を生成する（ネスト Worker）。
     // 非対応環境では例外になり、当該ファイルはメインスレッドへフォールバックする
-    const { data, width, height } = await decodeRawToImageData(buffer);
+    const { data, width, height } = await decodeRawToImageData(
+      buffer,
+      rawDevelopParams,
+    );
     return createImageBitmap(new ImageData(data, width, height));
   }
   // 標準フォーマット（JPEG/PNG/WebP/BMP など）は Blob から直接デコードする。
@@ -132,7 +137,12 @@ const processRequest = async (
     exifTiff = await readExifTiffFromDataUrl(dataUrl, fileType);
   }
 
-  const bitmap = await decodeToBitmap(buffer, fileType, decodeKind);
+  const bitmap = await decodeToBitmap(
+    buffer,
+    fileType,
+    decodeKind,
+    options.rawDevelopParams,
+  );
   const { width, height } = calculateTargetSize(
     bitmap.width,
     bitmap.height,

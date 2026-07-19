@@ -7,6 +7,7 @@
  */
 
 import { pngQualityStrategy } from "./pngQuality";
+import type { RawDevelopParams } from "./rawDevelopment";
 
 export type ConversionFormat = "jpeg" | "png" | "webp" | "avif" | "jxl";
 
@@ -49,6 +50,12 @@ export interface ConversionOptions {
    * 未指定または 0 以下の場合は quality をそのまま使う。
    */
   targetFileSizeKB?: number;
+  /**
+   * RAW 現像パラメータ（露出補正・WB・ハイライト復元。Issue #132）。
+   * RAW ソースのデコード時のみ使用され、非 RAW ソースでは無視される。
+   * 未指定時はカメラ設定準拠のデフォルト現像。
+   */
+  rawDevelopParams?: RawDevelopParams;
 }
 
 export interface ConversionResult {
