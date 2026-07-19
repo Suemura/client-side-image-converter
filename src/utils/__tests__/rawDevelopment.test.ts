@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   buildLibRawSettings,
+  composeWbMultipliers,
   DEFAULT_RAW_DEVELOP_PARAMS,
   EXPOSURE_EV_MAX,
   EXPOSURE_EV_MIN,
   isDefaultRawDevelopParams,
+  isValidWbMultipliers,
   KELVIN_DEFAULT,
   kelvinToWbMultipliers,
   type RawDevelopParams,
@@ -99,9 +101,18 @@ describe("buildLibRawSettings", () => {
       wbMode: "manual",
       kelvin: 5000,
     });
-    expect(manual.userMul).toEqual(kelvinToWbMultipliers(5000));
+    expect(manual.userMul).toEqual(composeWbMultipliers(undefined, 5000));
     expect(manual.useCameraWb).toBeUndefined();
     expect(manual.useAutoWb).toBeUndefined();
+  });
+
+  it("manual WB でカメラ実測 WB（cam_mul）が userMul の合成ベースに使われる", () => {
+    const camMul = [2048, 1024, 1536, 1024];
+    const settings = buildLibRawSettings(
+      { ...DEFAULT_RAW_DEVELOP_PARAMS, wbMode: "manual", kelvin: 5000 },
+      { cameraWbMultipliers: camMul },
+    );
+    expect(settings.userMul).toEqual(composeWbMultipliers(camMul, 5000));
   });
 
   it("ハイライト復元モードが highlight に反映される（0 は省略）", () => {
@@ -162,6 +173,64 @@ describe("kelvinToWbMultipliers", () => {
         expect(m).toBeGreaterThanOrEqual(0.1);
         expect(m).toBeLessThanOrEqual(10);
       }
+    }
+  });
+});
+
+describe("isValidWbMultipliers", () => {
+  it("先頭 3 要素が正の有限値なら有効", () => {
+    expect(isValidWbMultipliers([2048, 1024, 1536, 1024])).toBe(true);
+    expect(isValidWbMultipliers([2.0, 1.0, 1.5])).toBe(true);
+  });
+
+  it("未定義・要素不足・0 埋め・非有限値は無効", () => {
+    expect(isValidWbMultipliers(undefined)).toBe(false);
+    expect(isValidWbMultipliers([1, 2])).toBe(false);
+    // LibRaw はカメラ WB 不明時に cam_mul を 0 埋めで返すことがある
+    expect(isValidWbMultipliers([0, 0, 0, 0])).toBe(false);
+    expect(isValidWbMultipliers([Number.NaN, 1, 1])).toBe(false);
+  });
+});
+
+describe("composeWbMultipliers", () => {
+  it("6500K ではカメラ WB（G=1 正規化）とほぼ同値になる", () => {
+    // 一般的なカメラの as-shot 係数（1024 基準の整数）
+    const camMul = [2048, 1024, 1536, 1024];
+    const [r, g, b, g2] = composeWbMultipliers(camMul, KELVIN_DEFAULT);
+    expect(r).toBeCloseTo(2.0, 1);
+    expect(g).toBe(1);
+    expect(b).toBeCloseTo(1.5, 1);
+    expect(g2).toBeCloseTo(1.0, 5);
+  });
+
+  it("低 K 指定でカメラ WB 比の B/R が上がり、高 K 指定で下がる（相対調整）", () => {
+    const camMul = [2048, 1024, 1536, 1024];
+    const base = composeWbMultipliers(camMul, KELVIN_DEFAULT);
+    const cool = composeWbMultipliers(camMul, 3000);
+    const warm = composeWbMultipliers(camMul, 10000);
+    expect(cool[2] / cool[0]).toBeGreaterThan(base[2] / base[0]);
+    expect(warm[2] / warm[0]).toBeLessThan(base[2] / base[0]);
+  });
+
+  it("G2 が 0 埋めのカメラでは G と同値へフォールバックする", () => {
+    const [, , , g2] = composeWbMultipliers([2048, 1024, 1536, 0], 5000);
+    expect(g2).toBe(1);
+  });
+
+  it("ベースが無効な場合は相対ゲイン単体（kelvinToWbMultipliers）を返す", () => {
+    expect(composeWbMultipliers(undefined, 4000)).toEqual(
+      kelvinToWbMultipliers(4000),
+    );
+    expect(composeWbMultipliers([0, 0, 0, 0], 4000)).toEqual(
+      kelvinToWbMultipliers(4000),
+    );
+  });
+
+  it("合成後の係数はクランプ範囲（0.1〜10）に収まる", () => {
+    const extreme = composeWbMultipliers([10000, 1, 10000, 1], 2000);
+    for (const m of extreme) {
+      expect(m).toBeGreaterThanOrEqual(0.1);
+      expect(m).toBeLessThanOrEqual(10);
     }
   });
 });

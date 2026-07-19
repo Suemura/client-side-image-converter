@@ -9,6 +9,30 @@
 /** JXL エンコードに渡す品質値のデフォルト */
 const DEFAULT_JXL_QUALITY = 90;
 
+/** @jsquash/jxl デフォルトと同じエンコード努力度（1-9。小さいほど高速・圧縮効率は微減） */
+const JXL_EFFORT_DEFAULT = 7;
+
+/** 大画素数画像に適用する高速エンコード努力度 */
+const JXL_EFFORT_LARGE = 3;
+
+/** 高速エンコードへ切り替える画素数しきい値（8MP。avifEncoder と同じ基準） */
+const JXL_LARGE_PIXEL_THRESHOLD = 8_000_000;
+
+/**
+ * 画素数に応じた JXL エンコード努力度（effort）を返す
+ *
+ * JXL の WASM エンコードは単一スレッドで、デフォルトの effort 7 だとカメラ撮影画像級
+ * （RAW 現像後の数千万画素など）で数分〜十数分オーダーになり、変換が進まないように
+ * 見える（Issue #132 動作確認。AVIF の speed 調整 = PR #130 と同型の問題）。
+ * 8MP 超では effort を下げてエンコード時間を数分の一に抑える。
+ */
+export const resolveJxlEffort = (pixelCount: number): number => {
+  if (!Number.isFinite(pixelCount) || pixelCount <= JXL_LARGE_PIXEL_THRESHOLD) {
+    return JXL_EFFORT_DEFAULT;
+  }
+  return JXL_EFFORT_LARGE;
+};
+
 /**
  * 品質値を UI と同じ 1-100 の整数に正規化する
  *
@@ -50,6 +74,7 @@ export const encodeCanvasToJxlBlob = async (
   const { default: encode } = await import("@jsquash/jxl/encode.js");
   const buffer = await encode(imageData, {
     quality: normalizeJxlQuality(quality),
+    effort: resolveJxlEffort(canvas.width * canvas.height),
   });
 
   return new Blob([buffer], { type: "image/jxl" });

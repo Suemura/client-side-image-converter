@@ -96,11 +96,16 @@ const kelvinToIlluminantRgb = (kelvin: number): [number, number, number] => {
 };
 
 /**
- * 色温度（ケルビン）を LibRaw の `userMul`（RGBG2 のホワイトバランス係数）へ変換する。
+ * 色温度（ケルビン）を G=1 正規化の相対 WB ゲイン（RGBG2）へ変換する。
  *
  * 「光源が指定色温度だった」と仮定して中和する写真的な意味論:
  * 低 K（暖色光源）指定 → 青を持ち上げて画は寒色寄りに、高 K 指定 → 赤を持ち上げて暖色寄りになる。
- * 黒体放射近似の逆数を G=1 で正規化した相対調整用の係数で、カメラ実測 WB の再現ではない。
+ * 6500K（D65 相当）でほぼ [1, 1, 1, 1] になる相対調整用の係数。
+ *
+ * この係数は sRGB 相当の色空間を前提としており、RAW のセンサーチャンネル空間には
+ * そのまま適用できない（センサー固有の感度補正が失われ色相が破綻する）。
+ * LibRaw の `userMul` へ渡す際は必ず `composeWbMultipliers` でカメラ実測 WB
+ * （cam_mul）へ合成すること。
  */
 export const kelvinToWbMultipliers = (
   kelvin: number,
@@ -115,17 +120,70 @@ export const kelvinToWbMultipliers = (
 };
 
 /**
+ * WB 係数列（cam_mul / pre_mul 等）が合成のベースとして有効かを返す。
+ * LibRaw はカメラ WB 不明時に cam_mul を 0 埋めで返すことがある。
+ */
+export const isValidWbMultipliers = (
+  mul: readonly number[] | undefined,
+): mul is readonly number[] => {
+  return (
+    mul !== undefined &&
+    mul.length >= 3 &&
+    mul.slice(0, 3).every((v) => Number.isFinite(v) && v > 0)
+  );
+};
+
+/**
+ * カメラ実測 WB（cam_mul）をベースに、色温度の相対ゲインを合成した
+ * LibRaw `userMul` 係数（RGBG2・G=1 正規化）を返す。
+ *
+ * RAW のセンサーチャンネルはカメラごとに感度が大きく異なるため、
+ * 色温度由来の係数でカメラ WB を「置換」すると色相が破綻する（CR2 での実測）。
+ * 「カメラ WB を基準（≒6500K）とした相対調整」として乗算合成することで、
+ * 6500K 指定ではカメラ WB とほぼ同じ仕上がりになり、低 K / 高 K で
+ * 寒色 / 暖色へ滑らかにシフトする。
+ *
+ * @param baseMul - カメラ実測 WB 係数（LibRaw metadata の cam_mul。無効時は等倍ベース）
+ * @param kelvin - 色温度（ケルビン）
+ */
+export const composeWbMultipliers = (
+  baseMul: readonly number[] | undefined,
+  kelvin: number,
+): [number, number, number, number] => {
+  const rel = kelvinToWbMultipliers(kelvin);
+  if (!isValidWbMultipliers(baseMul)) {
+    return rel;
+  }
+  // ベースを G=1 に正規化する（cam_mul は 1024 基準等の生の整数で返ることがある）。
+  // G2（4 要素目）は 0 埋めのカメラがあるため G と同値へフォールバックする
+  const g = baseMul[1];
+  const g2 = baseMul.length >= 4 && baseMul[3] > 0 ? baseMul[3] : g;
+  const base = [baseMul[0] / g, 1, baseMul[2] / g, g2 / g];
+  return [
+    clamp(base[0] * rel[0], 0.1, 10),
+    1,
+    clamp(base[2] * rel[2], 0.1, 10),
+    clamp(base[3], 0.1, 10),
+  ];
+};
+
+/**
  * 現像パラメータを libraw-wasm の `LibRawSettings` へ変換する（`open()` へ渡す）。
  *
  * デフォルトパラメータ・halfSize なしのとき、Issue #101 時点の固定設定
  * `{ useCameraWb: true, outputBps: 8 }` と同値になる（後方互換）。
  *
  * @param params - 現像パラメータ（未指定時はデフォルト現像）
- * @param options - halfSize: プレビュー用の半分サイズ現像（demosaic 省略で大幅高速化）
+ * @param options - halfSize: プレビュー用の半分サイズ現像（demosaic 省略で大幅高速化）/
+ *   cameraWbMultipliers: カメラ実測 WB（cam_mul）。wbMode === "manual" のとき色温度ゲインの
+ *   合成ベースに使う（未指定時は等倍ベース = センサー特性未補正のため色相が崩れうる）
  */
 export const buildLibRawSettings = (
   params: RawDevelopParams = DEFAULT_RAW_DEVELOP_PARAMS,
-  options?: { halfSize?: boolean },
+  options?: {
+    halfSize?: boolean;
+    cameraWbMultipliers?: readonly number[];
+  },
 ): LibRawSettings => {
   // Canvas へ展開するため 8bit 出力で十分（16bit 中間バッファのメモリ圧迫も避ける）。
   // 現像処理自体は LibRaw 内部のリニア 16bit 域で行われるため階調メリットは失われない
@@ -137,7 +195,11 @@ export const buildLibRawSettings = (
   } else if (params.wbMode === "auto") {
     settings.useAutoWb = true;
   } else {
-    settings.userMul = kelvinToWbMultipliers(params.kelvin);
+    // カメラ実測 WB をベースに色温度の相対ゲインを合成する（置換すると色相が破綻する）
+    settings.userMul = composeWbMultipliers(
+      options?.cameraWbMultipliers,
+      params.kelvin,
+    );
   }
 
   // 露出補正（EV → リニア倍率）。expCorrec を立てないと expShift は無視される。

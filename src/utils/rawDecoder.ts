@@ -12,8 +12,38 @@
 
 import { ERROR_MESSAGES } from "./constants";
 import type { DecodedImage } from "./decodedImage";
-import { buildLibRawSettings, type RawDevelopParams } from "./rawDevelopment";
+import {
+  buildLibRawSettings,
+  isValidWbMultipliers,
+  type RawDevelopParams,
+} from "./rawDevelopment";
 import { rawImageDataToRgba } from "./rawImage";
+
+/**
+ * カメラ実測 WB（cam_mul）をメタデータから読み取る。
+ *
+ * 色温度指定（wbMode === "manual"）の合成ベースに使う。LibRaw の設定は `open()` 時に
+ * しか渡せないため、本現像とは別インスタンスで一度メタデータだけを取得する。
+ * libraw-wasm は渡した buffer を内部 Worker へ transfer（detach）するため複製を渡す。
+ * 取得失敗は致命ではない（等倍ベースへフォールバック）ので握りつぶして undefined を返す。
+ */
+const probeCameraWbMultipliers = async (
+  buffer: ArrayBuffer,
+): Promise<readonly number[] | undefined> => {
+  const { default: LibRaw } = await import("libraw-wasm");
+  const probe = new LibRaw();
+  try {
+    await probe.open(new Uint8Array(buffer.slice(0)));
+    const metadata = await probe.metadata(true);
+    const camMul = metadata?.color_data?.cam_mul;
+    return isValidWbMultipliers(camMul) ? camMul : undefined;
+  } catch (error) {
+    console.warn("カメラ WB（cam_mul）の取得に失敗:", error);
+    return undefined;
+  } finally {
+    probe.dispose();
+  }
+};
 
 /**
  * RAW ファイルをデコードして RGBA の生ピクセル（`ImageData` 化できる形）に展開する。
@@ -31,12 +61,18 @@ export const decodeRawToImageData = async (
   params?: RawDevelopParams,
   options?: { halfSize?: boolean },
 ): Promise<DecodedImage> => {
+  // 色温度指定時のみ、合成ベースのカメラ実測 WB を先に取得する（Issue #132 動作確認の修正）
+  const cameraWbMultipliers =
+    params?.wbMode === "manual"
+      ? await probeCameraWbMultipliers(buffer)
+      : undefined;
+
   const { default: LibRaw } = await import("libraw-wasm");
   const raw = new LibRaw();
   try {
     await raw.open(
       new Uint8Array(buffer),
-      buildLibRawSettings(params, options),
+      buildLibRawSettings(params, { ...options, cameraWbMultipliers }),
     );
     const image = await raw.imageData();
     if (!image) {
