@@ -1,0 +1,46 @@
+.rail {
+  width: 72px;
+  flex-shrink: 0;
+  background: var(--rail-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.item {
+  width: 56px;
+  height: 52px;
+  border: none;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-family: inherit;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.item:hover {
+  background: var(--surface-muted);
+}
+
+.active,
+.active:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.label {
+  font-size: 9px;
+  white-space: nowrap;
+}

@@ -44,6 +44,11 @@ interface CompareViewProps {
   eyedropperActive?: boolean;
   /** スポイトのクリック点（ソース自然座標の画素位置）を親へ渡すコールバック */
   onEyedropperPick?: (x: number, y: number) => void;
+  /**
+   * 前後比較（分割スライダー）を表示するか（既定 true = 従来挙動）。
+   * false のときは編集後のみを表示する（/studio の「編集後 | 前後比較」トグル用）
+   */
+  showCompare?: boolean;
 }
 
 /**
@@ -67,6 +72,7 @@ export const CompareView: React.FC<CompareViewProps> = ({
   onEditedFrame,
   eyedropperActive = false,
   onEyedropperPick,
+  showCompare = true,
 }) => {
   const { t } = useTranslation();
   const editedCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -281,10 +287,14 @@ export const CompareView: React.FC<CompareViewProps> = ({
           {t("edit.after")}
         </span>
 
-        {/* オーバーレイ: 編集前（分割位置まで表示） */}
+        {/* オーバーレイ: 編集前（分割位置まで表示）。比較オフ時は CSS で非表示にする
+            （unmount すると canvas の描画内容が失われ、再表示時に空になるため） */}
         <div
           className={styles.overlay}
-          style={{ clipPath: `inset(0 ${100 - divider}% 0 0)` }}
+          style={{
+            clipPath: `inset(0 ${100 - divider}% 0 0)`,
+            display: showCompare ? undefined : "none",
+          }}
         >
           <canvas ref={originalCanvasRef} className={styles.overlayCanvas} />
           <span className={`${styles.badge} ${styles.badgeBefore}`}>
@@ -293,7 +303,13 @@ export const CompareView: React.FC<CompareViewProps> = ({
         </div>
 
         {/* 分割ハンドル */}
-        <div className={styles.divider} style={{ left: `${divider}%` }}>
+        <div
+          className={styles.divider}
+          style={{
+            left: `${divider}%`,
+            display: showCompare ? undefined : "none",
+          }}
+        >
           <span className={styles.dividerHandle}>⇔</span>
         </div>
       </div>

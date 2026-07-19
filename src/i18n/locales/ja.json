@@ -16,6 +16,7 @@
   },
   "navigation": {
     "top": "トップ",
+    "studio": "スタジオ",
     "crop": "トリミング",
     "convert": "変換",
     "upscale": "AI拡大",
@@ -465,6 +466,102 @@
     "receivedFromShare": "共有シートから {{count}} 件を引き継ぎました",
     "skipped": "{{count}} 件は対応形式外または件数上限のため取り込めませんでした",
     "dismiss": "閉じる"
+  },
+  "studio": {
+    "brand": "Image Studio",
+    "backHome": "ホームへ戻る",
+    "tools": {
+      "crop": "切り抜き",
+      "adjust": "調整",
+      "retouch": "レタッチ",
+      "upscale": "AI拡大",
+      "removebg": "AI背景",
+      "info": "情報"
+    },
+    "panel": {
+      "cropTitle": "切り抜き",
+      "cropDescription": "トリミング・回転・反転",
+      "adjustTitle": "調整",
+      "adjustDescription": "露光・色・ディテールを非破壊で編集",
+      "retouchTitle": "レタッチ",
+      "retouchDescription": "見せたくない部分を隠します。適用後は戻せません。",
+      "upscaleTitle": "AIアップスケール",
+      "upscaleDescription": "超解像で解像度を拡大（端末内で処理）",
+      "removebgTitle": "AI背景除去",
+      "removebgDescription": "被写体を残して背景を透過",
+      "infoTitle": "情報 / メタデータ",
+      "infoDescription": "EXIFを確認し、プライバシー情報を削除",
+      "aiBadge": "AI"
+    },
+    "topbar": {
+      "editedOnly": "編集後",
+      "compare": "前後比較",
+      "undo": "元に戻す",
+      "redo": "やり直す",
+      "export": "書き出し"
+    },
+    "filmstrip": {
+      "batch": "一括処理",
+      "count": "{{count}} 枚",
+      "add": "追加",
+      "applyToAll": "全画像に同じ編集を適用",
+      "thumbnail": "{{name}} を選択"
+    },
+    "canvas": {
+      "zoomIn": "拡大表示",
+      "zoomOut": "縮小表示",
+      "dropHint": "画像を追加してワークスペースを開始",
+      "previewError": "プレビューを生成できませんでした"
+    },
+    "crop": {
+      "apply": "トリミングを適用",
+      "reset": "リセット"
+    },
+    "adjust": {
+      "confirm": "この調整を確定",
+      "reset": "リセット",
+      "confirmHelp": "確定すると調整を画像へ焼き込み、次のツールの入力になります"
+    },
+    "retouch": {
+      "apply": "レタッチを適用"
+    },
+    "upscale": {
+      "run": "アップスケール実行",
+      "outputSize": "{{srcWidth}}×{{srcHeight}} → {{width}}×{{height}}",
+      "processing": "超解像 処理中… {{percent}}%"
+    },
+    "removebg": {
+      "run": "背景を除去",
+      "transparentPreview": "適用後は透過部分が市松模様で表示されます"
+    },
+    "info": {
+      "remove": "選択したメタデータを削除"
+    },
+    "export": {
+      "title": "書き出し",
+      "description": "形式・品質・サイズを指定して出力",
+      "format": "出力フォーマット",
+      "quality": "品質",
+      "estimatedSize": "推定サイズ: 約 {{size}} / 枚",
+      "estimatedSizeUnavailable": "推定サイズ: —",
+      "estimating": "推定サイズ: 計算中…",
+      "resize": "リサイズ（任意）",
+      "width": "幅 (px)",
+      "height": "高さ (px)",
+      "auto": "自動",
+      "keepAspect": "アスペクト比を維持",
+      "preserveExif": "EXIF情報を保持",
+      "target": "対象",
+      "targetCurrent": "この画像",
+      "targetAll": "全{{count}}枚（ZIP）",
+      "cancel": "キャンセル",
+      "run": "書き出す",
+      "running": "書き出し中…",
+      "close": "閉じる",
+      "error": "書き出しに失敗しました"
+    },
+    "applyError": "適用に失敗しました",
+    "applyFailures": "一部の画像で適用に失敗しました"
   },
   "share": {
     "title": "共有シートから受け取り",

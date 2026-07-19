@@ -1,0 +1,71 @@
+/* 統合ワークスペースの全画面レイアウト（PC: レール + キャンバス + 右パネル + フィルムストリップ / スマホ: フィルムストリップ + キャンバス + ボトムシート + タブバー） */
+
+.workspace {
+  position: relative;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+  overflow: hidden;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.rightPanel {
+  width: 340px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  min-height: 0;
+  background: var(--surface);
+}
+
+.emptyState {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  background: var(--canvas-bg);
+  overflow-y: auto;
+}
+
+.emptyHint {
+  font-size: 14px;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+.emptyUpload {
+  width: min(560px, 100%);
+}
+
+.notices {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.notices > * {
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .notices {
+    bottom: 30dvh;
+    left: 12px;
+    right: 12px;
+  }
+}

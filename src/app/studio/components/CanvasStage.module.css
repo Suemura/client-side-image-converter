@@ -1,0 +1,208 @@
+.stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  background: var(--canvas-bg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+}
+
+.zoomArea {
+  margin: auto;
+  padding: 24px;
+  max-width: 100%;
+}
+
+/* ズームで 100% を超えた場合はスクロールで見る */
+.zoomArea[style] {
+  max-width: none;
+}
+
+.staticWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+/* 透過確認用の市松模様（AI背景ツール） */
+.checkerboard {
+  background-image: repeating-conic-gradient(
+    rgba(255, 255, 255, 0.9) 0% 25%,
+    rgba(190, 190, 190, 0.9) 0% 50%
+  );
+  background-size: 20px 20px;
+  border-radius: 2px;
+}
+
+.cornerLabel {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressLabel {
+  position: absolute;
+  right: 12px;
+  bottom: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressTrack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.gpsPin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+
+.floatingSegment {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  gap: 2px;
+  box-shadow: var(--shadow-md);
+}
+
+.floatingButton {
+  height: 28px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.floatingActive {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.navArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.navPrev {
+  left: 10px;
+}
+
+.navNext {
+  right: 10px;
+}
+
+.zoomControl {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  padding: 4px;
+}
+
+.zoomButton {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.zoomButton:disabled {
+  color: var(--faint-foreground);
+  cursor: default;
+}
+
+.zoomValue {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding: 0 8px;
+  min-width: 52px;
+  text-align: center;
+  color: var(--foreground);
+}
+
+@media (max-width: 768px) {
+  .zoomControl {
+    left: 12px;
+    bottom: 12px;
+    padding: 3px;
+  }
+
+  .zoomValue {
+    font-size: 11px;
+    min-width: 0;
+  }
+}
