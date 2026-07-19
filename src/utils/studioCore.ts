@@ -190,18 +190,3 @@ export const resolveExportIndices = (
   }
   return [currentIndex];
 };
-
-/**
- * ドキュメント削除後の選択インデックスを解決する（末尾削除時は 1 つ前へ詰める）。
- */
-export const resolveSelectionAfterRemove = (
-  removedIndex: number,
-  selectedIndex: number,
-  nextCount: number,
-): number => {
-  if (nextCount <= 0) {
-    return 0;
-  }
-  const next = selectedIndex > removedIndex ? selectedIndex - 1 : selectedIndex;
-  return Math.min(Math.max(next, 0), nextCount - 1);
-};

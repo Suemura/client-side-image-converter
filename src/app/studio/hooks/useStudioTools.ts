@@ -402,7 +402,10 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
         // 焼き込みは元形式維持・EXIF 保持（削除は情報ツール / 書き出しで行う）
         { outputFormat: "original", preserveExif: true },
       );
-      // results は成功分のみ・入力順を保持するため、順に突き合わせる
+      // results は成功分のみ・入力順を保持するため、カーソル + ファイル名照合で突き合わせる。
+      // 同名ファイルは投入時に addUniqueFilesWithLimit（名前+サイズ）で重複除外されるが、
+      // 同名別サイズは共存しうるため名前一致だけでは完全な一意性は保証できない。
+      // ここでは「名前が一致しない場合は取りこぼす」安全側に倒している（誤った画像への誤適用を避ける）。
       const updates = new Map<number, File>();
       let cursor = 0;
       for (const [position, index] of indices.entries()) {

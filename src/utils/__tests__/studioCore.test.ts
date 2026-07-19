@@ -7,7 +7,6 @@ import {
   redoHistory,
   resolveExportIndices,
   resolveResizeDimensions,
-  resolveSelectionAfterRemove,
   STUDIO_HISTORY_LIMIT,
   undoHistory,
 } from "../studioCore";
@@ -166,23 +165,5 @@ describe("resolveExportIndices", () => {
     expect(resolveExportIndices("all", 0, 0)).toEqual([]);
     expect(resolveExportIndices("current", 5, 3)).toEqual([]);
     expect(resolveExportIndices("current", -1, 3)).toEqual([]);
-  });
-});
-
-describe("resolveSelectionAfterRemove", () => {
-  it("選択より前の削除は選択を 1 つ詰める", () => {
-    expect(resolveSelectionAfterRemove(0, 2, 3)).toBe(1);
-  });
-
-  it("選択自身の削除は同じ位置（次の画像）を維持", () => {
-    expect(resolveSelectionAfterRemove(1, 1, 3)).toBe(1);
-  });
-
-  it("末尾選択の削除は 1 つ前へ", () => {
-    expect(resolveSelectionAfterRemove(2, 2, 2)).toBe(1);
-  });
-
-  it("全削除は 0", () => {
-    expect(resolveSelectionAfterRemove(0, 0, 0)).toBe(0);
   });
 });
