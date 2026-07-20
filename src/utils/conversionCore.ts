@@ -71,6 +71,10 @@ export interface ConversionResult {
    * 探索を行わなかった場合は undefined、達成できなかった場合（最小サイズで出力）は false。
    */
   targetSizeAchieved?: boolean;
+  /** 出力画像の幅 px（リサイズ等適用後）。リネーム規則の {width} 用（編集経路のみ設定） */
+  width?: number;
+  /** 出力画像の高さ px（リサイズ等適用後）。リネーム規則の {height} 用（編集経路のみ設定） */
+  height?: number;
 }
 
 export interface QualitySearchOptions {

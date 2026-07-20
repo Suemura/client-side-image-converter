@@ -127,6 +127,48 @@ test.describe("統合ワークスペース（/studio）", () => {
     }
   });
 
+  test("PC: リネーム規則（トークンチップ挿入 + プレビュー）が ZIP 書き出しへ適用される", async ({
+    page,
+  }) => {
+    await page.goto("/studio/");
+    await addInitialFiles(page, [
+      rectPngFile("alpha.png", 40, 20),
+      rectPngFile("beta.png", 40, 20),
+    ]);
+
+    // 書き出しダイアログ: PNG / 全 2 枚（ZIP）
+    await page.getByTestId("studio-export-open").click();
+    await page.getByTestId("studio-export-format-png").click();
+    await page.getByTestId("studio-export-target-all").click();
+
+    // トークンチップからカーソル位置へ挿入してパターンを組み立てる
+    const renameInput = page.getByTestId("studio-export-rename-input");
+    await renameInput.click();
+    await page.getByTestId("studio-export-rename-token-name").click();
+    await renameInput.pressSequentially("_");
+    await page.getByTestId("studio-export-rename-token-seq").click();
+    await renameInput.pressSequentially("_");
+    await page.getByTestId("studio-export-rename-token-width").click();
+    await expect(renameInput).toHaveValue("{name}_{seq}_{width}");
+
+    // 実ファイル名のプレビューが即時更新される（{width} は出力後の px）
+    await expect(
+      page.getByTestId("studio-export-rename-preview"),
+    ).toContainText("alpha_01_40.png, beta_02_40.png");
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "書き出す", exact: true }).click(),
+    ]);
+
+    // ZIP 内のエントリ名にリネーム規則が適用されている
+    const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+    expect(Object.keys(zip.files).sort()).toEqual([
+      "alpha_01_40.png",
+      "beta_02_40.png",
+    ]);
+  });
+
   test("PC: 調整（LUT）を確定すると currentFile へ焼き込まれ書き出しに反映される", async ({
     page,
   }) => {
