@@ -3,7 +3,7 @@
  *
  * - ツール定義（6 ツール）
  * - ドキュメントモデル（originalFile / currentFile の線形パイプライン）
- * - コミット単位の undo / redo 履歴（深さ上限付き）
+ * - 履歴パネルの操作ラベル定義（スタック本体は `editHistory.ts`）
  * - 書き出し時のリサイズ寸法計算・対象解決
  *
  * React への配線は `src/app/studio/hooks/` が担う。
@@ -41,65 +41,28 @@ export interface StudioDocument {
   currentFile: File;
 }
 
-/** undo / redo 履歴（past が古い順・future が新しい順） */
-export interface StudioHistory<T> {
-  past: T[];
-  present: T;
-  future: T[];
-}
-
-/** 履歴の深さ上限（present を除く past の最大数。メモリ膨張防止） */
-export const STUDIO_HISTORY_LIMIT = 20;
-
-/** 初期状態の履歴を作る */
-export const createHistory = <T>(initial: T): StudioHistory<T> => ({
-  past: [],
-  present: initial,
-  future: [],
-});
-
 /**
- * 新しい状態を履歴へ積む。future は破棄し、past が上限を超えたら最古を捨てる。
- * 捨てられたスナップショットは戻り値 evicted で返す（object URL の解放判定用）。
+ * 履歴パネルの操作ラベル種別。
+ * i18n キー（`studio.history.labels.*`）と 1:1 で対応する。
  */
-export const pushHistory = <T>(
-  history: StudioHistory<T>,
-  next: T,
-  limit: number = STUDIO_HISTORY_LIMIT,
-): { history: StudioHistory<T>; evicted: T[] } => {
-  const past = [...history.past, history.present];
-  const evicted =
-    past.length > limit ? past.splice(0, past.length - limit) : [];
-  return {
-    history: { past, present: next, future: [] },
-    evicted,
-  };
-};
+export type StudioHistoryLabelKey =
+  | "load" // 元画像を読み込み（baseline）
+  | "add" // 画像を追加
+  | "crop" // 切り抜き（自由比率）
+  | "cropRatio" // 切り抜き（比率プリセット指定）
+  | "adjust" // 調整の確定
+  | "retouchMosaic" // レタッチ（モザイク）
+  | "retouchBlur" // レタッチ（ぼかし）
+  | "retouchFill" // レタッチ（塗りつぶし）
+  | "upscale" // AI 拡大
+  | "removebg" // AI 背景除去
+  | "metadata"; // メタデータ削除
 
-export const canUndo = <T>(history: StudioHistory<T>): boolean =>
-  history.past.length > 0;
-
-export const canRedo = <T>(history: StudioHistory<T>): boolean =>
-  history.future.length > 0;
-
-/** 1 つ戻る（不可なら同じ参照を返す） */
-export const undoHistory = <T>(history: StudioHistory<T>): StudioHistory<T> => {
-  if (!canUndo(history)) {
-    return history;
-  }
-  const past = history.past.slice(0, -1);
-  const present = history.past[history.past.length - 1];
-  return { past, present, future: [history.present, ...history.future] };
-};
-
-/** 1 つ進む（不可なら同じ参照を返す） */
-export const redoHistory = <T>(history: StudioHistory<T>): StudioHistory<T> => {
-  if (!canRedo(history)) {
-    return history;
-  }
-  const [present, ...future] = history.future;
-  return { past: [...history.past, history.present], present, future };
-};
+/** 履歴ノードの表示用ラベル（コンポーネント側で t(key, params) に渡す） */
+export interface StudioHistoryLabel {
+  key: StudioHistoryLabelKey;
+  params?: Record<string, string | number>;
+}
 
 /** 書き出しのリサイズ指定（幅・高さは片方だけでもよい。未指定は「自動」） */
 export interface ResizeRequest {
