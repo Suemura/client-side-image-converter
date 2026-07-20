@@ -13,6 +13,7 @@ import { BottomSheet } from "./components/BottomSheet";
 import { CanvasStage } from "./components/CanvasStage";
 import { ExportDialog } from "./components/ExportDialog";
 import { Filmstrip } from "./components/Filmstrip";
+import { HistoryPanel } from "./components/HistoryPanel";
 import { MobileTabBar } from "./components/MobileTabBar";
 import { AdjustPanel } from "./components/panels/AdjustPanel";
 import { CropPanel } from "./components/panels/CropPanel";
@@ -52,6 +53,8 @@ export default function StudioPage() {
   // 前後比較モード（調整ツールのプレビュー）
   const [compare, setCompare] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
+  // 履歴パネル（PC: サイドパネル / スマホ: ボトムシート）の開閉
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // EXIF 補正済みプレビューソース（調整・レタッチ・AI・情報で共有）
   const { previewSource, previewSize, sourceHistogram, previewError } =
@@ -143,6 +146,8 @@ export default function StudioPage() {
         onOpenExport={() => setExportOpen(true)}
         exportDisabled={!hasFiles}
         isMobile={isMobile}
+        onToggleHistory={() => setHistoryOpen((prev) => !prev)}
+        historyDisabled={!hasFiles}
       />
 
       {!hasFiles ? (
@@ -188,11 +193,36 @@ export default function StudioPage() {
           />
           <BottomSheet>{renderPanel(tool, true)}</BottomSheet>
           <MobileTabBar tool={tool} onToolChange={setTool} />
+          {historyOpen && (
+            <HistoryPanel
+              entries={docs.historyEntries}
+              currentIndex={docs.historyIndex}
+              onJump={docs.jumpToHistory}
+              onClear={docs.clearHistory}
+              isMobile
+              onClose={() => setHistoryOpen(false)}
+            />
+          )}
         </>
       ) : (
         <>
           <div className={styles.body}>
-            <ToolRail tool={tool} onToolChange={setTool} />
+            <ToolRail
+              tool={tool}
+              onToolChange={setTool}
+              historyOpen={historyOpen}
+              onToggleHistory={() => setHistoryOpen((prev) => !prev)}
+            />
+            {historyOpen && (
+              <HistoryPanel
+                entries={docs.historyEntries}
+                currentIndex={docs.historyIndex}
+                onJump={docs.jumpToHistory}
+                onClear={docs.clearHistory}
+                isMobile={false}
+                onClose={() => setHistoryOpen(false)}
+              />
+            )}
             <CanvasStage
               tool={tool}
               tools={tools}

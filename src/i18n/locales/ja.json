@@ -584,7 +584,31 @@
       "error": "書き出しに失敗しました"
     },
     "applyError": "適用に失敗しました",
-    "applyFailures": "一部の画像で適用に失敗しました"
+    "applyFailures": "一部の画像で適用に失敗しました",
+    "history": {
+      "title": "履歴",
+      "clear": "クリア",
+      "close": "閉じる",
+      "note": "行をクリックでその時点に戻せます。戻した後の操作はやり直しできます。",
+      "noteMobile": "タップでその時点に戻せます。戻した後の操作はやり直しできます。",
+      "confirmTitle": "履歴のクリア",
+      "confirmMessage": "履歴をすべて破棄して元画像の状態に戻します。この操作は取り消せません。",
+      "confirmCancel": "キャンセル",
+      "confirmClear": "クリアする",
+      "labels": {
+        "load": "元画像を読み込み",
+        "add": "画像を追加（{{count}}枚）",
+        "crop": "切り抜き",
+        "cropRatio": "切り抜き {{ratio}}",
+        "adjust": "調整（{{count}}項目）",
+        "retouchMosaic": "レタッチ モザイク（{{count}}件）",
+        "retouchBlur": "レタッチ ぼかし（{{count}}件）",
+        "retouchFill": "レタッチ 塗りつぶし（{{count}}件）",
+        "upscale": "AI拡大 {{scale}}x",
+        "removebg": "AI背景除去",
+        "metadata": "メタデータを削除"
+      }
+    }
   },
   "share": {
     "title": "共有シートから受け取り",
