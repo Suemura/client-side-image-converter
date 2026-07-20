@@ -61,6 +61,16 @@ describe("sanitizeFileName", () => {
   it("通常の文字・日本語・スペースは維持する", () => {
     expect(sanitizeFileName("写真 2026 (1)")).toBe("写真 2026 (1)");
   });
+
+  it("Windows で無効な末尾のドット・スペースを除去する", () => {
+    expect(sanitizeFileName("photo.")).toBe("photo");
+    expect(sanitizeFileName("photo ")).toBe("photo");
+    expect(sanitizeFileName("photo. . ")).toBe("photo");
+  });
+
+  it("末尾以外のドット・スペースは維持する", () => {
+    expect(sanitizeFileName("photo.v2 final")).toBe("photo.v2 final");
+  });
 });
 
 describe("resolveSeqPadding", () => {

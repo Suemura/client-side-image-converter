@@ -50,9 +50,11 @@ export const stripExtension = (fileName: string): string => {
 /**
  * OS 禁止文字を `_` に置換する。パス区切りやワイルドカードの混入を防ぐ
  * （ZIP 内エントリ・File System Access API の両方で安全な名前にする）。
+ * Windows は末尾のドット・スペースも無効なため、それらも除去する
+ * （例: `photo.` → `photo` / `photo ` → `photo`）。
  */
 export const sanitizeFileName = (name: string): string =>
-  name.replace(FORBIDDEN_CHARS, "_");
+  name.replace(FORBIDDEN_CHARS, "_").replace(/[. ]+$/, "");
 
 /**
  * `{seq}` のゼロ埋め桁数を返す。最低 2 桁、総枚数が 100 以上なら桁数を自動拡張する

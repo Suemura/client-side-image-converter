@@ -252,6 +252,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
     async (
       results: ConversionResult[],
       sourceFiles: File[],
+      plannedTotal: number,
     ): Promise<ConversionResult[]> => {
       if (!hasRenamePattern(renamePattern) || results.length === 0) {
         return results;
@@ -271,7 +272,9 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
           return {
             name: stripExtension(result.originalFilename),
             seq: order + 1,
-            total: results.length,
+            // プレビューと連番桁数を揃えるため、実際の出力件数ではなく書き出し予定件数を使う
+            // （一部失敗しても {seq} のゼロ埋め桁数がプレビューと変わらないようにする）
+            total: plannedTotal,
             width: result.width,
             height: result.height,
             date: captureDate ?? now,
@@ -373,6 +376,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
       const outputs = await applyRename(
         results,
         indices.map((index) => files[index]),
+        indices.length,
       );
       if (outputs.length === 1) {
         downloadSingle(outputs[0]);
