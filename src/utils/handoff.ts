@@ -46,6 +46,16 @@ export interface HandoffTool {
 }
 
 /**
+ * 統合ワークスペース（/studio）のナビゲーション項目。
+ * ハンドオフ対象外（ワークスペース内で連携が完結する）ため HANDOFF_TOOLS には含めず、
+ * Navigation だけが参照する。
+ */
+export const STUDIO_NAV_ITEM = {
+  path: "/studio",
+  labelKey: "navigation.studio",
+} as const;
+
+/**
  * 全ツールのメタ定義（Navigation の表示順に並べる）。
  * acceptedTypes は各ページが FileUploadArea に渡している受理形式と同じ定数を参照し、
  * 送り先候補の判定と実際の取り込みフィルタが乖離しないようにする。

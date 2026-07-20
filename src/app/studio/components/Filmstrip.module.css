@@ -1,0 +1,148 @@
+.strip {
+  height: 96px;
+  flex-shrink: 0;
+  background: var(--rail-bg);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  min-width: 0;
+}
+
+.mobile {
+  height: 60px;
+  gap: 8px;
+  padding: 0 12px;
+  border-top: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 12px;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.metaTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.metaCount {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.counter {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  padding-right: 4px;
+}
+
+.thumbs {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  align-items: center;
+  padding: 8px 0;
+  min-width: 0;
+}
+
+.mobile .thumbs {
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: 88px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface-muted);
+}
+
+.mobile .thumb {
+  width: 44px;
+  height: 44px;
+  opacity: 0.6;
+}
+
+.thumbSelected {
+  border: 2px solid var(--accent);
+}
+
+.mobile .thumbSelected {
+  opacity: 1;
+}
+
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.addButton {
+  flex-shrink: 0;
+  width: 88px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mobile .addButton {
+  width: 44px;
+  height: 44px;
+}
+
+.addLabel {
+  font-size: 10px;
+}
+
+.mobile .addLabel {
+  display: none;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.applyToAll {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
