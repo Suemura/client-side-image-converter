@@ -10,6 +10,13 @@ import {
   type CropTransform,
   IDENTITY_TRANSFORM,
 } from "../../../utils/cropGeometry";
+import type { DetectionCategory } from "../../../utils/detectionCore";
+import {
+  countByCategory,
+  DETECTION_PADDING_RATIO,
+  type DetectionCandidate,
+  expandDetectionRect,
+} from "../../../utils/detectionCore";
 import { buildEditJobs } from "../../../utils/editJobs";
 import { changeFileExtension } from "../../../utils/fileUtils";
 import {
@@ -17,6 +24,10 @@ import {
   type CropResult,
   cropImages,
 } from "../../../utils/imageCropper";
+import {
+  detectPrivacyRegions,
+  isDetectionSupported,
+} from "../../../utils/imageDetector";
 import { editImages } from "../../../utils/imageEditor";
 import { redactImages } from "../../../utils/imageRedactor";
 import {
@@ -91,6 +102,31 @@ const collectCropResultUpdates = (
   return { updates, failures };
 };
 
+/** レタッチツールの AI 自動検出（顔・ナンバープレート）の状態と操作 */
+export interface RetouchDetect {
+  /** この環境で検出を実行できるか（false のときはボタン無効 + 理由表示） */
+  supported: boolean;
+  /** 検出の実行中か（モデル準備 + 推論） */
+  running: boolean;
+  /** モデル・ランタイムのダウンロード進捗（0..100。ダウンロード中以外は null） */
+  downloadPercent: number | null;
+  /** 直近の実行が失敗したか（モデル取得失敗等。ボタン無効 + 理由表示） */
+  failed: boolean;
+  /** 現在画像の検出候補（未実行・無効化時は null。矩形は自然座標） */
+  candidates: DetectionCandidate[] | null;
+  /** カテゴリ別の検出件数（candidates が null のときは全て 0） */
+  counts: Record<DetectionCategory, number>;
+  /** カテゴリ別の選択状態（チェックリスト） */
+  selection: Record<DetectionCategory, boolean>;
+  toggleCategory: (category: DetectionCategory, checked: boolean) => void;
+  /** 選択中カテゴリの検出候補の合計件数（追加ボタンの件数表示） */
+  selectedCount: number;
+  /** 検出を実行する（source は EXIF 補正済みの自然サイズキャンバス） */
+  run: (source: HTMLCanvasElement) => Promise<void>;
+  /** 選択中カテゴリの候補をパディング付きでレタッチ領域へ追加する */
+  addSelectedToRegions: () => void;
+}
+
 /** useStudioTools の返却値 */
 export interface StudioTools {
   tool: StudioToolId;
@@ -145,6 +181,7 @@ export interface StudioTools {
     setPreserveExif: (value: boolean) => void;
     canApply: boolean;
     apply: () => Promise<void>;
+    detect: RetouchDetect;
   };
 
   upscale: {
@@ -486,6 +523,113 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
     setPerImageRegions((prev) => ({ ...prev, [selectedIndex]: EMPTY_REGIONS }));
   }, [selectedIndex]);
 
+  // ---- レタッチ自動検出（顔・ナンバープレート） ----
+  // 候補は「現在表示中の画像」に対する一時状態。画像の切替・差し替えで無効化する
+  const [detectionState, setDetectionState] = useState<{
+    candidates: DetectionCandidate[];
+    imageWidth: number;
+    imageHeight: number;
+  } | null>(null);
+  const [detecting, setDetecting] = useState(false);
+  const [detectionDownloadPercent, setDetectionDownloadPercent] = useState<
+    number | null
+  >(null);
+  const [detectionFailed, setDetectionFailed] = useState(false);
+  const [detectionSelection, setDetectionSelection] = useState<
+    Record<DetectionCategory, boolean>
+  >({ face: true, plate: true });
+  const detectionSupported = useMemo(() => isDetectionSupported(), []);
+
+  // 画像の切替・差し替えで検出候補と失敗表示をリセットする
+  // biome-ignore lint/correctness/useExhaustiveDependencies: files / selectedIndex の変化をリセットのトリガーに使う
+  useEffect(() => {
+    setDetectionState(null);
+    setDetectionFailed(false);
+  }, [selectedIndex, files]);
+
+  const runDetection = useCallback(
+    async (source: HTMLCanvasElement) => {
+      if (detecting || !detectionSupported) return;
+      setDetecting(true);
+      setDetectionFailed(false);
+      setDetectionState(null);
+      try {
+        const ctx = source.getContext("2d");
+        if (!ctx) {
+          throw new Error("2D コンテキストを取得できませんでした");
+        }
+        const imageData = ctx.getImageData(0, 0, source.width, source.height);
+        const result = await detectPrivacyRegions(
+          imageData.data,
+          source.width,
+          source.height,
+          (_stage, loadedBytes, totalBytes) => {
+            setDetectionDownloadPercent(
+              totalBytes ? Math.round((loadedBytes / totalBytes) * 100) : 0,
+            );
+          },
+        );
+        setDetectionState({
+          candidates: result.candidates,
+          imageWidth: source.width,
+          imageHeight: source.height,
+        });
+        setDetectionSelection({ face: true, plate: true });
+      } catch (error) {
+        console.error("Auto-detection error:", error);
+        setDetectionFailed(true);
+      } finally {
+        setDetecting(false);
+        setDetectionDownloadPercent(null);
+      }
+    },
+    [detecting, detectionSupported],
+  );
+
+  const toggleDetectionCategory = useCallback(
+    (category: DetectionCategory, checked: boolean) => {
+      setDetectionSelection((prev) => ({ ...prev, [category]: checked }));
+    },
+    [],
+  );
+
+  const detectionCounts = useMemo(
+    () => countByCategory(detectionState?.candidates ?? []),
+    [detectionState],
+  );
+
+  const detectionSelectedCount =
+    (detectionSelection.face ? detectionCounts.face : 0) +
+    (detectionSelection.plate ? detectionCounts.plate : 0);
+
+  /** 選択中カテゴリの候補をパディング付きの通常レタッチ領域へ変換する */
+  const addDetectedRegions = useCallback(() => {
+    if (!detectionState) return;
+    const selected = detectionState.candidates.filter(
+      (candidate) => detectionSelection[candidate.category],
+    );
+    if (selected.length === 0) return;
+    const regions: RedactRegion[] = selected.map((candidate) => {
+      const region: RedactRegion = {
+        id: nextRegionIdRef.current,
+        area: expandDetectionRect(
+          candidate.rect,
+          detectionState.imageWidth,
+          detectionState.imageHeight,
+          DETECTION_PADDING_RATIO,
+        ),
+      };
+      nextRegionIdRef.current += 1;
+      return region;
+    });
+    setPerImageRegions((prev) => ({
+      ...prev,
+      [selectedIndex]: [...(prev[selectedIndex] ?? EMPTY_REGIONS), ...regions],
+    }));
+    // 追加済みの候補は破線表示から通常領域へ移行するためクリアする
+    setDetectionState(null);
+  }, [detectionState, detectionSelection, selectedIndex]);
+
   const totalRegionCount = useMemo(
     () =>
       files.reduce(
@@ -752,6 +896,19 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
       setPreserveExif: setRetouchPreserveExif,
       canApply: totalRegionCount > 0,
       apply: applyRetouch,
+      detect: {
+        supported: detectionSupported,
+        running: detecting,
+        downloadPercent: detectionDownloadPercent,
+        failed: detectionFailed,
+        candidates: detectionState?.candidates ?? null,
+        counts: detectionCounts,
+        selection: detectionSelection,
+        toggleCategory: toggleDetectionCategory,
+        selectedCount: detectionSelectedCount,
+        run: runDetection,
+        addSelectedToRegions: addDetectedRegions,
+      },
     },
     upscale: {
       scale: upscaleScale,

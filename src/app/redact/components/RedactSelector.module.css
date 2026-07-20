@@ -43,6 +43,30 @@
   z-index: 2;
 }
 
+/* AI 自動検出の候補矩形（accent 破線 + カテゴリラベル。操作を透過する表示専用） */
+.detectionOverlay {
+  position: absolute;
+  border: 2px dashed var(--accent);
+  background-color: transparent;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.detectionLabel {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  transform: translateY(-100%);
+  padding: 1px 6px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  white-space: nowrap;
+}
+
 /* リサイズハンドル: 画像上のオーバーレイ UI のためテーマ非依存の固定色
    （白縁 + 影でどんな画像上でも視認できる配色。DESIGN.md「Do's and Don'ts」参照） */
 .resizeHandle {

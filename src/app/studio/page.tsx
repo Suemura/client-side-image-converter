@@ -108,7 +108,13 @@ export default function StudioPage() {
           />
         );
       case "retouch":
-        return <RetouchPanel tools={tools} compact={compact} />;
+        return (
+          <RetouchPanel
+            tools={tools}
+            previewSource={previewSource}
+            compact={compact}
+          />
+        );
       case "upscale":
         return (
           <UpscalePanel

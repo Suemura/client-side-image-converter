@@ -13,11 +13,20 @@ import { renderRedacted } from "../../../utils/imageRedactor";
 import type { RedactRegion, RedactStyle } from "../../../utils/redactCore";
 import styles from "./RedactSelector.module.css";
 
+/** AI 自動検出候補の表示用データ（矩形は自然座標・ラベルは表示文言） */
+export interface DetectionOverlayItem {
+  key: string;
+  label: string;
+  area: CropArea;
+}
+
 interface RedactSelectorProps {
   /** EXIF Orientation 補正済みの無加工ソースキャンバス（自然サイズ） */
   sourceCanvas: HTMLCanvasElement;
   /** 現在の画像のレタッチ領域（自然座標） */
   regions: RedactRegion[];
+  /** AI 自動検出候補（accent 破線 + ラベルの表示専用オーバーレイ。省略可） */
+  detections?: DetectionOverlayItem[];
   /** 隠し方の設定（プレビューへ焼き込んで表示する） */
   redactStyle: RedactStyle;
   /** 新しい領域の確定（自然座標） */
@@ -131,6 +140,7 @@ const applyHandleDelta = (
 export const RedactSelector: React.FC<RedactSelectorProps> = ({
   sourceCanvas,
   regions,
+  detections,
   redactStyle,
   onAddRegion,
   onUpdateRegion,
@@ -427,6 +437,31 @@ export const RedactSelector: React.FC<RedactSelectorProps> = ({
                 >
                   ×
                 </button>
+              </div>
+            );
+          })}
+
+        {/* AI 自動検出候補（accent 破線 + カテゴリラベル。表示専用） */}
+        {scale &&
+          detections?.map((detection) => {
+            const display = toDisplayArea(
+              detection.area,
+              scale.scaleX,
+              scale.scaleY,
+            );
+            return (
+              <div
+                key={detection.key}
+                className={styles.detectionOverlay}
+                style={{
+                  left: display.x,
+                  top: display.y,
+                  width: display.width,
+                  height: display.height,
+                }}
+                data-testid="redact-detection"
+              >
+                <span className={styles.detectionLabel}>{detection.label}</span>
               </div>
             );
           })}

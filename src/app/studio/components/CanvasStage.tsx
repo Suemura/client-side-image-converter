@@ -181,6 +181,16 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
   const currentFile = files[selectedIndex] ?? null;
   const showError = previewError || (tool === "crop" && cropPreviewError);
 
+  // レタッチの AI 自動検出候補（選択中カテゴリのみ破線 + ラベルで表示する）
+  const { detect } = tools.retouch;
+  const detectionOverlays = (detect.candidates ?? [])
+    .filter((candidate) => detect.selection[candidate.category])
+    .map((candidate, index) => ({
+      key: `${candidate.category}-${index}`,
+      label: t(`studio.retouch.detect.label.${candidate.category}`),
+      area: candidate.rect,
+    }));
+
   return (
     <div className={styles.stage} data-testid="studio-canvas-stage">
       <div className={styles.scroll} ref={scrollRef}>
@@ -235,6 +245,7 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
               key={`${selectedIndex}:${currentFile?.name ?? ""}`}
               sourceCanvas={previewSource}
               regions={tools.retouch.currentRegions}
+              detections={detectionOverlays}
               redactStyle={tools.retouch.style}
               onAddRegion={tools.retouch.addRegion}
               onUpdateRegion={tools.retouch.updateRegion}
