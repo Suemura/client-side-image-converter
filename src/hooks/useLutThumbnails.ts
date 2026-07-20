@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import type { LutData } from "../utils/lutParser";
 import {
   applyLutToPixels,
@@ -70,7 +70,7 @@ export function useLutThumbnails(
     const canvas = document.createElement("canvas");
     canvas.width = LUT_THUMB_WIDTH;
     canvas.height = LUT_THUMB_HEIGHT;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const ctx = canvas.getContext("2d");
     if (!ctx) {
       return fallback;
     }
@@ -91,12 +91,28 @@ export function useLutThumbnails(
     };
   }, [previewSource]);
 
-  // 各 LUT のサムネイル。112×72 × 十数 LUT の CPU トライリニアで数十 ms 未満のため
+  // LUT id → 直近ベースでの計算結果キャッシュ。プリセットが逐次読み込まれる際に
+  // 既計算分の再描画（O(n²)）を避けるため、base 変化時のみ全クリアし差分だけ計算する。
+  const cacheRef = useRef<{
+    base: typeof base | null;
+    entries: Record<string, string>;
+  }>({
+    base: null,
+    entries: {},
+  });
+
+  // 各 LUT のサムネイル。112×72 の CPU トライリニアで 1 件あたり数 ms 未満のため
   // 同期生成で足りる（従来の makeThumbnail と同オーダー）
   const thumbnails = useMemo(() => {
+    if (cacheRef.current.base !== base) {
+      cacheRef.current = { base, entries: {} };
+    }
+    const cache = cacheRef.current.entries;
     const result: Record<string, string> = {};
     for (const [id, lut] of Object.entries(luts)) {
-      result[id] = pixelsToDataUrl(applyLutToPixels(base.pixels, lut));
+      result[id] =
+        cache[id] ?? pixelsToDataUrl(applyLutToPixels(base.pixels, lut));
+      cache[id] = result[id];
     }
     return result;
   }, [base, luts]);
