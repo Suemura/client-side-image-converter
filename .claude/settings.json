@@ -48,8 +48,20 @@
             "type": "command",
             "if": "Bash(gh pr create*)",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pr-created.sh\"",
-            "timeout": 15,
+            "timeout": 30,
             "statusMessage": "PR 作成を検知..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start-worktrees.sh\"",
+            "timeout": 20,
+            "statusMessage": "stale worktree を確認中..."
           }
         ]
       }

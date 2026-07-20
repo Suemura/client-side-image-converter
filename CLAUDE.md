@@ -167,7 +167,8 @@ npm run preview
 ### フック・権限（`.claude/settings.json`）
 
 - **PostToolUse (Write|Edit)**: ファイル編集後に Biome で自動フォーマット。編集直後にファイルが書き換わることがあるため、編集が失敗する場合はファイルを読み直すこと
-- **PostToolUse (Bash: gh pr create)**: PR 作成を検知し、自動レビューフロー（下記）の開始を指示（スクリプト: `.claude/hooks/pr-created.sh`）
+- **PostToolUse (Bash: gh pr create)**: PR 作成を検知し、自動レビューフロー（下記）の開始を指示 + mergeable を確認しコンフリクト時は `/resolve-conflicts` を案内（スクリプト: `.claude/hooks/pr-created.sh`）
+- **SessionStart**: マージ済み PR に対応する残存 worktree を検知し、`/land` での後片付けを促す（スクリプト: `.claude/hooks/session-start-worktrees.sh`）
 - **Stop**: 応答終了時、TS/TSX ファイルに未コミットの変更があれば lint + typecheck + test を自動実行（スクリプト: `.claude/hooks/check-on-stop.sh`）。失敗するとエラー内容が差し戻されるので修正して再度終了すること
 - **permissions**: 危険操作のガード。deny（`sudo` / `git push --force` / `.env` 系・`.dev.vars` 系ファイルの読み書き）、ask（`gh pr merge` / `git reset --hard` / `git clean` / `npm run deploy` / `wrangler pages deploy`）
 
@@ -182,9 +183,13 @@ npm run preview
 
 ### コマンド（`.claude/commands/`）
 
+- **/create-issue [要望]**: 要望・不具合報告を整理し、受け入れ条件付きの GitHub Issue を作成（/start-issue の入口）
 - **/start-issue <Issue番号>**: GitHub Issue を起点にタスクを開始。Issue 専用 worktree（`.claude/worktrees/issue-{番号}/`）とブランチの作成 → planner → 実装 → 検証（lint / typecheck / test + Sprint Contract 自己チェック）→ docs-sync → PR 作成（自動レビューフロー起動）まで自走。worktree で作業するため複数 Issue の並列作業が可能
 - **/review-pr <PR番号>**: PR のコードレビューを実施し、インラインコメントを投稿
 - **/resolve-pr-comments <PR番号>**: PR のレビューコメントを読み取り、修正対応・返信を実施
+- **/feedback <番号> <内容>**: 動作確認フィードバックを受け、該当 worktree で原因特定 → 修正 → 検証 → push まで自走
+- **/resolve-conflicts [PR番号]**: origin/main をマージ方式で取り込み、コンフリクト解消 → lint / typecheck / test → push
+- **/land <Issue/PR番号>**: PR マージ（ask 権限で承認ダイアログ）→ worktree・ローカルブランチ削除 → main 更新（/start-issue の出口）
 
 ### PR 自動レビューフロー
 
