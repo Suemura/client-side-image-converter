@@ -64,6 +64,25 @@
   right: 8px;
 }
 
+/* 長押し原画レイヤー（#146）。原画が編集後と寸法が異なる場合（/studio の
+   切り抜き・AI 拡大適用後）もはみ出さないよう contain で内接させる。
+   セレクタを 2 クラスにしているのは /studio の .zoomArea canvas
+   （ズーム追従の実 px 幅指定）より詳細度を上げて上書きするため */
+.holdOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.holdOverlay .holdCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+}
+
 .divider {
   position: absolute;
   top: 0;

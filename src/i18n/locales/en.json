@@ -204,7 +204,7 @@
     "selectNewImage": "Select new image",
     "before": "Before",
     "after": "After",
-    "compareHint": "Drag the divider in the middle to compare before and after.",
+    "compareHint": "Drag the divider in the middle to compare before and after. Press and hold the image to view the original.",
     "applyModeHelp": "\"All images\" applies the current adjustments to every image. \"Per image\" lets you set adjustments individually while switching images with ←/→.",
     "editFailures": "The following files could not be edited (unsupported format or possibly corrupted)",
     "editError": "An error occurred while editing.",
