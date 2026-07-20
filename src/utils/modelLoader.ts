@@ -39,6 +39,24 @@ const REMOVE_BG_MODEL_VERSION = "1";
 /** 背景除去モデルの配信 URL（public/models/ に同梱。出所は public/models/CREDITS.md） */
 export const REMOVE_BG_MODEL_URL = `/models/u2netp.onnx?v=${REMOVE_BG_MODEL_VERSION}`;
 
+/**
+ * 顔検出モデル（UltraFace RFB-640）のバージョン識別子。
+ * モデル差し替え時の扱いは UPSCALE_MODEL_VERSION と同じ（クエリでキャッシュキーを分離）。
+ */
+const FACE_DETECTION_MODEL_VERSION = "1";
+
+/** 顔検出モデルの配信 URL（public/models/ に同梱。出所は public/models/CREDITS.md） */
+export const FACE_DETECTION_MODEL_URL = `/models/version-RFB-640.onnx?v=${FACE_DETECTION_MODEL_VERSION}`;
+
+/**
+ * ナンバープレート検出モデル（LPD-YuNet）のバージョン識別子。
+ * モデル差し替え時の扱いは UPSCALE_MODEL_VERSION と同じ（クエリでキャッシュキーを分離）。
+ */
+const PLATE_DETECTION_MODEL_VERSION = "1";
+
+/** ナンバープレート検出モデルの配信 URL（public/models/ に同梱。出所は public/models/CREDITS.md） */
+export const PLATE_DETECTION_MODEL_URL = `/models/license_plate_detection_lpd_yunet_2023mar.onnx?v=${PLATE_DETECTION_MODEL_VERSION}`;
+
 /** copy-ort-assets.ts が生成する分割マニフェストの形 */
 export interface OrtAssetsManifest {
   version: string;

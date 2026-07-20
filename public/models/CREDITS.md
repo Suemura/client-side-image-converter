@@ -61,3 +61,61 @@ Web); images are never uploaded.
   bilinearly resized back to the source resolution, then applied as alpha
   （サリエンシーマップを min-max 正規化 → 元解像度へバイリニア拡大 → アルファ
   として合成）
+
+## version-RFB-640.onnx
+
+Face detection model used by the auto-detect feature of the Image Studio
+retouch tool (`/studio`). All inference runs locally in the browser (ONNX
+Runtime Web); images are never uploaded.
+
+Image Studio（`/studio`）レタッチツールの自動検出機能が使用する顔検出モデルです。
+推論はすべてブラウザ内（ONNX Runtime Web）で実行され、画像がサーバーへ送信される
+ことはありません。
+
+- **Source / 出所**: ONNX export distributed by the
+  [ONNX Model Zoo](https://github.com/onnx/models)
+  ([`validated/vision/body_analysis/ultraface/models/version-RFB-640.onnx`](https://github.com/onnx/models/blob/main/validated/vision/body_analysis/ultraface/models/version-RFB-640.onnx))
+  (SHA-256: `8f4c659275977e7a3bfbfa339a9c769ad793df50f9c0baa8c14b11baa1646430`)
+- **Architecture / アーキテクチャ**: Ultra-Light-Fast-Generic-Face-Detector-1MB
+  (UltraFace, RFB-640 variant) from
+  [Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB](https://github.com/Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB)
+- **License / ライセンス**: **MIT** — same as the upstream UltraFace project;
+  the ONNX Model Zoo distributes this model under MIT
+  (`SPDX-License-Identifier: MIT`).
+  （上流の UltraFace プロジェクトと同じ **MIT**。ONNX Model Zoo も MIT として
+  配布しています。）
+- **Input / 入力**: NCHW fp32 `(1, 3, 480, 640)`, RGB, normalized as
+  `(pixel - 127) / 128`
+- **Output / 出力**: `scores (1, 17640, 2)` (softmax probabilities) and
+  `boxes (1, 17640, 4)` (corner-form `[x1, y1, x2, y2]`, normalized 0..1);
+  score-thresholded and merged with NMS
+  （スコアしきい値 → NMS で確定）
+
+## license_plate_detection_lpd_yunet_2023mar.onnx
+
+License plate detection model used by the auto-detect feature of the Image
+Studio retouch tool (`/studio`). All inference runs locally in the browser
+(ONNX Runtime Web); images are never uploaded.
+
+Image Studio（`/studio`）レタッチツールの自動検出機能が使用するナンバープレート
+検出モデルです。推論はすべてブラウザ内（ONNX Runtime Web）で実行され、画像が
+サーバーへ送信されることはありません。
+
+- **Source / 出所**: [opencv/opencv_zoo](https://github.com/opencv/opencv_zoo)
+  ([`models/license_plate_detection_yunet/license_plate_detection_lpd_yunet_2023mar.onnx`](https://github.com/opencv/opencv_zoo/blob/main/models/license_plate_detection_yunet/license_plate_detection_lpd_yunet_2023mar.onnx))
+  (SHA-256: `6d4978a7b6d25514d5e24811b82bfb511d166bdd8ca3b03aa63c1623d4d039c7`)
+- **Architecture / アーキテクチャ**: LPD-YuNet (YuNet-based license plate
+  detector, trained on CCPD). Provided to opencv_zoo by Dong Wang / Shiqi Yu
+  (SYSTEM TEAM, Southern University of Science and Technology)
+- **License / ライセンス**: **Apache-2.0** — see
+  [models/license_plate_detection_yunet/LICENSE](https://github.com/opencv/opencv_zoo/blob/main/models/license_plate_detection_yunet/LICENSE)
+- **Input / 入力**: NCHW fp32 `(1, 3, 240, 320)`, BGR, raw 0..255
+  (OpenCV `blobFromImage` default; no mean subtraction / scaling)
+- **Output / 出力**: `loc (4385, 14)` / `conf (4385, 2)` / `iou (4385, 1)`;
+  decoded with SSD-style priors (strides 8/16/32/64) into 4 corner points,
+  then converted to axis-aligned boxes, score = `sqrt(cls * iou)`, merged
+  with NMS（プライア復号 → 四隅点 → 外接矩形 → NMS）
+- **Note / 注記**: trained on CCPD (Chinese City Parking Dataset); detection
+  accuracy for non-Chinese license plates may be lower
+  （CCPD（中国のナンバープレート）で学習されており、他地域のプレートでは精度が
+  下がる場合があります）
