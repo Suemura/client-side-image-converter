@@ -535,7 +535,8 @@
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",
       "dropHint": "Add images to start the workspace",
-      "previewError": "Failed to generate the preview"
+      "previewError": "Failed to generate the preview",
+      "originalBadge": "Before"
     },
     "crop": {
       "apply": "Apply crop",

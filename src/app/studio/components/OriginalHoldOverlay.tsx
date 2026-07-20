@@ -45,7 +45,7 @@ export const OriginalHoldOverlay: React.FC<OriginalHoldOverlayProps> = ({
       data-testid="studio-hold-original"
     >
       <canvas ref={canvasRef} className={styles.canvas} />
-      <span className={styles.badge}>{t("edit.before")}</span>
+      <span className={styles.badge}>{t("studio.canvas.originalBadge")}</span>
     </div>
   );
 };

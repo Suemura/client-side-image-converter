@@ -534,7 +534,8 @@
       "zoomIn": "拡大表示",
       "zoomOut": "縮小表示",
       "dropHint": "画像を追加してワークスペースを開始",
-      "previewError": "プレビューを生成できませんでした"
+      "previewError": "プレビューを生成できませんでした",
+      "originalBadge": "編集前"
     },
     "crop": {
       "apply": "トリミングを適用",
