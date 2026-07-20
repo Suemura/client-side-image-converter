@@ -539,10 +539,15 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
     Record<DetectionCategory, boolean>
   >({ face: true, plate: true });
   const detectionSupported = useMemo(() => isDetectionSupported(), []);
+  // 実行中の検出が「どの画像表示に対するものか」を識別する世代トークン。
+  // 画像切替・差し替えでインクリメントし、完了時に世代が一致しない結果は破棄する
+  // （await 中の Promise 自体はキャンセルできないため、結果適用側でガードする）
+  const detectionRunIdRef = useRef(0);
 
   // 画像の切替・差し替えで検出候補と失敗表示をリセットする
   // biome-ignore lint/correctness/useExhaustiveDependencies: files / selectedIndex の変化をリセットのトリガーに使う
   useEffect(() => {
+    detectionRunIdRef.current += 1;
     setDetectionState(null);
     setDetectionFailed(false);
   }, [selectedIndex, files]);
@@ -550,6 +555,7 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
   const runDetection = useCallback(
     async (source: HTMLCanvasElement) => {
       if (detecting || !detectionSupported) return;
+      const runId = detectionRunIdRef.current;
       setDetecting(true);
       setDetectionFailed(false);
       setDetectionState(null);
@@ -569,6 +575,8 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
             );
           },
         );
+        // 実行中に画像が切り替わっていた場合、この結果は別画像基準の座標のため破棄する
+        if (detectionRunIdRef.current !== runId) return;
         setDetectionState({
           candidates: result.candidates,
           imageWidth: source.width,
@@ -577,7 +585,9 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
         setDetectionSelection({ face: true, plate: true });
       } catch (error) {
         console.error("Auto-detection error:", error);
-        setDetectionFailed(true);
+        if (detectionRunIdRef.current === runId) {
+          setDetectionFailed(true);
+        }
       } finally {
         setDetecting(false);
         setDetectionDownloadPercent(null);

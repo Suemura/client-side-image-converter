@@ -552,7 +552,7 @@
         "title": "Auto Detect",
         "run": "Detect faces & license plates",
         "running": "Detecting…",
-        "detecting": "Detecting…",
+        "detecting": "Scanning image…",
         "preparingModel": "Preparing AI model... {{percent}}%",
         "modelNote": "The first run downloads the AI models (about 6MB); they are cached afterwards. Your images are never uploaded.",
         "empty": "Nothing was detected",
