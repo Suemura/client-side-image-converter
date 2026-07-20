@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
 import type {
@@ -78,11 +78,27 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
 }) => {
   const { t } = useTranslation();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirmDialogRef = useRef<HTMLDivElement>(null);
 
   const handleClearConfirmed = () => {
     setConfirmOpen(false);
     onClear();
   };
+
+  // 破壊的操作の確認ダイアログ: Escape での cancel と、開いた際にダイアログへフォーカスを移す
+  useEffect(() => {
+    if (!confirmOpen) {
+      return;
+    }
+    confirmDialogRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setConfirmOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [confirmOpen]);
 
   const content = (
     <>
@@ -162,10 +178,12 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
       {confirmOpen && (
         <div className={styles.confirmOverlay}>
           <div
+            ref={confirmDialogRef}
             className={styles.confirmDialog}
             role="alertdialog"
             aria-modal="true"
             aria-label={t("studio.history.confirmTitle")}
+            tabIndex={-1}
           >
             <p className={styles.confirmText}>
               {t("studio.history.confirmMessage")}

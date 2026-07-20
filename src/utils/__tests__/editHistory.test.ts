@@ -132,4 +132,11 @@ describe("editHistory 上限（baseline は pin）", () => {
     expect(result.evicted).toEqual(["b"]);
     expect(stack.nodes.map((node) => node.state)).toEqual(["a", "c"]);
   });
+
+  it("limit に 0 以下を渡しても push 直後の新規ノードは間引かれない", () => {
+    const { stack, evicted } = push(create("a"), "b", 0);
+    expect(currentEditState(stack)).toBe("b");
+    expect(stack.nodes.map((node) => node.state)).toEqual(["a", "b"]);
+    expect(evicted).toEqual([]);
+  });
 });

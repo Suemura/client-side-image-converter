@@ -63,7 +63,9 @@ export const pushEditHistory = <S, L>(
     { state, label, timestamp },
   ];
   // baseline（先頭）は pin し、超過分は index 1 から間引く
-  const overflow = Math.max(0, nodes.length - 1 - limit);
+  // limit は 1 未満だと push 直後の新規ノード自身まで間引かれてしまうため下限を保証する
+  const safeLimit = Math.max(1, limit);
+  const overflow = Math.max(0, nodes.length - 1 - safeLimit);
   const trimmed = overflow > 0 ? nodes.splice(1, overflow) : [];
   return {
     stack: { nodes, index: nodes.length - 1 },
