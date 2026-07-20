@@ -139,6 +139,9 @@ export function useStudioDocuments(): StudioDocuments {
           const file = updates.get(index);
           return file ? { ...doc, currentFile: file } : doc;
         });
+        // `evicted`（間引かれたスナップショット）は未使用: currentFile は File で
+        // createObjectURL 由来ではないため今は解放不要。将来 Blob URL を保持する
+        // 場合はここで evicted を revokeObjectURL する必要がある点に注意
         return pushEditHistory(prev, next, label, Date.now()).stack;
       });
     },
