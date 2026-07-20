@@ -52,6 +52,33 @@ test.describe("統合ワークスペース（/studio）", () => {
     ).toBeVisible();
   });
 
+  test("PC: ズームボタンでプレビューの表示サイズが変わる", async ({ page }) => {
+    await page.goto("/studio/");
+    await addInitialFiles(page, rectPngFile("rect.png", 40, 20));
+
+    // 既定ツール（切り抜き）のプレビュー画像がフィット表示される
+    const previewImage = page
+      .getByTestId("studio-canvas-stage")
+      .locator("img")
+      .first();
+    await expect(previewImage).toBeVisible({ timeout: 15_000 });
+    const baseBox = await previewImage.boundingBox();
+    expect(baseBox).not.toBeNull();
+
+    // ズームイン → 表示幅が拡大する
+    await page.getByRole("button", { name: "拡大表示" }).click();
+    await expect
+      .poll(async () => (await previewImage.boundingBox())?.width ?? 0)
+      .toBeGreaterThan((baseBox?.width ?? 0) * 1.2);
+
+    // ズームアウト × 2 → フィットより縮小される
+    await page.getByRole("button", { name: "縮小表示" }).click();
+    await page.getByRole("button", { name: "縮小表示" }).click();
+    await expect
+      .poll(async () => (await previewImage.boundingBox())?.width ?? 0)
+      .toBeLessThan(baseBox?.width ?? 0);
+  });
+
   test("PC: 切り抜き（1:1）を適用し全画像を ZIP で書き出せる", async ({
     page,
   }) => {

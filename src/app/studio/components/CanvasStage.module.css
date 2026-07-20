@@ -19,11 +19,24 @@
 .zoomArea {
   margin: auto;
   padding: 24px;
-  max-width: 100%;
 }
 
-/* ズームで 100% を超えた場合はスクロールで見る */
-.zoomArea[style] {
+/* ズーム追従: 子コンポーネント（CompareView / CropSelector / RedactSelector /
+   PreviewCanvas）はそれぞれ固有のサイズ上限（max-width / max-height）を持ち
+   % 幅ではズームに追従しないため、CanvasStage が測った
+   「フィット表示幅 × ズーム倍率」の実 px（--studio-preview-width）へ
+   プレビューの img / canvas を直接揃える */
+.zoomArea img,
+.zoomArea canvas {
+  width: var(--studio-preview-width);
+  max-width: none;
+  max-height: none;
+  height: auto;
+}
+
+/* CompareView の .stage（max-width: 640px）等、プレビューを包む要素側の
+   上限もズーム時に効かないよう解除する */
+.zoomArea div {
   max-width: none;
 }
 
@@ -35,14 +48,29 @@
   min-height: 0;
 }
 
-/* 透過確認用の市松模様（AI背景ツール） */
-.checkerboard {
-  background-image: repeating-conic-gradient(
-    rgba(255, 255, 255, 0.9) 0% 25%,
-    rgba(190, 190, 190, 0.9) 0% 50%
-  );
-  background-size: 20px 20px;
-  border-radius: 2px;
+/* 透過確認用の定番チェッカー柄（白 + #ccc の 8px 市松。テーマ非依存の
+   透過インジケータのため固定色。画像の直下にだけ敷く） */
+.checkerboard canvas {
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(
+      45deg,
+      #cccccc 25%,
+      transparent 25%,
+      transparent 75%,
+      #cccccc 75%
+    ),
+    linear-gradient(
+      45deg,
+      #cccccc 25%,
+      transparent 25%,
+      transparent 75%,
+      #cccccc 75%
+    );
+  background-position:
+    0 0,
+    8px 8px;
+  background-size: 16px 16px;
 }
 
 .cornerLabel {

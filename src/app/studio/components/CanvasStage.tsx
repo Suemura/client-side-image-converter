@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorNotice } from "../../../components/ErrorNotice";
 import { createOrientedPreviewUrl } from "../../../utils/imageCropper";
@@ -133,6 +133,42 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
     setZoomIndex((prev) => Math.max(prev - 1, 0));
   }, []);
 
+  // ステージ実寸を測り、プレビューの「フィット表示幅 × ズーム倍率」を実 px で決める。
+  // 子コンポーネント（CompareView / CropSelector / RedactSelector / PreviewCanvas）は
+  // それぞれ固有のサイズ上限（max-width / max-height）を持ち % 幅では追従しないため、
+  // CSS 変数 --studio-preview-width の実 px を配布して img / canvas を直接追従させる
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+    const update = (): void => {
+      setStageSize({ width: el.clientWidth, height: el.clientHeight });
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  // ズームエリアの padding（左右合計）ぶんを除いたフィット幅。
+  // 高さ方向は画像アスペクト比（未読込は 0 = 幅フィットのみ）で内接させる
+  const STAGE_PADDING = 48;
+  const fitWidth = (() => {
+    const availableWidth = Math.max(stageSize.width - STAGE_PADDING, 64);
+    const availableHeight = Math.max(stageSize.height - STAGE_PADDING, 64);
+    if (previewSize.width <= 0 || previewSize.height <= 0) {
+      return availableWidth;
+    }
+    const aspect = previewSize.width / previewSize.height;
+    return Math.min(availableWidth, availableHeight * aspect);
+  })();
+  const previewWidth = Math.max(64, Math.round(fitWidth * zoom));
+
   const upscaledSize =
     previewSize.width > 0
       ? resolveOutputSize(
@@ -147,10 +183,14 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
 
   return (
     <div className={styles.stage} data-testid="studio-canvas-stage">
-      <div className={styles.scroll}>
+      <div className={styles.scroll} ref={scrollRef}>
         <div
           className={styles.zoomArea}
-          style={{ width: `${zoom * 100}%` }}
+          style={
+            {
+              "--studio-preview-width": `${previewWidth}px`,
+            } as React.CSSProperties
+          }
           data-tool={tool}
         >
           <ErrorNotice
