@@ -104,6 +104,7 @@ export default function StudioPage() {
             onToggleEyedropper={handleToggleEyedropper}
             eyedropperActive={wbEyedropperActive}
             autoDisabled={!sourceHistogram}
+            previewSource={previewSource}
             compact={compact}
           />
         );
