@@ -1,3 +1,12 @@
+---
+description: >-
+  PR ブランチのマージコンフリクトを origin/main のマージ取り込みで解消し、
+  lint / typecheck / test を通して push する。「コンフリクト解消して」
+  「コンフリクト直して」「コンフリクト起きてる」「マージできない」と
+  言われたら使う。
+argument-hint: "[PR番号 | ブランチ名]"
+---
+
 PR ブランチのコンフリクトを解消し、検証して push してください。
 
 対象: $ARGUMENTS

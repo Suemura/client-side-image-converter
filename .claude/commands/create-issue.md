@@ -1,3 +1,12 @@
+---
+description: >-
+  要望・アイデア・不具合報告を整理し、受け入れ条件付きの GitHub Issue を作成する
+  （/start-issue の入口）。「Issue にしたい」「Issue 化して」「仕様を整理して
+  Issue に」「この機能が欲しい」「バグを報告したい」「提案を Issue にして」と
+  言われたら使う。
+argument-hint: "[要望・不具合の概要]"
+---
+
 要望・アイデア・不具合報告を整理し、GitHub Issue として作成してください。
 
 入力: $ARGUMENTS

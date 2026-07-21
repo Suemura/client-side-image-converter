@@ -1,3 +1,12 @@
+---
+description: >-
+  PR のマージと後片付け（worktree・ローカルブランチ削除・main 更新）を一括実行。
+  「マージして」「PR を取り込んで」「マージしたから worktree 消して/片付けて」
+  「後片付けして」「worktree 削除して」と言われたら使う。マージ済み PR の
+  後片付けだけの依頼にも使う。
+argument-hint: <Issue番号 | PR番号 | ブランチ名>
+---
+
 PR のマージと後片付け（worktree・ブランチ削除）を一括で行ってください。
 
 対象: $ARGUMENTS

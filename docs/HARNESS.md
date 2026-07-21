@@ -84,6 +84,8 @@ flowchart TD
 
 ### 4. コマンド（`.claude/commands/`）
 
+全コマンドは frontmatter の `description` にトリガー語句（「マージして」「コンフリクト解消して」等）を持ち、ユーザーが `/名前` を打たなくても自然言語の依頼からモデルが自動発火できる（Skill 統合。`argument-hint` も定義済み）。
+
 | コマンド | 役割 |
 | --- | --- |
 | `/create-issue` | 新しい要望を整理し、受け入れ条件（Definition of Done）を付けた GitHub Issue を作成する入口。既存要望との重複チェック・カテゴリ判定・優先度設定もガイドする |

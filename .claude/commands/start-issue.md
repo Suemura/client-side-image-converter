@@ -1,3 +1,12 @@
+---
+description: >-
+  GitHub Issue を起点にタスクを開始し、worktree 作成 → 計画 → 実装 → 検証 →
+  PR 作成（自動レビューフロー起動）まで自走する。「Issue #N やって」
+  「Issue N に着手して」「Issue N を進めて」「この Issue お願い」と既存 Issue の
+  着手を依頼されたら使う。
+argument-hint: <Issue番号>
+---
+
 GitHub Issue を起点にタスクを開始し、PR 作成まで自走してください。
 
 Issue: $ARGUMENTS
