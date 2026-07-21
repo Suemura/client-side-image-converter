@@ -1,3 +1,11 @@
+---
+description: >-
+  GitHub PR のレビューコメントを読み取り、修正対応・回答・返信・push を行う。
+  「レビューコメントに対応して」「PR #N の指摘を直して」と言われたら使う
+  （通常は PR 作成フックから pr-comment-resolver エージェント経由で自動実行される）。
+argument-hint: <PR番号>
+---
+
 Github Pull Requestのレビューコメントを読み取り、指摘への対応・質問への回答・必要な修正を行ってください。
 
 PR: $ARGUMENTS
