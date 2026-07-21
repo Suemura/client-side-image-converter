@@ -92,7 +92,7 @@ npm run preview
 
 各ファイルの詳細な責務・関数一覧は `docs/ARCHITECTURE.md` を参照。
 
-- `src/app/` - Next.js App Router ページ（`convert/` 変換、`crop/` トリミング、`edit/` 画像編集、`redact/` モザイク / ぼかしレタッチ、`upscale/` AI 超解像、`metadata/` EXIF エディター、`share/` 共有シート受け口、`manifest.ts` PWA マニフェスト。ページ固有の UI 部品は `src/app/<page>/components/` 配下）
+- `src/app/` - Next.js App Router ページ（`convert/` 変換、`crop/` トリミング、`edit/` 画像編集、`redact/` モザイク / ぼかしレタッチ、`upscale/` AI 超解像、`remove-bg/` AI 背景除去、`metadata/` EXIF エディター、`studio/` 統合ワークスペース、`share/` 共有シート受け口、`manifest.ts` PWA マニフェスト。ページ固有の UI 部品は `src/app/<page>/components/` 配下）
 - `src/components/` - 再利用可能な React コンポーネント（PWA 関連・ツール連携（ハンドオフ）の送出/到着 UI・汎用スライダー等）
 - `src/contexts/` - React Context（テーマ・ツール連携の共有ストア）
 - `src/utils/` - コアユーティリティ。Canvas / WebGL / WASM 依存のオーケストレーションと、Canvas 非依存の純粋ロジック（単体テスト対象）をファイル単位で分離して配置する
@@ -127,6 +127,7 @@ npm run preview
 9. **バッチ処理・ファイル保存** - 複数画像の一括処理（投入上限 `MAX_INPUT_FILES` = 200 件。変換はワーカープールで並列）。結果は ZIP ダウンロードまたは Chromium 系では File System Access API でフォルダへ直接保存可
 10. **プライバシーファースト** - Canvas API / WASM / WebGL によるクライアントサイドでの全処理（サーバー送信なし）
 11. **PWA** - オフライン対応・ホーム画面 / デスクトップへインストール可能。インストール済み PWA はスマホの共有シートから画像を直接受け取れる（Web Share Target、受け口 `/share`）
+12. **統合ワークスペース「Image Studio」**（`/studio`）- 6 ツール（トリミング・編集・レタッチ・アップスケール・背景除去・メタデータ）を同一画面で操作する Photoshop ライクなワークスペース。線形パイプラインモデル（各ツール出力が次へ入力される）と最大 20 個のコミット単位 undo/redo で複数処理を組み合わせ、組み込み export ダイアログで直接書き出し可
 
 ### 重要な設計原則
 

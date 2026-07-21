@@ -31,6 +31,7 @@ import {
 import { renderOrientedImage } from "./imageCropper";
 import { fileToDataUrl } from "./imageUtils";
 import { encodeCanvasToJxlBlob } from "./jxlEncoder";
+import { type ResizeRequest, resolveResizeDimensions } from "./studioCore";
 import {
   type AdjustmentRenderer,
   applyAdjustmentsToCanvas,
@@ -58,6 +59,11 @@ export interface EditOptions {
   outputFormat?: EditOutputFormat;
   /** ロッシー形式（JPEG / WebP）の品質 0-1（既定 0.92）。AVIF は 1-100 へ換算する */
   quality?: number;
+  /**
+   * 出力リサイズ指定（/studio の書き出し用）。ファイルごとの実寸から
+   * `resolveResizeDimensions` で出力寸法を解決する。未指定は原寸のまま（既定挙動不変）
+   */
+  resize?: ResizeRequest;
 }
 
 /** 編集バッチの結果（成功結果と失敗ファイルの両方を返す。convert 経路と同形） */
@@ -152,9 +158,15 @@ export const renderEdited = async (
     lut,
     curve,
   );
+  // 出力リサイズ（/studio の書き出し）。未指定・同寸は原寸のまま
+  const resized = options.resize
+    ? resolveResizeDimensions(width, height, options.resize)
+    : null;
+  const outputWidth = resized?.width ?? width;
+  const outputHeight = resized?.height ?? height;
   const encodeCanvas = document.createElement("canvas");
-  encodeCanvas.width = width;
-  encodeCanvas.height = height;
+  encodeCanvas.width = outputWidth;
+  encodeCanvas.height = outputHeight;
   const encodeCtx = encodeCanvas.getContext("2d");
   if (!encodeCtx) {
     throw new Error("Canvas 2D context is not supported");
@@ -168,9 +180,9 @@ export const renderEdited = async (
   const background = resolveFlattenBackground(format);
   if (background) {
     encodeCtx.fillStyle = background;
-    encodeCtx.fillRect(0, 0, width, height);
+    encodeCtx.fillRect(0, 0, outputWidth, outputHeight);
   }
-  encodeCtx.drawImage(adjustedCanvas, 0, 0);
+  encodeCtx.drawImage(adjustedCanvas, 0, 0, outputWidth, outputHeight);
 
   // エンコード（AVIF / JXL は WASM、その他は Canvas.toBlob）
   let blob =
@@ -190,15 +202,15 @@ export const renderEdited = async (
       if (exifTiff) {
         const normalizedExif = await normalizeExifForBakedImage(
           exifTiff,
-          width,
-          height,
+          outputWidth,
+          outputHeight,
         );
         blob = await insertExifIntoBlob(
           blob,
           normalizedExif,
           writableFormat,
-          width,
-          height,
+          outputWidth,
+          outputHeight,
         );
       }
     } catch (error) {

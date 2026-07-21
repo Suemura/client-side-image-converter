@@ -16,6 +16,7 @@
   },
   "navigation": {
     "top": "Top",
+    "studio": "Studio",
     "crop": "Crop",
     "convert": "Convert",
     "upscale": "AI Upscale",
@@ -489,6 +490,102 @@
     "receivedFromShare": "Received {{count}} file(s) from the share sheet",
     "skipped": "{{count}} file(s) could not be imported (unsupported format or file limit)",
     "dismiss": "Dismiss"
+  },
+  "studio": {
+    "brand": "Image Studio",
+    "backHome": "Back to home",
+    "tools": {
+      "crop": "Crop",
+      "adjust": "Adjust",
+      "retouch": "Retouch",
+      "upscale": "AI Upscale",
+      "removebg": "AI BG",
+      "info": "Info"
+    },
+    "panel": {
+      "cropTitle": "Crop",
+      "cropDescription": "Trim, rotate and flip",
+      "adjustTitle": "Adjust",
+      "adjustDescription": "Non-destructive light, color and detail edits",
+      "retouchTitle": "Retouch",
+      "retouchDescription": "Hide sensitive areas. Cannot be undone after applying.",
+      "upscaleTitle": "AI Upscale",
+      "upscaleDescription": "Enlarge with super-resolution (on-device)",
+      "removebgTitle": "AI Background Removal",
+      "removebgDescription": "Keep the subject and make the background transparent",
+      "infoTitle": "Info / Metadata",
+      "infoDescription": "Review EXIF and remove privacy data",
+      "aiBadge": "AI"
+    },
+    "topbar": {
+      "editedOnly": "Edited",
+      "compare": "Compare",
+      "undo": "Undo",
+      "redo": "Redo",
+      "export": "Export"
+    },
+    "filmstrip": {
+      "batch": "Batch",
+      "count": "{{count}} images",
+      "add": "Add",
+      "applyToAll": "Apply the same edits to all images",
+      "thumbnail": "Select {{name}}"
+    },
+    "canvas": {
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "dropHint": "Add images to start the workspace",
+      "previewError": "Failed to generate the preview"
+    },
+    "crop": {
+      "apply": "Apply crop",
+      "reset": "Reset"
+    },
+    "adjust": {
+      "confirm": "Confirm adjustments",
+      "reset": "Reset",
+      "confirmHelp": "Confirming bakes the adjustments into the image for the next tool"
+    },
+    "retouch": {
+      "apply": "Apply retouch"
+    },
+    "upscale": {
+      "run": "Run upscale",
+      "outputSize": "{{srcWidth}}×{{srcHeight}} → {{width}}×{{height}}",
+      "processing": "Upscaling… {{percent}}%"
+    },
+    "removebg": {
+      "run": "Remove background",
+      "transparentPreview": "After applying, transparent areas are shown as a checkerboard"
+    },
+    "info": {
+      "remove": "Remove selected metadata"
+    },
+    "export": {
+      "title": "Export",
+      "description": "Choose format, quality and size",
+      "format": "Output format",
+      "quality": "Quality",
+      "estimatedSize": "Estimated size: about {{size}} / image",
+      "estimatedSizeUnavailable": "Estimated size: —",
+      "estimating": "Estimated size: calculating…",
+      "resize": "Resize (optional)",
+      "width": "Width (px)",
+      "height": "Height (px)",
+      "auto": "Auto",
+      "keepAspect": "Keep aspect ratio",
+      "preserveExif": "Preserve EXIF data",
+      "target": "Target",
+      "targetCurrent": "This image",
+      "targetAll": "All {{count}} (ZIP)",
+      "cancel": "Cancel",
+      "run": "Export",
+      "running": "Exporting…",
+      "close": "Close",
+      "error": "Export failed"
+    },
+    "applyError": "Failed to apply",
+    "applyFailures": "Some images could not be processed"
   },
   "share": {
     "title": "Received from Share Sheet",
