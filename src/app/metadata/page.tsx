@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { ErrorNotice } from "../../components/ErrorNotice";
@@ -36,6 +36,12 @@ export default function MetadataPage() {
   const [imageUrls, setImageUrls] = useState<Map<string, string>>(new Map());
   // ダウンロード失敗の通知（次の実行開始でクリアする）
   const [downloadError, setDownloadError] = useState(false);
+  // 最新の imageUrls を ref に保持し、URL 解放処理が imageUrls へ依存せずに
+  // 済むようにする（ハンドラ・アンマウント時クリーンアップの不要な再生成を防ぐ）
+  const imageUrlsRef = useRef(imageUrls);
+  useEffect(() => {
+    imageUrlsRef.current = imageUrls;
+  }, [imageUrls]);
 
   const {
     analysis,
@@ -55,11 +61,15 @@ export default function MetadataPage() {
     removeSelectedMetadata,
   } = useMetadataManager();
 
-  // GPS 処理モードの選択肢（削除 / 市区町村レベルに丸める）
-  const gpsModeOptions = [
-    { label: t("metadata.gpsMode.remove"), value: "remove" },
-    { label: t("metadata.gpsMode.round"), value: "round" },
-  ];
+  // GPS 処理モードの選択肢（削除 / 市区町村レベルに丸める）。
+  // ラベルは翻訳に依存するため t の変化時のみ再生成する
+  const gpsModeOptions = useMemo(
+    () => [
+      { label: t("metadata.gpsMode.remove"), value: "remove" },
+      { label: t("metadata.gpsMode.round"), value: "round" },
+    ],
+    [t],
+  );
 
   // 解析結果に GPS 関連タグが含まれるか（GPS モード UI の表示判定に使う）
   const hasGpsTags = analysis
@@ -75,8 +85,8 @@ export default function MetadataPage() {
       const imageFiles = files.filter(isImageFile);
       setSelectedFiles(imageFiles);
 
-      // 既存のURLをクリーンアップ
-      for (const url of imageUrls.values()) {
+      // 既存のURLをクリーンアップ（最新値は ref から参照し imageUrls への依存を断つ）
+      for (const url of imageUrlsRef.current.values()) {
         URL.revokeObjectURL(url);
       }
 
@@ -93,7 +103,7 @@ export default function MetadataPage() {
         await analyzeFiles(imageFiles);
       }
     },
-    [analyzeFiles, imageUrls],
+    [analyzeFiles],
   );
 
   // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
@@ -104,13 +114,13 @@ export default function MetadataPage() {
 
   const handleClearFiles = useCallback(() => {
     setSelectedFiles([]);
-    // URLをクリーンアップ
-    for (const url of imageUrls.values()) {
+    // URLをクリーンアップ（最新値は ref から参照し imageUrls への依存を断つ）
+    for (const url of imageUrlsRef.current.values()) {
       URL.revokeObjectURL(url);
     }
     setImageUrls(new Map());
     clearHandoffNotice();
-  }, [imageUrls, clearHandoffNotice]);
+  }, [clearHandoffNotice]);
 
   const handleImageClick = useCallback((file: File) => {
     setSelectedFileForModal(file);
@@ -161,14 +171,16 @@ export default function MetadataPage() {
     }
   }, [analysis, selectedTags, removeSelectedMetadata]);
 
-  // クリーンアップ
+  // アンマウント時に残存 URL を解放する。個々の差し替え時の解放は
+  // handleFilesSelected / handleClearFiles 側で行うため、ここでは
+  // imageUrls の変化ごとに再実行せず ref 経由で最新値のみを対象にする
   useEffect(() => {
     return () => {
-      for (const url of imageUrls.values()) {
+      for (const url of imageUrlsRef.current.values()) {
         URL.revokeObjectURL(url);
       }
     };
-  }, [imageUrls]);
+  }, []);
 
   // プライバシーリスクの表示
   const getPrivacyRiskBadge = useCallback(

@@ -245,12 +245,11 @@ export const convertImage = async (
     // 例外は外側 Promise の reject へ接続し、unhandled rejection を防ぐ
     reader.onload = async (e) => {
       try {
+        // FileReader の結果は EXIF 読み取りと Image ソースの両方で使うため一度だけキャストする
+        const dataUrl = e.target?.result as string;
         let exifTiff: Uint8Array | null = null;
         if (shouldPreserveExif) {
-          exifTiff = await readExifTiffFromDataUrl(
-            e.target?.result as string,
-            file.type,
-          );
+          exifTiff = await readExifTiffFromDataUrl(dataUrl, file.type);
         }
 
         const img = new Image();
@@ -262,7 +261,7 @@ export const convertImage = async (
           reject(new Error("画像の読み込みに失敗しました"));
         };
 
-        img.src = e.target?.result as string;
+        img.src = dataUrl;
       } catch (error) {
         reject(error);
       }

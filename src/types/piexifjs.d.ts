@@ -95,6 +95,9 @@ declare module "piexifjs" {
   }
 
   interface GPSIFD {
+    // GPS タグ名（文字列）からタグ ID を引く用途（metadataManager の GPS 一括削除）。
+    // 全 GPS タグ ID は number のため、名前引きを型安全に許可する索引シグネチャを持たせる
+    [tagName: string]: number;
     GPSVersionID: number;
     GPSLatitudeRef: number;
     GPSLatitude: number;

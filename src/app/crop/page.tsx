@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { ErrorNotice } from "../../components/ErrorNotice";
@@ -45,6 +45,12 @@ export default function CropPage() {
     handleNext: handleNextImage,
   } = useImageNavigation(files.length);
   const [previewUrl, setPreviewUrl] = useState<string>("");
+  // 最新の previewUrl を ref に保持し、アンマウント時クリーンアップが
+  // previewUrl の変化ごとに再生成・再実行されないようにする
+  const previewUrlRef = useRef(previewUrl);
+  useEffect(() => {
+    previewUrlRef.current = previewUrl;
+  }, [previewUrl]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
@@ -130,14 +136,16 @@ export default function CropPage() {
     };
   }, [files, currentPreviewIndex, rotation, flipHorizontal, flipVertical]);
 
-  // アンマウント時にプレビューURLをクリーンアップ
+  // アンマウント時にプレビューURLをクリーンアップ。
+  // 差し替え時の解放は生成 effect（setPreviewUrl の更新関数）と handleClearFiles が
+  // 担うため、ここでは previewUrl の変化ごとに再実行せず ref 経由で最新値のみ解放する
   useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
       }
     };
-  }, [previewUrl]);
+  }, []);
 
   const resetCropSettings = useCallback(() => {
     areaStore.reset();
