@@ -573,6 +573,8 @@
       "height": "高さ (px)",
       "auto": "自動",
       "keepAspect": "アスペクト比を維持",
+      "rename": "リネーム規則（任意）",
+      "renamePreview": "プレビュー: {{names}}",
       "preserveExif": "EXIF情報を保持",
       "target": "対象",
       "targetCurrent": "この画像",

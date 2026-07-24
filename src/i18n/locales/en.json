@@ -574,6 +574,8 @@
       "height": "Height (px)",
       "auto": "Auto",
       "keepAspect": "Keep aspect ratio",
+      "rename": "Rename pattern (optional)",
+      "renamePreview": "Preview: {{names}}",
       "preserveExif": "Preserve EXIF data",
       "target": "Target",
       "targetCurrent": "This image",
