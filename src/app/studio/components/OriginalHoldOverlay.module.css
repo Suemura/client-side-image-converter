@@ -1,0 +1,35 @@
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* 進捗ラベル等より前面に出す（長押し中は原画表示を優先） */
+  z-index: 2;
+  /* 透過画像の原画でも背後の編集後プレビューが透けないよう下地を敷く */
+  background: var(--canvas-bg);
+}
+
+/* CanvasStage の .zoomArea canvas（ズーム追従の実 px 幅指定）より詳細度を上げ、
+   原画が編集後と寸法・アスペクト比が異なる場合も contain で内接させる */
+.layer .canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+}
+
+/* 「編集前」バッジ。CompareView のバッジと同スタイル。画像上オーバーレイ UI のため
+   テーマ非依存の固定色（白 + 半透明黒）を使う（DESIGN.md「Do's and Don'ts」の例外） */
+.badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+}

@@ -24,6 +24,7 @@ import { UpscalePanel } from "./components/panels/UpscalePanel";
 import { ToolRail } from "./components/ToolRail";
 import { TopBar } from "./components/TopBar";
 import { useStudioDocuments } from "./hooks/useStudioDocuments";
+import { useStudioOriginal } from "./hooks/useStudioOriginal";
 import { useStudioTools } from "./hooks/useStudioTools";
 import styles from "./studio.module.css";
 
@@ -59,6 +60,13 @@ export default function StudioPage() {
   // EXIF 補正済みプレビューソース（調整・レタッチ・AI・情報で共有）
   const { previewSource, previewSize, sourceHistogram, previewError } =
     useEditPreview(files, selectedIndex);
+
+  // 長押し原画表示用: ツール横断の元画像（履歴スタック先頭。EXIF 補正のみ適用）
+  const originalSource = useStudioOriginal(
+    documents,
+    selectedIndex,
+    previewSource,
+  );
 
   // 自動補正（オートレベル / 自動 WB / WB スポイト）
   const {
@@ -182,6 +190,7 @@ export default function StudioPage() {
             onPreviousImage={handlePreviousImage}
             onNextImage={handleNextImage}
             previewSource={previewSource}
+            originalSource={originalSource}
             previewSize={previewSize}
             previewError={previewError}
             compare={compare}
@@ -232,6 +241,7 @@ export default function StudioPage() {
               onPreviousImage={handlePreviousImage}
               onNextImage={handleNextImage}
               previewSource={previewSource}
+              originalSource={originalSource}
               previewSize={previewSize}
               previewError={previewError}
               compare={compare}

@@ -2,6 +2,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorNotice } from "../../../components/ErrorNotice";
+import { usePressAndHold } from "../../../hooks/usePressAndHold";
 import { createOrientedPreviewUrl } from "../../../utils/imageCropper";
 import type { StudioToolId } from "../../../utils/studioCore";
 import { resolveOutputSize } from "../../../utils/upscaleCore";
@@ -10,6 +11,7 @@ import { CompareView } from "../../edit/components/CompareView";
 import { RedactSelector } from "../../redact/components/RedactSelector";
 import type { AiProgressState, StudioTools } from "../hooks/useStudioTools";
 import styles from "./CanvasStage.module.css";
+import { OriginalHoldOverlay } from "./OriginalHoldOverlay";
 import { PreviewCanvas } from "./PreviewCanvas";
 
 /** ズーム倍率の刻み（fit 表示に対する倍率） */
@@ -24,6 +26,8 @@ interface CanvasStageProps {
   onNextImage: () => void;
   /** EXIF 補正済みのプレビューソース（調整・レタッチ・AI・情報で共有） */
   previewSource: HTMLCanvasElement | null;
+  /** 長押し原画表示用: ツール横断の元画像（EXIF 補正のみ適用。未準備は null） */
+  originalSource: HTMLCanvasElement | null;
   previewSize: { width: number; height: number };
   previewError: boolean;
   /** 調整プレビューの前後比較モード */
@@ -59,6 +63,7 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
   onPreviousImage,
   onNextImage,
   previewSource,
+  originalSource,
   previewSize,
   previewError,
   compare,
@@ -181,6 +186,17 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
   const currentFile = files[selectedIndex] ?? null;
   const showError = previewError || (tool === "crop" && cropPreviewError);
 
+  // 長押しで原画（ツール横断の元画像）を表示する（#146）。
+  // 静的プレビュー系ツール（AI拡大・AI背景・情報）のみ対象。切り抜き / レタッチは
+  // キャンバス上のドラッグ操作（領域指定・ハンドル）と競合するため対象外、
+  // AI 処理の実行中も無効。調整ツールは CompareView 側で処理する
+  const staticHoldEnabled =
+    (tool === "upscale" || tool === "removebg" || tool === "info") &&
+    previewSource !== null &&
+    originalSource !== null &&
+    aiProgress === null;
+  const staticHold = usePressAndHold({ disabled: !staticHoldEnabled });
+
   return (
     <div className={styles.stage} data-testid="studio-canvas-stage">
       <div className={styles.scroll} ref={scrollRef}>
@@ -213,6 +229,8 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
               eyedropperActive={eyedropperActive}
               onEyedropperPick={onEyedropperPick}
               showCompare={compare}
+              holdSource={originalSource}
+              pressHoldEnabled={!compare}
             />
           )}
 
@@ -247,10 +265,14 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
           )}
 
           {tool === "upscale" && (
-            <div className={styles.staticWrap}>
+            <div className={styles.staticWrap} {...staticHold.bind}>
               <PreviewCanvas
                 source={previewSource}
                 label={currentFile?.name ?? ""}
+              />
+              <OriginalHoldOverlay
+                source={originalSource}
+                active={staticHold.active}
               />
               {upscaledSize && (
                 <span className={styles.cornerLabel}>
@@ -285,10 +307,17 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
           )}
 
           {tool === "removebg" && (
-            <div className={`${styles.staticWrap} ${styles.checkerboard}`}>
+            <div
+              className={`${styles.staticWrap} ${styles.checkerboard}`}
+              {...staticHold.bind}
+            >
               <PreviewCanvas
                 source={previewSource}
                 label={currentFile?.name ?? ""}
+              />
+              <OriginalHoldOverlay
+                source={originalSource}
+                active={staticHold.active}
               />
               {aiProgress && (
                 <>
@@ -314,10 +343,14 @@ export const CanvasStage: React.FC<CanvasStageProps> = ({
           )}
 
           {tool === "info" && (
-            <div className={styles.staticWrap}>
+            <div className={styles.staticWrap} {...staticHold.bind}>
               <PreviewCanvas
                 source={previewSource}
                 label={currentFile?.name ?? ""}
+              />
+              <OriginalHoldOverlay
+                source={originalSource}
+                active={staticHold.active}
               />
               {hasGps && (
                 <span className={styles.gpsPin} title="GPS">

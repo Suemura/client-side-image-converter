@@ -340,4 +340,32 @@ test.describe("統合ワークスペース（/studio）", () => {
       page.getByRole("link", { name: "スタジオ", exact: true }),
     ).toBeVisible();
   });
+
+  test("PC: 情報ツールで長押しすると元画像が表示され、離すと戻る", async ({
+    page,
+  }) => {
+    await page.goto("/studio/");
+    await addInitialFiles(page, rectPngFile("hold.png", 40, 20));
+
+    // 静的プレビュー系ツール（情報）へ切り替える
+    await page.getByTestId("studio-rail-info").click();
+    const preview = page.getByTestId("studio-preview-canvas");
+    await expect(preview).toBeVisible();
+
+    // 長押しオーバーレイは初期状態では非表示（display: none で mount 済み）
+    const overlay = page.getByTestId("studio-hold-original");
+    await expect(overlay).toBeHidden();
+
+    const box = await preview.boundingBox();
+    if (!box) throw new Error("preview canvas not visible");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    // 約 300ms のしきい値経過で元画像（編集前バッジ付き）が表示される
+    await expect(overlay).toBeVisible({ timeout: 5_000 });
+    await expect(overlay.getByText("編集前")).toBeVisible();
+
+    // 離すと即座に戻る
+    await page.mouse.up();
+    await expect(overlay).toBeHidden();
+  });
 });
