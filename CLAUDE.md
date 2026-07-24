@@ -127,7 +127,7 @@ npm run preview
 9. **バッチ処理・ファイル保存** - 複数画像の一括処理（投入上限 `MAX_INPUT_FILES` = 200 件。変換はワーカープールで並列）。結果は ZIP ダウンロードまたは Chromium 系では File System Access API でフォルダへ直接保存可
 10. **プライバシーファースト** - Canvas API / WASM / WebGL によるクライアントサイドでの全処理（サーバー送信なし）
 11. **PWA** - オフライン対応・ホーム画面 / デスクトップへインストール可能。インストール済み PWA はスマホの共有シートから画像を直接受け取れる（Web Share Target、受け口 `/share`）
-12. **統合ワークスペース「Image Studio」**（`/studio`）- 6 ツール（トリミング・編集・レタッチ・アップスケール・背景除去・メタデータ）を同一画面で操作する Photoshop ライクなワークスペース。線形パイプラインモデル（各ツール出力が次へ入力される）と最大 20 個のコミット単位 undo/redo + 履歴パネル（任意時点への復帰・クリア。`editHistory.ts`）で複数処理を組み合わせ、組み込み export ダイアログで直接書き出し可
+12. **統合ワークスペース「Image Studio」**（`/studio`）- 6 ツール（トリミング・編集・レタッチ・アップスケール・背景除去・メタデータ）を同一画面で操作する Photoshop ライク。線形パイプライン + 最大 20 コミット undo/redo + 履歴パネル（任意時点復帰・クリア。`editHistory.ts`）。組み込み export で書き出し（リネーム規則 `{name}` `{seq}` `{width}` `{height}` `{date}` 対応）
 
 ### 重要な設計原則
 
@@ -168,7 +168,8 @@ npm run preview
 ### フック・権限（`.claude/settings.json`）
 
 - **PostToolUse (Write|Edit)**: ファイル編集後に Biome で自動フォーマット。編集直後にファイルが書き換わることがあるため、編集が失敗する場合はファイルを読み直すこと
-- **PostToolUse (Bash: gh pr create)**: PR 作成を検知し、自動レビューフロー（下記）の開始を指示（スクリプト: `.claude/hooks/pr-created.sh`）
+- **PostToolUse (Bash: gh pr create)**: PR 作成を検知し、自動レビューフロー（下記）の開始を指示 + mergeable を確認しコンフリクト時は `/resolve-conflicts` を案内（スクリプト: `.claude/hooks/pr-created.sh`）
+- **SessionStart**: マージ済み PR に対応する残存 worktree を検知し、`/land` での後片付けを促す（スクリプト: `.claude/hooks/session-start-worktrees.sh`）
 - **Stop**: 応答終了時、TS/TSX ファイルに未コミットの変更があれば lint + typecheck + test を自動実行（スクリプト: `.claude/hooks/check-on-stop.sh`）。失敗するとエラー内容が差し戻されるので修正して再度終了すること
 - **permissions**: 危険操作のガード。deny（`sudo` / `git push --force` / `.env` 系・`.dev.vars` 系ファイルの読み書き）、ask（`gh pr merge` / `git reset --hard` / `git clean` / `npm run deploy` / `wrangler pages deploy`）
 
@@ -183,9 +184,13 @@ npm run preview
 
 ### コマンド（`.claude/commands/`）
 
+- **/create-issue [要望]**: 要望・不具合報告を整理し、受け入れ条件付きの GitHub Issue を作成（/start-issue の入口）
 - **/start-issue <Issue番号>**: GitHub Issue を起点にタスクを開始。Issue 専用 worktree（`.claude/worktrees/issue-{番号}/`）とブランチの作成 → planner → 実装 → 検証（lint / typecheck / test + Sprint Contract 自己チェック）→ docs-sync → PR 作成（自動レビューフロー起動）まで自走。worktree で作業するため複数 Issue の並列作業が可能
 - **/review-pr <PR番号>**: PR のコードレビューを実施し、インラインコメントを投稿
 - **/resolve-pr-comments <PR番号>**: PR のレビューコメントを読み取り、修正対応・返信を実施
+- **/feedback <番号> <内容>**: 動作確認フィードバックを受け、該当 worktree で原因特定 → 修正 → 検証 → push まで自走
+- **/resolve-conflicts [PR番号]**: origin/main をマージ方式で取り込み、コンフリクト解消 → lint / typecheck / test → push
+- **/land <Issue/PR番号>**: PR マージ（ask 権限で承認ダイアログ）→ worktree・ローカルブランチ削除 → main 更新（/start-issue の出口）
 
 ### PR 自動レビューフロー
 

@@ -2,8 +2,9 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Slider } from "../../../components/Slider";
+import { useLutThumbnails } from "../../../hooks/useLutThumbnails";
 import { loadLutFromFile, loadPresetLut } from "../../../utils/lutLoader";
-import { applyLutToPixel, type LutData } from "../../../utils/lutParser";
+import type { LutData } from "../../../utils/lutParser";
 import {
   CUSTOM_LUT_ID,
   LUT_PRESETS,
@@ -24,46 +25,15 @@ interface LutPickerProps {
   customName: string | null;
   /** カスタム LUT アップロード完了の通知（ファイル名を渡す） */
   onCustomLoaded: (name: string) => void;
+  /** サムネイルのベースにする現在画像（EXIF 補正済み。null は固定グラデーション） */
+  previewSource: HTMLCanvasElement | null;
 }
-
-const THUMB_W = 56;
-const THUMB_H = 36;
-
-/**
- * LUT を固定グラデーションへ適用したサムネイル（dataURL）を生成する。
- * プレビュー用途の軽量描画なので CPU（`applyLutToPixel`）で十分。
- */
-const makeThumbnail = (lut: LutData): string => {
-  const canvas = document.createElement("canvas");
-  canvas.width = THUMB_W;
-  canvas.height = THUMB_H;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    return "";
-  }
-  const image = ctx.createImageData(THUMB_W, THUMB_H);
-  for (let y = 0; y < THUMB_H; y++) {
-    for (let x = 0; x < THUMB_W; x++) {
-      // 幅・高さで色域を広めに走査するベースグラデーション
-      const br = x / (THUMB_W - 1);
-      const bg = y / (THUMB_H - 1);
-      const bb = 1 - x / (THUMB_W - 1);
-      const [r, g, b] = applyLutToPixel(br, bg, bb, lut, 1);
-      const p = (y * THUMB_W + x) * 4;
-      image.data[p] = Math.round(r * 255);
-      image.data[p + 1] = Math.round(g * 255);
-      image.data[p + 2] = Math.round(b * 255);
-      image.data[p + 3] = 255;
-    }
-  }
-  ctx.putImageData(image, 0, 0);
-  return canvas.toDataURL();
-};
 
 /**
  * LUT フィルタの選択 UI（プリセットサムネイル一覧 + カスタムアップロード + 適用強度）。
  * `selection` + `onSelectionChange` の不変更新契約は `AdjustmentPanel` を踏襲する。
  * プレビューの即時反映はページ側が解決した LUT を `CompareView` へ渡すことで行う。
+ * サムネイルは現在画像の縮小版へ各 LUT を単体適用して生成する（`useLutThumbnails`）。
  */
 export const LutPicker: React.FC<LutPickerProps> = ({
   selection,
@@ -71,13 +41,17 @@ export const LutPicker: React.FC<LutPickerProps> = ({
   registerLut,
   customName,
   onCustomLoaded,
+  previewSource,
 }) => {
   const { t } = useTranslation();
-  const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
+  // サムネイル生成用に読み込み済み LUT データを保持する（ページ側レジストリとは別に、
+  // 本コンポーネントが表示に必要な分だけを持つ）
+  const [loadedLuts, setLoadedLuts] = useState<Record<string, LutData>>({});
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { thumbnails, noneThumb } = useLutThumbnails(previewSource, loadedLuts);
 
-  // プリセットをマウント時にまとめて読み込み、レジストリ登録 + サムネイル生成する
+  // プリセットをマウント時にまとめて読み込み、レジストリ登録 + サムネイル用に保持する
   // （動的 fetch のため初期バンドルには影響しない。個別失敗は握りつぶしてチップは残す）。
   useEffect(() => {
     let cancelled = false;
@@ -88,8 +62,7 @@ export const LutPicker: React.FC<LutPickerProps> = ({
             return;
           }
           registerLut(preset.id, data);
-          const thumb = makeThumbnail(data);
-          setThumbnails((prev) => ({ ...prev, [preset.id]: thumb }));
+          setLoadedLuts((prev) => ({ ...prev, [preset.id]: data }));
         })
         .catch((loadError) => {
           console.warn(`Failed to load preset LUT ${preset.id}:`, loadError);
@@ -136,10 +109,7 @@ export const LutPicker: React.FC<LutPickerProps> = ({
       try {
         const data = await loadLutFromFile(file);
         registerLut(CUSTOM_LUT_ID, data);
-        setThumbnails((prev) => ({
-          ...prev,
-          [CUSTOM_LUT_ID]: makeThumbnail(data),
-        }));
+        setLoadedLuts((prev) => ({ ...prev, [CUSTOM_LUT_ID]: data }));
         onCustomLoaded(file.name);
         onSelectionChange({
           lutId: CUSTOM_LUT_ID,
@@ -197,7 +167,12 @@ export const LutPicker: React.FC<LutPickerProps> = ({
           onClick={handleSelectNone}
           aria-pressed={selection.lutId === null}
         >
-          <span className={`${styles.thumb} ${styles.thumbNone}`} />
+          <span
+            className={`${styles.thumb} ${noneThumb ? "" : styles.thumbNone}`}
+            style={
+              noneThumb ? { backgroundImage: `url(${noneThumb})` } : undefined
+            }
+          />
           <span className={styles.swatchLabel}>{t("edit.lut.none")}</span>
         </button>
         {LUT_PRESETS.map((preset) =>

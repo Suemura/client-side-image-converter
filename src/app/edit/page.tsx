@@ -355,6 +355,7 @@ export default function EditPage() {
                     registerLut={registerLut}
                     customName={customLutName}
                     onCustomLoaded={setCustomLutName}
+                    previewSource={previewSource}
                   />
                 </>
               ) : (

@@ -3,14 +3,27 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
 import { ErrorNotice } from "../../../components/ErrorNotice";
-import type { ConversionFormat } from "../../../utils/conversionCore";
+import type {
+  ConversionFormat,
+  ConversionResult,
+} from "../../../utils/conversionCore";
 import { downloadAsZip, downloadSingle } from "../../../utils/fileDownloader";
 import type { EditJob } from "../../../utils/imageEditor";
 import { editImages } from "../../../utils/imageEditor";
+import { extractExifData } from "../../../utils/metadataManager";
+import {
+  buildRenamedFileNames,
+  hasRenamePattern,
+  parseExifDateTime,
+  RENAME_TOKENS,
+  type RenameContext,
+  stripExtension,
+} from "../../../utils/renamePattern";
 import {
   type ExportTarget,
   type ResizeRequest,
   resolveExportIndices,
+  resolveResizeDimensions,
 } from "../../../utils/studioCore";
 import styles from "./ExportDialog.module.css";
 
@@ -19,6 +32,12 @@ const EXPORT_FORMATS: ConversionFormat[] = ["jpeg", "png", "webp", "avif"];
 
 /** 推定サイズ計算のデバウンス（ms） */
 const ESTIMATE_DEBOUNCE_MS = 500;
+
+/** リネーム規則入力のプレースホルダ（モック準拠。i18n 対象外のリテラル例） */
+const RENAME_PLACEHOLDER = "{name}_{seq}";
+
+/** プレビューに表示する実ファイル名の件数（モック準拠: 先頭 1〜2 件） */
+const RENAME_PREVIEW_COUNT = 2;
 
 interface ExportDialogProps {
   open: boolean;
@@ -40,6 +59,37 @@ const formatBytes = (bytes: number): string => {
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   }
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+};
+
+/**
+ * ソース画像の表示上の寸法（EXIF Orientation 反映後）を読み取る。
+ * リネーム規則プレビューの {width} / {height} 解決に使う。失敗時は null（トークンをリテラル残し）
+ */
+const readImageDimensions = async (
+  file: File,
+): Promise<{ width: number; height: number } | null> => {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const dimensions = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return dimensions;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * ソース画像の EXIF 撮影日時（DateTimeOriginal）を読み取る。
+ * ない・読めない場合は null（呼び出し側が書き出し日時へフォールバック）
+ */
+const readCaptureDate = async (file: File): Promise<Date | null> => {
+  try {
+    const exif = await extractExifData(file);
+    const value = exif.DateTimeOriginal;
+    return typeof value === "string" ? parseExifDateTime(value) : null;
+  } catch {
+    return null;
+  }
 };
 
 /**
@@ -69,6 +119,14 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
   const [estimatedSize, setEstimatedSize] = useState<number | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
   const estimateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [renamePattern, setRenamePattern] = useState("");
+  const [renamePreview, setRenamePreview] = useState<string | null>(null);
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
+  // ファイルごとの寸法 / EXIF 撮影日時のキャッシュ（プレビューの即時更新用。File 参照キー）
+  const dimensionsCacheRef = useRef(
+    new Map<File, Promise<{ width: number; height: number } | null>>(),
+  );
+  const captureDateCacheRef = useRef(new Map<File, Promise<Date | null>>());
 
   const buildResize = useCallback((): ResizeRequest | undefined => {
     const width = parseDimension(widthText);
@@ -78,6 +136,160 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
     }
     return { width, height, keepAspect };
   }, [widthText, heightText, keepAspect]);
+
+  /** 寸法をキャッシュ付きで読み取る（同一ファイルの再デコードを避ける） */
+  const getDimensions = useCallback(
+    (file: File): Promise<{ width: number; height: number } | null> => {
+      let cached = dimensionsCacheRef.current.get(file);
+      if (!cached) {
+        cached = readImageDimensions(file);
+        dimensionsCacheRef.current.set(file, cached);
+      }
+      return cached;
+    },
+    [],
+  );
+
+  /** EXIF 撮影日時をキャッシュ付きで読み取る */
+  const getCaptureDate = useCallback((file: File): Promise<Date | null> => {
+    let cached = captureDateCacheRef.current.get(file);
+    if (!cached) {
+      cached = readCaptureDate(file);
+      captureDateCacheRef.current.set(file, cached);
+    }
+    return cached;
+  }, []);
+
+  /** トークンチップをカーソル位置に挿入する（PC のみ表示） */
+  const insertToken = useCallback(
+    (token: string) => {
+      const input = renameInputRef.current;
+      const start = input?.selectionStart ?? renamePattern.length;
+      const end = input?.selectionEnd ?? start;
+      setRenamePattern(
+        `${renamePattern.slice(0, start)}${token}${renamePattern.slice(end)}`,
+      );
+      // state 反映後にカーソルをトークン直後へ戻す
+      requestAnimationFrame(() => {
+        if (input) {
+          input.focus();
+          const position = start + token.length;
+          input.setSelectionRange(position, position);
+        }
+      });
+    },
+    [renamePattern],
+  );
+
+  // リネーム規則のプレビュー: 書き出し対象の先頭 1〜2 件の実ファイル名を即時計算する
+  useEffect(() => {
+    if (!open || files.length === 0 || !hasRenamePattern(renamePattern)) {
+      setRenamePreview(null);
+      return;
+    }
+    let cancelled = false;
+    const indices = resolveExportIndices(target, selectedIndex, files.length);
+    const total = indices.length;
+    const previewIndices = indices.slice(0, RENAME_PREVIEW_COUNT);
+    const resize = buildResize();
+    const now = new Date();
+    Promise.all(
+      previewIndices.map(async (index, order): Promise<RenameContext> => {
+        const file = files[index];
+        const [dimensions, captureDate] = await Promise.all([
+          getDimensions(file),
+          getCaptureDate(file),
+        ]);
+        const output =
+          dimensions && resize
+            ? (resolveResizeDimensions(
+                dimensions.width,
+                dimensions.height,
+                resize,
+              ) ?? dimensions)
+            : dimensions;
+        return {
+          name: stripExtension(file.name),
+          seq: order + 1,
+          total,
+          width: output?.width,
+          height: output?.height,
+          date: captureDate ?? now,
+        };
+      }),
+    ).then((contexts) => {
+      if (cancelled) {
+        return;
+      }
+      const names = buildRenamedFileNames(renamePattern, contexts, format);
+      setRenamePreview(
+        total > previewIndices.length
+          ? `${names.join(", ")} …`
+          : names.join(", "),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    files,
+    selectedIndex,
+    target,
+    format,
+    renamePattern,
+    buildResize,
+    getDimensions,
+    getCaptureDate,
+  ]);
+
+  /**
+   * リネーム規則を書き出し結果へ適用する（空欄時は従来命名のまま）。
+   * ファイル名を差し替えた結果を返すため、単枚 / ZIP / フォルダ直接保存の
+   * どの保存経路でも同じリネームが適用される。
+   */
+  const applyRename = useCallback(
+    async (
+      results: ConversionResult[],
+      sourceFiles: File[],
+      plannedTotal: number,
+    ): Promise<ConversionResult[]> => {
+      if (!hasRenamePattern(renamePattern) || results.length === 0) {
+        return results;
+      }
+      // 失敗でスキップされた分があっても対応付くよう、元ファイル名で照合する（同名は先頭から消費）
+      const sourceQueues = new Map<string, File[]>();
+      for (const file of sourceFiles) {
+        const queue = sourceQueues.get(file.name) ?? [];
+        queue.push(file);
+        sourceQueues.set(file.name, queue);
+      }
+      const now = new Date();
+      const contexts = await Promise.all(
+        results.map(async (result, order): Promise<RenameContext> => {
+          const source = sourceQueues.get(result.originalFilename)?.shift();
+          const captureDate = source ? await getCaptureDate(source) : null;
+          return {
+            name: stripExtension(result.originalFilename),
+            seq: order + 1,
+            // プレビューと連番桁数を揃えるため、実際の出力件数ではなく書き出し予定件数を使う
+            // （一部失敗しても {seq} のゼロ埋め桁数がプレビューと変わらないようにする）
+            total: plannedTotal,
+            width: result.width,
+            height: result.height,
+            date: captureDate ?? now,
+          };
+        }),
+      );
+      const names = buildRenamedFileNames(renamePattern, contexts, format);
+      return results.map((result, index) => ({
+        ...result,
+        filename: names[index],
+        file: new File([result.blob], names[index], { type: result.blob.type }),
+      }));
+    },
+    [renamePattern, format, getCaptureDate],
+  );
 
   // 推定サイズ: 選択中 1 枚を実エンコードして測る（デバウンス付き）。
   // AVIF は WASM エンコードが重いため推定を省略する
@@ -160,10 +372,16 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
         setExportError(true);
         return;
       }
-      if (results.length === 1) {
-        downloadSingle(results[0]);
-      } else if (results.length > 1) {
-        await downloadAsZip(results);
+      // リネーム規則（任意）をファイル名へ適用してから保存する
+      const outputs = await applyRename(
+        results,
+        indices.map((index) => files[index]),
+        indices.length,
+      );
+      if (outputs.length === 1) {
+        downloadSingle(outputs[0]);
+      } else if (outputs.length > 1) {
+        await downloadAsZip(outputs);
       }
       for (const result of results) {
         URL.revokeObjectURL(result.url);
@@ -189,6 +407,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
     quality,
     buildResize,
     preserveExif,
+    applyRename,
     onClose,
   ]);
 
@@ -332,6 +551,47 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
               </label>
             </div>
           )}
+
+          <div>
+            <div className={styles.sectionTitle}>
+              {t("studio.export.rename")}
+            </div>
+            <input
+              ref={renameInputRef}
+              type="text"
+              value={renamePattern}
+              onChange={(event) => setRenamePattern(event.target.value)}
+              placeholder={RENAME_PLACEHOLDER}
+              className={styles.renameInput}
+              spellCheck={false}
+              autoComplete="off"
+              data-testid="studio-export-rename-input"
+              aria-label={t("studio.export.rename")}
+            />
+            {!isMobile && (
+              <div className={styles.tokenChips}>
+                {RENAME_TOKENS.map((token) => (
+                  <button
+                    key={token}
+                    type="button"
+                    className={styles.tokenChip}
+                    onClick={() => insertToken(token)}
+                    data-testid={`studio-export-rename-token-${token.slice(1, -1)}`}
+                  >
+                    {token}
+                  </button>
+                ))}
+              </div>
+            )}
+            {renamePreview !== null && (
+              <div
+                className={styles.renamePreview}
+                data-testid="studio-export-rename-preview"
+              >
+                {t("studio.export.renamePreview", { names: renamePreview })}
+              </div>
+            )}
+          </div>
 
           <label className={styles.exifRow}>
             <span>{t("studio.export.preserveExif")}</span>

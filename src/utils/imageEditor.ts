@@ -218,7 +218,10 @@ export const renderEdited = async (
     }
   }
 
-  return buildEditResult(file, blob, format);
+  return buildEditResult(file, blob, format, {
+    width: outputWidth,
+    height: outputHeight,
+  });
 };
 
 /**

@@ -15,6 +15,8 @@ interface AdjustPanelProps {
   onToggleEyedropper: () => void;
   eyedropperActive: boolean;
   autoDisabled: boolean;
+  /** LUT サムネイルのベースにする現在画像（EXIF 補正済み。null は固定グラデーション） */
+  previewSource: HTMLCanvasElement | null;
   compact?: boolean;
 }
 
@@ -26,6 +28,7 @@ export const AdjustPanel: React.FC<AdjustPanelProps> = ({
   onToggleEyedropper,
   eyedropperActive,
   autoDisabled,
+  previewSource,
   compact,
 }) => {
   const { t } = useTranslation();
@@ -63,6 +66,7 @@ export const AdjustPanel: React.FC<AdjustPanelProps> = ({
         registerLut={lutRegistry.registerLut}
         customName={lutRegistry.customLutName}
         onCustomLoaded={lutRegistry.setCustomLutName}
+        previewSource={previewSource}
       />
       <AdjustmentPanel
         adjustments={scopeStores.adjustments.current}
