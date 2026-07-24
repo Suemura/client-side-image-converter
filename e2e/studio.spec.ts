@@ -244,6 +244,48 @@ test.describe("統合ワークスペース（/studio）", () => {
     expect(size.height).toBe(20);
   });
 
+  test("PC: undo で未確定のレタッチ領域がリセットされる", async ({ page }) => {
+    await page.goto("/studio/");
+    await addInitialFiles(page, rectPngFile("rect.png", 40, 20));
+
+    // 切り抜き（1:1）を適用して履歴を 1 つ積む（画像寸法が変わる）
+    const applyCrop = page.getByRole("button", {
+      name: "トリミングを適用",
+      exact: true,
+    });
+    await expect(applyCrop).toBeEnabled({ timeout: 15_000 });
+    await page.getByRole("button", { name: "1:1", exact: true }).click();
+    await applyCrop.click();
+    await expect(page.getByTestId("studio-undo")).toBeEnabled({
+      timeout: 15_000,
+    });
+
+    // レタッチツールへ切替、プレビュー上のドラッグで領域を 1 つ追加する
+    await page.getByTestId("studio-rail-retouch").click();
+    const canvas = page.getByTestId("redact-preview-canvas");
+    await expect(canvas).toBeVisible({ timeout: 15_000 });
+    await canvas.scrollIntoViewIfNeeded();
+    const box = await canvas.boundingBox();
+    expect(box).not.toBeNull();
+    if (!box) return;
+    await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.6, {
+      steps: 5,
+    });
+    await page.mouse.up();
+    await expect(page.getByTestId("redact-region")).toHaveCount(1);
+    await expect(page.getByText("指定中の領域: 1 件")).toBeVisible();
+
+    // undo で切り抜き前の画像へ戻ると、古い寸法基準の未確定領域は残らずリセットされる
+    await page.getByTestId("studio-undo").click();
+    await expect(page.getByTestId("redact-region")).toHaveCount(0);
+    await expect(page.getByText("指定中の領域: 0 件")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "レタッチを適用", exact: true }),
+    ).toBeDisabled();
+  });
+
   test("PC: 履歴パネルで任意時点への復帰・redo・クリアができる", async ({
     page,
   }) => {

@@ -60,6 +60,12 @@ export interface StudioDocuments {
   jumpToHistory: (index: number) => void;
   /** 履歴を全破棄して各画像を元画像の状態に戻す */
   clearHistory: () => void;
+  /**
+   * 履歴ナビゲーション（undo / redo / ジャンプ / クリア）で現在位置が実際に
+   * 変わった回数。ツール側が未確定編集状態（レタッチ領域・切り抜き・調整値）を
+   * リセットするトリガーに使う（ツール適用による replaceFiles では変化しない）
+   */
+  navigationEpoch: number;
 }
 
 const EMPTY_DOCUMENTS: StudioDocument[] = [];
@@ -77,6 +83,8 @@ export function useStudioDocuments(): StudioDocuments {
   const [history, setHistory] = useState<DocumentHistory | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [limitExceeded, setLimitExceeded] = useState(false);
+  // 履歴ナビゲーションの発生回数（現在位置が実際に変わった操作のみカウントする）
+  const [navigationEpoch, setNavigationEpoch] = useState(0);
   // ドキュメント id の採番（ファイル差し替え後も不変な識別子）
   const nextDocIdRef = useRef(1);
 
@@ -154,56 +162,56 @@ export function useStudioDocuments(): StudioDocuments {
     );
   }, []);
 
-  const undo = useCallback(() => {
-    setHistory((prev) => {
-      if (prev === null) {
-        return prev;
-      }
-      const next = undoEditHistory(prev);
-      clampSelection(currentEditState(next));
-      return next;
-    });
-  }, [clampSelection]);
-
-  const redo = useCallback(() => {
-    setHistory((prev) => {
-      if (prev === null) {
-        return prev;
-      }
-      const next = redoEditHistory(prev);
-      clampSelection(currentEditState(next));
-      return next;
-    });
-  }, [clampSelection]);
-
-  const jumpToHistory = useCallback(
-    (index: number) => {
+  /**
+   * 現在位置が実際に変わったときだけ navigationEpoch を進め、ツール側の
+   * 未確定編集状態リセット（useStudioTools 参照）をトリガーする。
+   * setState はすべて関数型更新にし、render 時点の history を直接読まないことで、
+   * 同一 tick 内で連続呼び出しされても stale な参照を使わないようにする
+   */
+  const navigateTo = useCallback(
+    (compute: (prev: DocumentHistory) => DocumentHistory) => {
       setHistory((prev) => {
         if (prev === null) {
           return prev;
         }
-        const next = jumpEditHistory(prev, index);
+        const next = compute(prev);
+        if (next === prev) {
+          return prev;
+        }
         clampSelection(currentEditState(next));
+        setNavigationEpoch((epoch) => epoch + 1);
         return next;
       });
     },
     [clampSelection],
   );
 
+  const undo = useCallback(() => {
+    navigateTo(undoEditHistory);
+  }, [navigateTo]);
+
+  const redo = useCallback(() => {
+    navigateTo(redoEditHistory);
+  }, [navigateTo]);
+
+  const jumpToHistory = useCallback(
+    (index: number) => {
+      navigateTo((prev) => jumpEditHistory(prev, index));
+    },
+    [navigateTo],
+  );
+
   const clearHistory = useCallback(() => {
-    setHistory((prev) => {
-      if (prev === null) {
-        return prev;
-      }
-      // 現在のドキュメント構成を保ったまま、各画像を元画像へ戻して履歴を作り直す
+    // 現在のドキュメント構成を保ったまま、各画像を元画像へ戻して履歴を作り直す。
+    // 「クリア = 真っさら」の期待に合わせ、未確定編集状態もリセットする（epoch を進める）
+    navigateTo((prev) => {
       const reset = currentEditState(prev).map((doc) => ({
         ...doc,
         currentFile: doc.originalFile,
       }));
-      clampSelection(reset);
       return createEditHistory(reset, { key: "load" }, Date.now());
     });
-  }, [clampSelection]);
+  }, [navigateTo]);
 
   const historyEntries = useMemo<StudioHistoryEntry[]>(
     () =>
@@ -232,5 +240,6 @@ export function useStudioDocuments(): StudioDocuments {
     historyIndex: history?.index ?? 0,
     jumpToHistory,
     clearHistory,
+    navigationEpoch,
   };
 }

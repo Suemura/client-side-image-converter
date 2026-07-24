@@ -228,7 +228,7 @@ const isIdentityTransform = (transform: CropTransform): boolean =>
  * 成功結果で documents の currentFile を差し替えて履歴へ積む。
  */
 export function useStudioTools(docs: StudioDocuments): StudioTools {
-  const { files, selectedIndex, replaceFiles } = docs;
+  const { files, selectedIndex, replaceFiles, navigationEpoch } = docs;
   const [tool, setTool] = useState<StudioToolId>("crop");
 
   const [applyingTool, setApplyingTool] = useState<StudioToolId | null>(null);
@@ -336,6 +336,23 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
     transformStore.reset();
     setAspectRatioId("free");
   }, [areaStore.reset, transformStore.reset]);
+
+  // 履歴ナビゲーション（undo / redo / ジャンプ / クリア）で currentFile が別時点の
+  // 状態へ差し替わったとき、未確定の編集状態（切り抜き領域 / 変換・調整値・レタッチ領域）は
+  // 差し替え後の画像内容・寸法と同期しないためすべてリセットする。
+  // ツール適用（replaceFiles）では epoch は変わらず、各 apply が自前でリセットする。
+  // 検出候補（detectionState）は files 参照変化を監視する既存 effect が担う
+  // biome-ignore lint/correctness/useExhaustiveDependencies: navigationEpoch の変化だけをリセットのトリガーに使う
+  useEffect(() => {
+    if (navigationEpoch === 0) {
+      return;
+    }
+    resetCrop();
+    scopeStores.resetAll();
+    lutRegistry.setCustomLutName(null);
+    setPerImageRegions({});
+    nextRegionIdRef.current = 1;
+  }, [navigationEpoch]);
 
   const cropCanApply = files.some((_, index) => {
     const area = resolveScopedValueForIndex(index, areaStore.state, null);
