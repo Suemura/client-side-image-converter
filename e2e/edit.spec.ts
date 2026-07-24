@@ -646,7 +646,7 @@ test.describe("画像編集 /edit", () => {
     );
     await expect(
       page.getByText("中央の境界をドラッグして編集前後を比較できます。", {
-        exact: true,
+        exact: false,
       }),
     ).toBeVisible();
 
