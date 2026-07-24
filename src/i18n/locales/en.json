@@ -548,7 +548,30 @@
       "confirmHelp": "Confirming bakes the adjustments into the image for the next tool"
     },
     "retouch": {
-      "apply": "Apply retouch"
+      "apply": "Apply retouch",
+      "detect": {
+        "title": "Auto Detect",
+        "run": "Detect faces & license plates",
+        "running": "Detecting…",
+        "detecting": "Scanning image…",
+        "preparingModel": "Preparing AI model... {{percent}}%",
+        "modelNote": "The first run downloads the AI models (about 6MB); they are cached afterwards. Your images are never uploaded.",
+        "empty": "Nothing was detected",
+        "failed": "Failed to load the AI models. Check your connection and switch images to retry.",
+        "unsupported": "AI detection is not available in this environment",
+        "count": {
+          "face_one": "{{count}} face",
+          "face_other": "{{count}} faces",
+          "plate_one": "{{count}} license plate",
+          "plate_other": "{{count}} license plates"
+        },
+        "label": {
+          "face": "Face",
+          "plate": "Plate"
+        },
+        "addToRegions_one": "Add {{count}} detected region",
+        "addToRegions_other": "Add {{count}} detected regions"
+      }
     },
     "upscale": {
       "run": "Run upscale",

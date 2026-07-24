@@ -547,7 +547,27 @@
       "confirmHelp": "確定すると調整を画像へ焼き込み、次のツールの入力になります"
     },
     "retouch": {
-      "apply": "レタッチを適用"
+      "apply": "レタッチを適用",
+      "detect": {
+        "title": "自動検出",
+        "run": "顔・ナンバープレートを検出",
+        "running": "検出中…",
+        "detecting": "検出しています…",
+        "preparingModel": "AIモデルを準備中... {{percent}}%",
+        "modelNote": "初回はAIモデル（約6MB）をダウンロードします（以降はキャッシュから読み込み）。画像は送信されません。",
+        "empty": "検出されませんでした",
+        "failed": "AIモデルを読み込めませんでした。接続を確認し、画像を切り替えると再試行できます。",
+        "unsupported": "この環境ではAI検出を利用できません",
+        "count": {
+          "face": "顔 {{count}} 件",
+          "plate": "ナンバープレート {{count}} 件"
+        },
+        "label": {
+          "face": "顔",
+          "plate": "ナンバー"
+        },
+        "addToRegions": "検出した{{count}}件をレタッチ領域に追加"
+      }
     },
     "upscale": {
       "run": "アップスケール実行",
