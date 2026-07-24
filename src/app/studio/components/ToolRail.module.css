@@ -44,3 +44,8 @@
   font-size: 9px;
   white-space: nowrap;
 }
+
+/* 履歴トグル（6 ツールの下・レール最下部に寄せる） */
+.historyButton {
+  margin-top: auto;
+}
