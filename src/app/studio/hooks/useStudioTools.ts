@@ -43,7 +43,10 @@ import {
   type RemoveBgBatchHandle,
   runRemoveBgBatch,
 } from "../../../utils/removeBgRunner";
-import type { StudioToolId } from "../../../utils/studioCore";
+import type {
+  StudioHistoryLabel,
+  StudioToolId,
+} from "../../../utils/studioCore";
 import type { UpscaleScale } from "../../../utils/upscaleCore";
 import {
   runUpscaleBatch,
@@ -303,10 +306,14 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
     setApplyFailures([]);
   }, []);
 
-  /** 適用の共通後処理（成功分の差し替え + 失敗通知） */
+  /** 適用の共通後処理（成功分の差し替え + 履歴ラベル + 失敗通知） */
   const commitUpdates = useCallback(
-    (updates: Map<number, File>, failures: string[]) => {
-      replaceFiles(updates);
+    (
+      updates: Map<number, File>,
+      failures: string[],
+      label: StudioHistoryLabel,
+    ) => {
+      replaceFiles(updates, label);
       setApplyFailures(failures);
     },
     [replaceFiles],
@@ -373,7 +380,13 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
         indices,
         files,
       );
-      commitUpdates(updates, failures);
+      commitUpdates(
+        updates,
+        failures,
+        aspectRatioId === "free"
+          ? { key: "crop" }
+          : { key: "cropRatio", params: { ratio: aspectRatioId } },
+      );
       // 適用後は寸法が変わるため領域・変換をリセットする
       resetCrop();
     } catch (error) {
@@ -387,6 +400,7 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
     files,
     areaStore.state,
     transformStore.state,
+    aspectRatioId,
     cropPreserveExif,
     beginApply,
     commitUpdates,
@@ -454,9 +468,17 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
           cursor += 1;
         }
       }
+      // 調整項目数（非ゼロの調整 + LUT + トーンカーブ）を履歴ラベルに残す
+      const firstJob = jobs[indices[0]];
+      const adjustedCount =
+        Object.values(firstJob.adjustments).filter((value) => value !== 0)
+          .length +
+        (firstJob.lut ? 1 : 0) +
+        (firstJob.curve ? 1 : 0);
       commitUpdates(
         updates,
         failures.map((failure) => failure.fileName),
+        { key: "adjust", params: { count: adjustedCount } },
       );
       // 焼き込み済みの調整は初期値へ戻す（二重適用を防ぐ）
       scopeStores.resetAll();
@@ -675,7 +697,16 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
         indices,
         files,
       );
-      commitUpdates(updates, failures);
+      const retouchLabelKey =
+        redactStyle.mode === "mosaic"
+          ? ("retouchMosaic" as const)
+          : redactStyle.mode === "blur"
+            ? ("retouchBlur" as const)
+            : ("retouchFill" as const);
+      commitUpdates(updates, failures, {
+        key: retouchLabelKey,
+        params: { count: totalRegionCount },
+      });
       // 焼き込み済みの領域はクリアする
       setPerImageRegions({});
       nextRegionIdRef.current = 1;
@@ -738,7 +769,10 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
         indices,
         files,
       );
-      commitUpdates(updates, failures);
+      commitUpdates(updates, failures, {
+        key: "upscale",
+        params: { scale: upscaleScale },
+      });
     } catch (error) {
       console.error("Upscale apply error:", error);
       setApplyError(true);
@@ -795,7 +829,7 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
         indices,
         files,
       );
-      commitUpdates(updates, failures);
+      commitUpdates(updates, failures, { key: "removebg" });
     } catch (error) {
       console.error("Remove background apply error:", error);
       setApplyError(true);
@@ -831,7 +865,7 @@ export function useStudioTools(docs: StudioDocuments): StudioTools {
         cleaned.forEach((file, index) => {
           updates.set(index, fileFromBlob(files[index].name, file));
         });
-        commitUpdates(updates, []);
+        commitUpdates(updates, [], { key: "metadata" });
         // 差し替え後のファイルで再解析する（tool === "info" の effect が files 変化で発火）
       } else if (metadataManager.removeError) {
         setApplyError(true);

@@ -127,6 +127,48 @@ test.describe("統合ワークスペース（/studio）", () => {
     }
   });
 
+  test("PC: リネーム規則（トークンチップ挿入 + プレビュー）が ZIP 書き出しへ適用される", async ({
+    page,
+  }) => {
+    await page.goto("/studio/");
+    await addInitialFiles(page, [
+      rectPngFile("alpha.png", 40, 20),
+      rectPngFile("beta.png", 40, 20),
+    ]);
+
+    // 書き出しダイアログ: PNG / 全 2 枚（ZIP）
+    await page.getByTestId("studio-export-open").click();
+    await page.getByTestId("studio-export-format-png").click();
+    await page.getByTestId("studio-export-target-all").click();
+
+    // トークンチップからカーソル位置へ挿入してパターンを組み立てる
+    const renameInput = page.getByTestId("studio-export-rename-input");
+    await renameInput.click();
+    await page.getByTestId("studio-export-rename-token-name").click();
+    await renameInput.pressSequentially("_");
+    await page.getByTestId("studio-export-rename-token-seq").click();
+    await renameInput.pressSequentially("_");
+    await page.getByTestId("studio-export-rename-token-width").click();
+    await expect(renameInput).toHaveValue("{name}_{seq}_{width}");
+
+    // 実ファイル名のプレビューが即時更新される（{width} は出力後の px）
+    await expect(
+      page.getByTestId("studio-export-rename-preview"),
+    ).toContainText("alpha_01_40.png, beta_02_40.png");
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "書き出す", exact: true }).click(),
+    ]);
+
+    // ZIP 内のエントリ名にリネーム規則が適用されている
+    const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+    expect(Object.keys(zip.files).sort()).toEqual([
+      "alpha_01_40.png",
+      "beta_02_40.png",
+    ]);
+  });
+
   test("PC: 調整（LUT）を確定すると currentFile へ焼き込まれ書き出しに反映される", async ({
     page,
   }) => {
@@ -202,6 +244,67 @@ test.describe("統合ワークスペース（/studio）", () => {
     expect(size.height).toBe(20);
   });
 
+  test("PC: 履歴パネルで任意時点への復帰・redo・クリアができる", async ({
+    page,
+  }) => {
+    await page.goto("/studio/");
+    await addInitialFiles(page, rectPngFile("rect.png", 40, 20));
+
+    // ツールレール最下部の「履歴」ボタンでパネルをトグル表示
+    await page.getByTestId("studio-history-toggle").click();
+    await expect(page.getByTestId("studio-history-panel")).toBeVisible();
+    const loadRow = page.getByTestId("studio-history-row-0");
+    await expect(loadRow).toContainText("元画像を読み込み");
+    await expect(loadRow).toHaveAttribute("aria-current", "step");
+
+    // 切り抜き（1:1）を適用すると履歴に行が増え、現在位置が移る
+    const applyCrop = page.getByRole("button", {
+      name: "トリミングを適用",
+      exact: true,
+    });
+    await expect(applyCrop).toBeEnabled({ timeout: 15_000 });
+    await page.getByRole("button", { name: "1:1", exact: true }).click();
+    await applyCrop.click();
+
+    const cropRow = page.getByTestId("studio-history-row-1");
+    await expect(cropRow).toBeVisible({ timeout: 15_000 });
+    await expect(cropRow).toContainText("切り抜き 1:1");
+    await expect(cropRow).toHaveAttribute("aria-current", "step");
+    await expect(page.getByTestId("studio-undo")).toBeEnabled();
+
+    // 行クリックで読み込み時点へ戻る。後方は破棄されず redo 可能
+    await loadRow.click();
+    await expect(loadRow).toHaveAttribute("aria-current", "step");
+    await expect(page.getByTestId("studio-undo")).toBeDisabled();
+    await expect(page.getByTestId("studio-redo")).toBeEnabled();
+
+    // 上部バーの redo と履歴ハイライトが同期する
+    await page.getByTestId("studio-redo").click();
+    await expect(cropRow).toHaveAttribute("aria-current", "step");
+
+    // クリア（確認ダイアログ）で元画像だけの履歴に戻る
+    await page.getByTestId("studio-history-clear").click();
+    await page.getByTestId("studio-history-clear-confirm").click();
+    await expect(page.getByTestId("studio-history-row-1")).toHaveCount(0);
+    await expect(page.getByTestId("studio-undo")).toBeDisabled();
+    await expect(page.getByTestId("studio-redo")).toBeDisabled();
+  });
+
+  test("スマホ: 履歴ボトムシートを開閉できる", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 820 });
+    await page.goto("/studio/");
+    await addInitialFiles(page, rectPngFile("rect.png", 40, 20));
+
+    await page.getByTestId("studio-history-open").click();
+    await expect(page.getByTestId("studio-history-panel")).toBeVisible();
+    await expect(page.getByTestId("studio-history-row-0")).toContainText(
+      "元画像を読み込み",
+    );
+
+    await page.getByTestId("studio-history-close").click();
+    await expect(page.getByTestId("studio-history-panel")).toHaveCount(0);
+  });
+
   test("スマホ: タブバー・ボトムシート・フローティング比較トグルが表示される", async ({
     page,
   }) => {
@@ -236,5 +339,33 @@ test.describe("統合ワークスペース（/studio）", () => {
     await expect(
       page.getByRole("link", { name: "スタジオ", exact: true }),
     ).toBeVisible();
+  });
+
+  test("PC: 情報ツールで長押しすると元画像が表示され、離すと戻る", async ({
+    page,
+  }) => {
+    await page.goto("/studio/");
+    await addInitialFiles(page, rectPngFile("hold.png", 40, 20));
+
+    // 静的プレビュー系ツール（情報）へ切り替える
+    await page.getByTestId("studio-rail-info").click();
+    const preview = page.getByTestId("studio-preview-canvas");
+    await expect(preview).toBeVisible();
+
+    // 長押しオーバーレイは初期状態では非表示（display: none で mount 済み）
+    const overlay = page.getByTestId("studio-hold-original");
+    await expect(overlay).toBeHidden();
+
+    const box = await preview.boundingBox();
+    if (!box) throw new Error("preview canvas not visible");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    // 約 300ms のしきい値経過で元画像（編集前バッジ付き）が表示される
+    await expect(overlay).toBeVisible({ timeout: 5_000 });
+    await expect(overlay.getByText("編集前")).toBeVisible();
+
+    // 離すと即座に戻る
+    await page.mouse.up();
+    await expect(overlay).toBeHidden();
   });
 });

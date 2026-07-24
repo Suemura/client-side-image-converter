@@ -3,6 +3,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorNotice } from "../../../components/ErrorNotice";
 import {
+  PRESS_AND_HOLD_MOVE_TOLERANCE_PX,
+  usePressAndHold,
+} from "../../../hooks/usePressAndHold";
+import {
   type AdjustmentState,
   clampAdjustments,
   normalizeAdjustments,
@@ -49,6 +53,14 @@ interface CompareViewProps {
    * false のときは編集後のみを表示する（/studio の「編集後 | 前後比較」トグル用）
    */
   showCompare?: boolean;
+  /**
+   * 長押し中に全面表示する原画（#146）。省略時は source（編集前入力）を流用する。
+   * /studio ではツール横断の元画像（EXIF 補正のみ適用）を渡す。
+   * null はまだ用意できていない状態（デコード中等）で、長押しは無効になる
+   */
+  holdSource?: EditableSource | null;
+  /** 長押し原画表示を有効にするか（既定 true。/studio のスプリット比較中は false を渡す） */
+  pressHoldEnabled?: boolean;
 }
 
 /**
@@ -73,17 +85,39 @@ export const CompareView: React.FC<CompareViewProps> = ({
   eyedropperActive = false,
   onEyedropperPick,
   showCompare = true,
+  holdSource,
+  pressHoldEnabled = true,
 }) => {
   const { t } = useTranslation();
   const editedCanvasRef = useRef<HTMLCanvasElement>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
+  const holdCanvasRef = useRef<HTMLCanvasElement>(null);
   const glRendererRef = useRef<AdjustmentRenderer | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
+  // 分割ドラッグ / タップ判定用の押下開始位置（pointerId と座標）
+  const pressStartRef = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+  } | null>(null);
   // 分割位置（%）。左が編集前、右が編集後
   const [divider, setDivider] = useState(50);
   // 編集後プレビューの描画失敗通知（次の描画成功でクリアする）
   const [renderError, setRenderError] = useState(false);
+
+  // 長押しで表示する原画。holdSource 未指定（/edit）は source を流用し、
+  // 指定時（/studio）はツール横断の元画像を使う（null の間は無効 = 準備中）
+  const effectiveHoldSource = holdSource === undefined ? source : holdSource;
+  // source と別の原画を持つ場合のみ専用キャンバスへ描画する
+  // （同一なら既存の「編集前」オーバーレイを全面化して再利用し、メモリを増やさない）
+  const dedicatedHold =
+    effectiveHoldSource !== null && effectiveHoldSource !== source;
+  const hold = usePressAndHold({
+    disabled:
+      !pressHoldEnabled || eyedropperActive || effectiveHoldSource === null,
+  });
+  const holdActive = hold.active;
 
   // onEditedFrame は ref 経由で最新を参照し、コールバックの identity 変化が
   // 編集後描画 effect（GPU 再描画）を誘発しないようにする
@@ -161,6 +195,28 @@ export const CompareView: React.FC<CompareViewProps> = ({
     ctx.clearRect(0, 0, width, height);
     ctx.drawImage(source, 0, 0, width, height);
   }, [source, width, height]);
+
+  // 長押し用の原画（source と異なる場合のみ）を専用キャンバスへ先に描画しておき、
+  // 長押し時は表示切替だけで済ませる（再デコード・再描画なしの即時切替）
+  useEffect(() => {
+    const canvas = holdCanvasRef.current;
+    if (!canvas || !dedicatedHold || effectiveHoldSource === null) {
+      return;
+    }
+    const sw = effectiveHoldSource.width;
+    const sh = effectiveHoldSource.height;
+    if (sw <= 0 || sh <= 0) {
+      return;
+    }
+    canvas.width = sw;
+    canvas.height = sh;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return;
+    }
+    ctx.clearRect(0, 0, sw, sh);
+    ctx.drawImage(effectiveHoldSource, 0, 0, sw, sh);
+  }, [dedicatedHold, effectiveHoldSource]);
 
   // 編集後（調整適用）を描画する。出力経路と同一の applyAdjustmentsToCanvas を使う
   useEffect(() => {
@@ -246,25 +302,70 @@ export const CompareView: React.FC<CompareViewProps> = ({
         }
         return;
       }
-      draggingRef.current = true;
+      // 分割ドラッグと長押し（原画表示）を両立させるため、押下時点では分割位置を
+      // 動かさない。しきい値以上動いたらドラッグ開始（長押しは内部でキャンセルされる）、
+      // 動かさず素早く離したらタップとして分割位置を移動する（up 側で処理）
+      pressStartRef.current = {
+        pointerId: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+      };
+      draggingRef.current = false;
       e.currentTarget.setPointerCapture(e.pointerId);
-      updateDivider(e.clientX);
+      hold.bind.onPointerDown(e);
     },
-    [updateDivider, eyedropperActive, onEyedropperPick, width, height],
+    [eyedropperActive, onEyedropperPick, width, height, hold.bind],
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
+      hold.bind.onPointerMove(e);
       if (draggingRef.current) {
+        updateDivider(e.clientX);
+        return;
+      }
+      const press = pressStartRef.current;
+      // 長押し成立中はドラッグを開始しない（原画表示を優先し、離すまで維持）
+      if (!press || press.pointerId !== e.pointerId || holdActive) {
+        return;
+      }
+      const dx = e.clientX - press.x;
+      const dy = e.clientY - press.y;
+      if (Math.hypot(dx, dy) >= PRESS_AND_HOLD_MOVE_TOLERANCE_PX) {
+        draggingRef.current = true;
         updateDivider(e.clientX);
       }
     },
-    [updateDivider],
+    [updateDivider, hold.bind, holdActive],
   );
 
-  const stopDragging = useCallback(() => {
-    draggingRef.current = false;
-  }, []);
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const press = pressStartRef.current;
+      // ドラッグも長押しもせず離した場合はタップ = 分割位置の移動（従来のクリック挙動）
+      if (
+        press &&
+        press.pointerId === e.pointerId &&
+        !draggingRef.current &&
+        !holdActive
+      ) {
+        updateDivider(e.clientX);
+      }
+      pressStartRef.current = null;
+      draggingRef.current = false;
+      hold.bind.onPointerUp(e);
+    },
+    [updateDivider, hold.bind, holdActive],
+  );
+
+  const handlePointerCancel = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      pressStartRef.current = null;
+      draggingRef.current = false;
+      hold.bind.onPointerCancel(e);
+    },
+    [hold.bind],
+  );
 
   return (
     <div className={styles.container}>
@@ -274,8 +375,11 @@ export const CompareView: React.FC<CompareViewProps> = ({
         className={`${styles.stage}${eyedropperActive ? ` ${styles.stageEyedropper}` : ""}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        onPointerUp={stopDragging}
-        onPointerLeave={stopDragging}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerCancel}
+        onPointerCancel={handlePointerCancel}
+        onContextMenu={hold.bind.onContextMenu}
+        data-hold-active={holdActive ? "true" : "false"}
       >
         {/* ベース: 編集後 */}
         <canvas
@@ -283,17 +387,26 @@ export const CompareView: React.FC<CompareViewProps> = ({
           className={styles.baseCanvas}
           data-testid="edit-preview-canvas"
         />
-        <span className={`${styles.badge} ${styles.badgeAfter}`}>
-          {t("edit.after")}
-        </span>
+        {!holdActive && (
+          <span className={`${styles.badge} ${styles.badgeAfter}`}>
+            {t("edit.after")}
+          </span>
+        )}
 
         {/* オーバーレイ: 編集前（分割位置まで表示）。比較オフ時は CSS で非表示にする
-            （unmount すると canvas の描画内容が失われ、再表示時に空になるため） */}
+            （unmount すると canvas の描画内容が失われ、再表示時に空になるため）。
+            長押し中（専用原画なし）は全面表示へ切り替える */}
         <div
           className={styles.overlay}
           style={{
-            clipPath: `inset(0 ${100 - divider}% 0 0)`,
-            display: showCompare ? undefined : "none",
+            clipPath:
+              holdActive && !dedicatedHold
+                ? "inset(0)"
+                : `inset(0 ${100 - divider}% 0 0)`,
+            display:
+              showCompare || (holdActive && !dedicatedHold)
+                ? undefined
+                : "none",
           }}
         >
           <canvas ref={originalCanvasRef} className={styles.overlayCanvas} />
@@ -302,12 +415,26 @@ export const CompareView: React.FC<CompareViewProps> = ({
           </span>
         </div>
 
-        {/* 分割ハンドル */}
+        {/* 長押し用の原画レイヤー（/studio: ツール横断の元画像が source と異なる場合のみ）。
+            unmount で描画内容が失われるため表示は CSS で切り替える */}
+        {dedicatedHold && (
+          <div
+            className={styles.holdOverlay}
+            style={{ display: holdActive ? undefined : "none" }}
+          >
+            <canvas ref={holdCanvasRef} className={styles.holdCanvas} />
+            <span className={`${styles.badge} ${styles.badgeBefore}`}>
+              {t("edit.before")}
+            </span>
+          </div>
+        )}
+
+        {/* 分割ハンドル（長押し中は原画の全面表示を優先して隠す） */}
         <div
           className={styles.divider}
           style={{
             left: `${divider}%`,
-            display: showCompare ? undefined : "none",
+            display: showCompare && !holdActive ? undefined : "none",
           }}
         >
           <span className={styles.dividerHandle}>⇔</span>

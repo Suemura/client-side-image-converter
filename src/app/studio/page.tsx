@@ -13,6 +13,7 @@ import { BottomSheet } from "./components/BottomSheet";
 import { CanvasStage } from "./components/CanvasStage";
 import { ExportDialog } from "./components/ExportDialog";
 import { Filmstrip } from "./components/Filmstrip";
+import { HistoryPanel } from "./components/HistoryPanel";
 import { MobileTabBar } from "./components/MobileTabBar";
 import { AdjustPanel } from "./components/panels/AdjustPanel";
 import { CropPanel } from "./components/panels/CropPanel";
@@ -23,6 +24,7 @@ import { UpscalePanel } from "./components/panels/UpscalePanel";
 import { ToolRail } from "./components/ToolRail";
 import { TopBar } from "./components/TopBar";
 import { useStudioDocuments } from "./hooks/useStudioDocuments";
+import { useStudioOriginal } from "./hooks/useStudioOriginal";
 import { useStudioTools } from "./hooks/useStudioTools";
 import styles from "./studio.module.css";
 
@@ -52,10 +54,19 @@ export default function StudioPage() {
   // 前後比較モード（調整ツールのプレビュー）
   const [compare, setCompare] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
+  // 履歴パネル（PC: サイドパネル / スマホ: ボトムシート）の開閉
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // EXIF 補正済みプレビューソース（調整・レタッチ・AI・情報で共有）
   const { previewSource, previewSize, sourceHistogram, previewError } =
     useEditPreview(files, selectedIndex);
+
+  // 長押し原画表示用: ツール横断の元画像（履歴スタック先頭。EXIF 補正のみ適用）
+  const originalSource = useStudioOriginal(
+    documents,
+    selectedIndex,
+    previewSource,
+  );
 
   // 自動補正（オートレベル / 自動 WB / WB スポイト）
   const {
@@ -104,6 +115,7 @@ export default function StudioPage() {
             onToggleEyedropper={handleToggleEyedropper}
             eyedropperActive={wbEyedropperActive}
             autoDisabled={!sourceHistogram}
+            previewSource={previewSource}
             compact={compact}
           />
         );
@@ -149,6 +161,8 @@ export default function StudioPage() {
         onOpenExport={() => setExportOpen(true)}
         exportDisabled={!hasFiles}
         isMobile={isMobile}
+        onToggleHistory={() => setHistoryOpen((prev) => !prev)}
+        historyDisabled={!hasFiles}
       />
 
       {!hasFiles ? (
@@ -182,6 +196,7 @@ export default function StudioPage() {
             onPreviousImage={handlePreviousImage}
             onNextImage={handleNextImage}
             previewSource={previewSource}
+            originalSource={originalSource}
             previewSize={previewSize}
             previewError={previewError}
             compare={compare}
@@ -194,11 +209,36 @@ export default function StudioPage() {
           />
           <BottomSheet>{renderPanel(tool, true)}</BottomSheet>
           <MobileTabBar tool={tool} onToolChange={setTool} />
+          {historyOpen && (
+            <HistoryPanel
+              entries={docs.historyEntries}
+              currentIndex={docs.historyIndex}
+              onJump={docs.jumpToHistory}
+              onClear={docs.clearHistory}
+              isMobile
+              onClose={() => setHistoryOpen(false)}
+            />
+          )}
         </>
       ) : (
         <>
           <div className={styles.body}>
-            <ToolRail tool={tool} onToolChange={setTool} />
+            <ToolRail
+              tool={tool}
+              onToolChange={setTool}
+              historyOpen={historyOpen}
+              onToggleHistory={() => setHistoryOpen((prev) => !prev)}
+            />
+            {historyOpen && (
+              <HistoryPanel
+                entries={docs.historyEntries}
+                currentIndex={docs.historyIndex}
+                onJump={docs.jumpToHistory}
+                onClear={docs.clearHistory}
+                isMobile={false}
+                onClose={() => setHistoryOpen(false)}
+              />
+            )}
             <CanvasStage
               tool={tool}
               tools={tools}
@@ -207,6 +247,7 @@ export default function StudioPage() {
               onPreviousImage={handlePreviousImage}
               onNextImage={handleNextImage}
               previewSource={previewSource}
+              originalSource={originalSource}
               previewSize={previewSize}
               previewError={previewError}
               compare={compare}

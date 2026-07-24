@@ -204,7 +204,7 @@
     "selectNewImage": "新しい画像を選択",
     "before": "編集前",
     "after": "編集後",
-    "compareHint": "中央の境界をドラッグして編集前後を比較できます。",
+    "compareHint": "中央の境界をドラッグして編集前後を比較できます。画像を長押しすると編集前を全面表示できます。",
     "applyModeHelp": "「全画像一括」は現在の調整を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に調整を指定できます。",
     "editFailures": "以下のファイルは編集できませんでした（未対応の形式、または破損している可能性があります）",
     "editError": "編集処理中にエラーが発生しました。",
@@ -534,7 +534,8 @@
       "zoomIn": "拡大表示",
       "zoomOut": "縮小表示",
       "dropHint": "画像を追加してワークスペースを開始",
-      "previewError": "プレビューを生成できませんでした"
+      "previewError": "プレビューを生成できませんでした",
+      "originalBadge": "編集前"
     },
     "crop": {
       "apply": "トリミングを適用",
@@ -593,6 +594,8 @@
       "height": "高さ (px)",
       "auto": "自動",
       "keepAspect": "アスペクト比を維持",
+      "rename": "リネーム規則（任意）",
+      "renamePreview": "プレビュー: {{names}}",
       "preserveExif": "EXIF情報を保持",
       "target": "対象",
       "targetCurrent": "この画像",
@@ -604,7 +607,31 @@
       "error": "書き出しに失敗しました"
     },
     "applyError": "適用に失敗しました",
-    "applyFailures": "一部の画像で適用に失敗しました"
+    "applyFailures": "一部の画像で適用に失敗しました",
+    "history": {
+      "title": "履歴",
+      "clear": "クリア",
+      "close": "閉じる",
+      "note": "行をクリックでその時点に戻せます。戻した後の操作はやり直しできます。",
+      "noteMobile": "タップでその時点に戻せます。戻した後の操作はやり直しできます。",
+      "confirmTitle": "履歴のクリア",
+      "confirmMessage": "履歴をすべて破棄して元画像の状態に戻します。この操作は取り消せません。",
+      "confirmCancel": "キャンセル",
+      "confirmClear": "クリアする",
+      "labels": {
+        "load": "元画像を読み込み",
+        "add": "画像を追加（{{count}}枚）",
+        "crop": "切り抜き",
+        "cropRatio": "切り抜き {{ratio}}",
+        "adjust": "調整（{{count}}項目）",
+        "retouchMosaic": "レタッチ モザイク（{{count}}件）",
+        "retouchBlur": "レタッチ ぼかし（{{count}}件）",
+        "retouchFill": "レタッチ 塗りつぶし（{{count}}件）",
+        "upscale": "AI拡大 {{scale}}x",
+        "removebg": "AI背景除去",
+        "metadata": "メタデータを削除"
+      }
+    }
   },
   "share": {
     "title": "共有シートから受け取り",
