@@ -587,7 +587,31 @@
       "error": "Export failed"
     },
     "applyError": "Failed to apply",
-    "applyFailures": "Some images could not be processed"
+    "applyFailures": "Some images could not be processed",
+    "history": {
+      "title": "History",
+      "clear": "Clear",
+      "close": "Close",
+      "note": "Click a row to return to that point. You can redo after going back.",
+      "noteMobile": "Tap a row to return to that point. You can redo after going back.",
+      "confirmTitle": "Clear history",
+      "confirmMessage": "This discards all history and restores the original images. This cannot be undone.",
+      "confirmCancel": "Cancel",
+      "confirmClear": "Clear",
+      "labels": {
+        "load": "Loaded original images",
+        "add": "Added images ({{count}})",
+        "crop": "Crop",
+        "cropRatio": "Crop {{ratio}}",
+        "adjust": "Adjust ({{count}} items)",
+        "retouchMosaic": "Retouch: mosaic ({{count}})",
+        "retouchBlur": "Retouch: blur ({{count}})",
+        "retouchFill": "Retouch: fill ({{count}})",
+        "upscale": "AI upscale {{scale}}x",
+        "removebg": "AI background removal",
+        "metadata": "Removed metadata"
+      }
+    }
   },
   "share": {
     "title": "Received from Share Sheet",

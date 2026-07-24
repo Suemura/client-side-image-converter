@@ -244,6 +244,67 @@ test.describe("統合ワークスペース（/studio）", () => {
     expect(size.height).toBe(20);
   });
 
+  test("PC: 履歴パネルで任意時点への復帰・redo・クリアができる", async ({
+    page,
+  }) => {
+    await page.goto("/studio/");
+    await addInitialFiles(page, rectPngFile("rect.png", 40, 20));
+
+    // ツールレール最下部の「履歴」ボタンでパネルをトグル表示
+    await page.getByTestId("studio-history-toggle").click();
+    await expect(page.getByTestId("studio-history-panel")).toBeVisible();
+    const loadRow = page.getByTestId("studio-history-row-0");
+    await expect(loadRow).toContainText("元画像を読み込み");
+    await expect(loadRow).toHaveAttribute("aria-current", "step");
+
+    // 切り抜き（1:1）を適用すると履歴に行が増え、現在位置が移る
+    const applyCrop = page.getByRole("button", {
+      name: "トリミングを適用",
+      exact: true,
+    });
+    await expect(applyCrop).toBeEnabled({ timeout: 15_000 });
+    await page.getByRole("button", { name: "1:1", exact: true }).click();
+    await applyCrop.click();
+
+    const cropRow = page.getByTestId("studio-history-row-1");
+    await expect(cropRow).toBeVisible({ timeout: 15_000 });
+    await expect(cropRow).toContainText("切り抜き 1:1");
+    await expect(cropRow).toHaveAttribute("aria-current", "step");
+    await expect(page.getByTestId("studio-undo")).toBeEnabled();
+
+    // 行クリックで読み込み時点へ戻る。後方は破棄されず redo 可能
+    await loadRow.click();
+    await expect(loadRow).toHaveAttribute("aria-current", "step");
+    await expect(page.getByTestId("studio-undo")).toBeDisabled();
+    await expect(page.getByTestId("studio-redo")).toBeEnabled();
+
+    // 上部バーの redo と履歴ハイライトが同期する
+    await page.getByTestId("studio-redo").click();
+    await expect(cropRow).toHaveAttribute("aria-current", "step");
+
+    // クリア（確認ダイアログ）で元画像だけの履歴に戻る
+    await page.getByTestId("studio-history-clear").click();
+    await page.getByTestId("studio-history-clear-confirm").click();
+    await expect(page.getByTestId("studio-history-row-1")).toHaveCount(0);
+    await expect(page.getByTestId("studio-undo")).toBeDisabled();
+    await expect(page.getByTestId("studio-redo")).toBeDisabled();
+  });
+
+  test("スマホ: 履歴ボトムシートを開閉できる", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 820 });
+    await page.goto("/studio/");
+    await addInitialFiles(page, rectPngFile("rect.png", 40, 20));
+
+    await page.getByTestId("studio-history-open").click();
+    await expect(page.getByTestId("studio-history-panel")).toBeVisible();
+    await expect(page.getByTestId("studio-history-row-0")).toContainText(
+      "元画像を読み込み",
+    );
+
+    await page.getByTestId("studio-history-close").click();
+    await expect(page.getByTestId("studio-history-panel")).toHaveCount(0);
+  });
+
   test("スマホ: タブバー・ボトムシート・フローティング比較トグルが表示される", async ({
     page,
   }) => {

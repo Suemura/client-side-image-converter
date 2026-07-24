@@ -21,6 +21,9 @@ interface TopBarProps {
   exportDisabled: boolean;
   /** スマホでは比較トグル等をキャンバス側に出すため簡易表示にする */
   isMobile: boolean;
+  /** 履歴ボトムシートを開く（スマホのみ表示。PC はツールレールから開く） */
+  onToggleHistory: () => void;
+  historyDisabled: boolean;
 }
 
 /** ワークスペース上部バー（ロゴ・ファイル名・比較トグル・undo/redo・テーマ・言語・書き出し） */
@@ -35,6 +38,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenExport,
   exportDisabled,
   isMobile,
+  onToggleHistory,
+  historyDisabled,
 }) => {
   const { t } = useTranslation();
 
@@ -134,6 +139,33 @@ export const TopBar: React.FC<TopBarProps> = ({
             <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" />
           </svg>
         </button>
+
+        {isMobile && (
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={onToggleHistory}
+            disabled={historyDisabled}
+            aria-label={t("studio.history.title")}
+            title={t("studio.history.title")}
+            data-testid="studio-history-open"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <circle cx="12" cy="12" r="9" />
+              <polyline points="12 7 12 12 15.5 14" />
+            </svg>
+          </button>
+        )}
 
         {!isMobile && (
           <>
