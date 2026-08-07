@@ -167,7 +167,7 @@ const fourCC = (bytes: Uint8Array, offset: number): string => {
 // PNG シグネチャ（8 バイト）
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
-interface PngChunk {
+export interface PngChunk {
   type: string;
   data: Uint8Array;
 }
@@ -181,7 +181,7 @@ const isPng = (png: Uint8Array): boolean => {
 };
 
 /** PNG をチャンク列にパースする（不正な PNG の場合は null） */
-const parsePngChunks = (png: Uint8Array): PngChunk[] | null => {
+export const parsePngChunks = (png: Uint8Array): PngChunk[] | null => {
   if (!isPng(png)) {
     return null;
   }
@@ -206,7 +206,7 @@ const parsePngChunks = (png: Uint8Array): PngChunk[] | null => {
 };
 
 /** チャンク列から PNG バイナリを再構築する */
-const assemblePng = (chunks: PngChunk[]): Uint8Array<ArrayBuffer> => {
+export const assemblePng = (chunks: PngChunk[]): Uint8Array<ArrayBuffer> => {
   let total = PNG_SIGNATURE.length;
   for (const chunk of chunks) {
     total += 12 + chunk.data.length; // length(4) + type(4) + data + crc(4)
@@ -275,7 +275,7 @@ export const insertPngExif = (
 
 // ---- WebP（RIFF） ----
 
-interface RiffChunk {
+export interface RiffChunk {
   fourCC: string;
   payload: Uint8Array;
 }
@@ -290,7 +290,7 @@ const isWebp = (webp: Uint8Array): boolean => {
 };
 
 /** WebP をチャンク列にパースする（不正な場合は null） */
-const parseWebpChunks = (webp: Uint8Array): RiffChunk[] | null => {
+export const parseWebpChunks = (webp: Uint8Array): RiffChunk[] | null => {
   if (!isWebp(webp)) {
     return null;
   }
@@ -326,7 +326,7 @@ const buildRiffChunk = (chunk: RiffChunk): Uint8Array => {
 };
 
 /** チャンク列から WebP（RIFF/WEBP）バイナリを再構築する */
-const assembleWebp = (chunks: RiffChunk[]): Uint8Array<ArrayBuffer> => {
+export const assembleWebp = (chunks: RiffChunk[]): Uint8Array<ArrayBuffer> => {
   const chunkBytes = chunks.map(buildRiffChunk);
   const bodySize = chunkBytes.reduce((sum, c) => sum + c.length, 0);
   // RIFF サイズは "WEBP"(4) + 全チャンク
