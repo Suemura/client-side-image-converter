@@ -32,6 +32,16 @@ export default function Home() {
                 {t("home.startConverting")}
               </Button>
             </Link>
+            <Link href="/upscale">
+              <Button variant="secondary" size="large">
+                {t("home.tryUpscaleTool")}
+              </Button>
+            </Link>
+            <Link href="/remove-bg">
+              <Button variant="secondary" size="large">
+                {t("home.tryRemoveBgTool")}
+              </Button>
+            </Link>
             <Link href="/crop">
               <Button variant="secondary" size="large">
                 {t("home.tryCropTool")}

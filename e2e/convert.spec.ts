@@ -5,6 +5,7 @@ import piexif from "piexifjs";
 import {
   bmpFile,
   brokenImageFile,
+  dngFile,
   heicFile,
   jpegFileWithExif,
   loadExifFromPngBuffer,
@@ -12,6 +13,7 @@ import {
   magicNumber,
   noisyBmpFile,
   pngFile,
+  pngSize,
   tiffFile,
   transparentPngFile,
 } from "./helpers/fixtures";
@@ -87,6 +89,44 @@ test.describe("画像フォーマット変換", () => {
     expect(download.suggestedFilename()).toBe("sample.avif");
     const buf = readFileSync(await download.path());
     expect(magicNumber.isAvif(buf)).toBe(true);
+  });
+
+  test("PNG を JPEG XL に変換してダウンロードできる（プレビューは再デコード表示）", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(pngFile());
+
+    // ラジオの input は不可視のためラベルテキストをクリックする
+    await page.getByText("JPEG XL", { exact: true }).click();
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    // WASM エンコーダーの初回ロードがあるためタイムアウトを長めにとる
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // Chromium は <img> で JXL を表示できないため、@jsquash/jxl の decode による
+    // プレビュー用 PNG が生成・表示される（naturalWidth > 0 = デコード成功）
+    const preview = page.locator('img[alt="sample.jxl"]');
+    await expect(preview).toBeVisible({ timeout: 15_000 });
+    await expect
+      .poll(
+        () => preview.evaluate((img: HTMLImageElement) => img.naturalWidth),
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThan(0);
+
+    // 1 ファイル時は ZIP 化されず単一ファイルとしてダウンロードされる
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("sample.jxl");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isJxl(buf)).toBe(true);
   });
 
   test("HEIC を JPEG に変換してダウンロードできる", async ({ page }) => {
@@ -186,6 +226,59 @@ test.describe("画像フォーマット変換", () => {
     expect(magicNumber.isPng(buf)).toBe(true);
   });
 
+  test("DNG（RAW）を PNG に変換してダウンロードできる", async ({ page }) => {
+    await page.goto("/convert/");
+    await page.locator('input[type="file"]').setInputFiles(dngFile());
+
+    // ラジオの input は不可視のためラベルテキストをクリックする
+    await page.getByText("PNG", { exact: true }).click();
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    // LibRaw の WASM（約 1.4MB）初回ロードがあるためタイムアウトを長めにとる
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("sample.png");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isPng(buf)).toBe(true);
+    // デモザイク後もフィクスチャの寸法（32x32）が保たれている
+    expect(pngSize(buf)).toEqual({ width: 32, height: 32 });
+  });
+
+  test("MIME タイプ不明の .dng ファイルも受理して JPEG に変換できる", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    // RAW は MIME が空や application/octet-stream で報告される環境があるため、
+    // 拡張子フォールバックでの受理を検証する
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(dngFile("sample.dng", "application/octet-stream"));
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe("sample.jpeg");
+    const buf = readFileSync(await download.path());
+    expect(magicNumber.isJpeg(buf)).toBe(true);
+  });
+
   test("BMP を PNG に変換してダウンロードできる", async ({ page }) => {
     await page.goto("/convert/");
     await page.locator('input[type="file"]').setInputFiles(bmpFile());
@@ -211,6 +304,12 @@ test.describe("画像フォーマット変換", () => {
 
   test("変換に失敗したファイルは失敗通知に表示される", async ({ page }) => {
     await page.goto("/convert/");
+    // ネイティブ alert() に依存しないことを検証する（Issue #118）
+    const dialogs: string[] = [];
+    page.on("dialog", (dialog) => {
+      dialogs.push(dialog.message());
+      void dialog.dismiss();
+    });
     // PNG を装った破損ファイルはデコードに失敗し、失敗通知に表示される
     await page.locator('input[type="file"]').setInputFiles(brokenImageFile());
 
@@ -223,6 +322,32 @@ test.describe("画像フォーマット変換", () => {
     await expect(
       page.getByRole("heading", { name: /変換結果/ }),
     ).not.toBeVisible();
+    expect(dialogs).toEqual([]);
+  });
+
+  test("正常ファイルと破損ファイルの混在バッチで、成功結果と失敗通知の両方が表示される", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    const dialogs: string[] = [];
+    page.on("dialog", (dialog) => {
+      dialogs.push(dialog.message());
+      void dialog.dismiss();
+    });
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles([pngFile(), brokenImageFile()]);
+
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+
+    // 破損ファイルは失敗通知に表示され、正常ファイルは変換結果に表示される
+    const alert = page.getByRole("alert").filter({ hasText: "broken.png" });
+    await expect(alert).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 15_000,
+    });
+    // 失敗の通知はネイティブ alert() に依存しない（Issue #118）
+    expect(dialogs).toEqual([]);
   });
 
   test("対応形式の表示と実際に変換可能な形式が一致している", async ({
@@ -230,7 +355,7 @@ test.describe("画像フォーマット変換", () => {
   }) => {
     await page.goto("/convert/");
     await expect(
-      page.getByText("対応形式: JPG, PNG, WebP, BMP, TIFF, HEIC, HEIF", {
+      page.getByText("対応形式: JPG, PNG, WebP, BMP, TIFF, HEIC, HEIF, RAW", {
         exact: true,
       }),
     ).toBeVisible();
@@ -498,6 +623,38 @@ test.describe("画像フォーマット変換", () => {
     for (const name of names) {
       const buf = await zip.file(name)!.async("nodebuffer");
       expect(magicNumber.isAvif(buf)).toBe(true);
+    }
+  });
+
+  test("複数ファイルを一括で JPEG XL に変換できる（Worker で WASM エンコード）", async ({
+    page,
+  }) => {
+    await page.goto("/convert/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles([pngFile("one.png"), pngFile("two.png")]);
+
+    // ラジオの input は不可視のためラベルテキストをクリックする
+    await page.getByText("JPEG XL", { exact: true }).click();
+    await page.getByRole("button", { name: "変換", exact: true }).click();
+    // WASM エンコーダーの初回ロードがあるためタイムアウトを長めにとる
+    await expect(page.getByRole("heading", { name: /変換結果/ })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Zipでダウンロード", exact: true })
+        .click(),
+    ]);
+
+    const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+    const names = Object.keys(zip.files).sort();
+    expect(names).toEqual(["one.jxl", "two.jxl"]);
+    for (const name of names) {
+      const buf = await zip.file(name)!.async("nodebuffer");
+      expect(magicNumber.isJxl(buf)).toBe(true);
     }
   });
 

@@ -306,27 +306,3 @@ export const applyToneCurveToPixel = (
   const shift = sampleCurveTable(table, 3, luma) - luma;
   return [clamp01(cr + shift), clamp01(cg + shift), clamp01(cb + shift)];
 };
-
-/** crop / adjustments / LUT と同型の、edit ページが保持するトーンカーブ状態（一括 / 画像ごと） */
-export interface ToneCurveEditState {
-  /** true: 全画像へ共有カーブを適用 / false: 画像ごとに保持 */
-  applyToAll: boolean;
-  /** 一括モードの共有カーブ */
-  sharedToneCurve: ToneCurveState;
-  /** 画像ごとのカーブ（未設定インデックスは恒等） */
-  perImageToneCurve: Record<number, ToneCurveState>;
-}
-
-/**
- * 出力時、指定インデックスの画像へ適用するトーンカーブを解決する。
- * （`resolveAdjustmentForIndex` / `resolveLutForIndex` を踏襲）
- */
-export const resolveToneCurveForIndex = (
-  index: number,
-  state: ToneCurveEditState,
-): ToneCurveState => {
-  if (state.applyToAll) {
-    return state.sharedToneCurve;
-  }
-  return state.perImageToneCurve[index] ?? DEFAULT_TONE_CURVE;
-};

@@ -179,14 +179,15 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     emitNaturalArea(fitted);
   }, [aspectRatio, imageLoaded]);
 
-  const getRelativePosition = useCallback((event: React.MouseEvent) => {
+  const getRelativePosition = useCallback((event: React.PointerEvent) => {
     if (!containerRef.current || !imageRef.current) return { x: 0, y: 0 };
     const rect = imageRef.current.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }, []);
 
+  // Pointer Events でマウス / タッチ / ペン共通
   const handleResizeStart = useCallback(
-    (event: React.MouseEvent, handle: ResizeHandle) => {
+    (event: React.PointerEvent, handle: ResizeHandle) => {
       event.preventDefault();
       event.stopPropagation();
       const position = getRelativePosition(event);
@@ -197,8 +198,8 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     [getRelativePosition],
   );
 
-  const handleMouseDown = useCallback(
-    (event: React.MouseEvent) => {
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent) => {
       event.preventDefault();
       const position = getRelativePosition(event);
       setIsDragging(true);
@@ -208,7 +209,7 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     [getRelativePosition],
   );
 
-  const handleMouseUpLogic = useCallback(() => {
+  const handlePointerUpLogic = useCallback(() => {
     // 最小サイズをチェック
     if (cropArea.width < 10 || cropArea.height < 10) {
       return;
@@ -217,15 +218,23 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
   }, [cropArea, emitNaturalArea]);
 
   useEffect(() => {
-    const handleGlobalMouseUp = () => {
+    const handleGlobalPointerUp = () => {
       if (isDragging) {
         setIsDragging(false);
         setActiveHandle(null);
-        handleMouseUpLogic();
+        handlePointerUpLogic();
       }
     };
 
-    const handleGlobalMouseMove = (event: MouseEvent) => {
+    // タッチ操作がブラウザ側でキャンセルされた場合はドラッグを中断する（確定はしない）
+    const handleGlobalPointerCancel = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        setActiveHandle(null);
+      }
+    };
+
+    const handleGlobalPointerMove = (event: PointerEvent) => {
       if (!isDragging || !activeHandle || !imageRef.current) return;
 
       const rect = imageRef.current.getBoundingClientRect();
@@ -302,12 +311,14 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
       setDragStart({ x, y });
     };
 
-    document.addEventListener("mouseup", handleGlobalMouseUp);
-    document.addEventListener("mousemove", handleGlobalMouseMove);
+    document.addEventListener("pointerup", handleGlobalPointerUp);
+    document.addEventListener("pointermove", handleGlobalPointerMove);
+    document.addEventListener("pointercancel", handleGlobalPointerCancel);
 
     return () => {
-      document.removeEventListener("mouseup", handleGlobalMouseUp);
-      document.removeEventListener("mousemove", handleGlobalMouseMove);
+      document.removeEventListener("pointerup", handleGlobalPointerUp);
+      document.removeEventListener("pointermove", handleGlobalPointerMove);
+      document.removeEventListener("pointercancel", handleGlobalPointerCancel);
     };
   }, [
     isDragging,
@@ -315,7 +326,7 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
     dragStart,
     cropArea,
     aspectRatio,
-    handleMouseUpLogic,
+    handlePointerUpLogic,
   ]);
 
   const showNavigation = totalImages > 1;
@@ -368,42 +379,42 @@ export const CropSelector: React.FC<CropSelectorProps> = ({
               width: cropArea.width,
               height: cropArea.height,
             }}
-            onMouseDown={handleMouseDown}
+            onPointerDown={handlePointerDown}
           >
             {/* 四隅のハンドル */}
             <div
               className={`${styles.resizeHandle} ${styles.nw}`}
-              onMouseDown={(e) => handleResizeStart(e, "nw")}
+              onPointerDown={(e) => handleResizeStart(e, "nw")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.ne}`}
-              onMouseDown={(e) => handleResizeStart(e, "ne")}
+              onPointerDown={(e) => handleResizeStart(e, "ne")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.se}`}
-              onMouseDown={(e) => handleResizeStart(e, "se")}
+              onPointerDown={(e) => handleResizeStart(e, "se")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.sw}`}
-              onMouseDown={(e) => handleResizeStart(e, "sw")}
+              onPointerDown={(e) => handleResizeStart(e, "sw")}
             />
 
             {/* 辺のハンドル */}
             <div
               className={`${styles.resizeHandle} ${styles.n}`}
-              onMouseDown={(e) => handleResizeStart(e, "n")}
+              onPointerDown={(e) => handleResizeStart(e, "n")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.e}`}
-              onMouseDown={(e) => handleResizeStart(e, "e")}
+              onPointerDown={(e) => handleResizeStart(e, "e")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.s}`}
-              onMouseDown={(e) => handleResizeStart(e, "s")}
+              onPointerDown={(e) => handleResizeStart(e, "s")}
             />
             <div
               className={`${styles.resizeHandle} ${styles.w}`}
-              onMouseDown={(e) => handleResizeStart(e, "w")}
+              onPointerDown={(e) => handleResizeStart(e, "w")}
             />
           </div>
         )}

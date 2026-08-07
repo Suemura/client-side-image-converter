@@ -12,6 +12,8 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   background-color: var(--surface-muted);
+  /* タッチでの選択枠ドラッグ中にページスクロールへ奪われないようにする（Pointer Events 前提） */
+  touch-action: none;
 }
 
 .image {

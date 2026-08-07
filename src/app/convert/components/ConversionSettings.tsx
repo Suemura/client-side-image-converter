@@ -8,6 +8,7 @@ import type {
   ConversionFormat,
   ConversionMode,
 } from "../../../utils/imageConverter";
+import { canPreserveExifForFormat } from "../../../utils/imageConverter";
 import styles from "./ConversionSettings.module.css";
 
 export interface ConversionSettings {
@@ -68,7 +69,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
     setLocalTargetFileSize(settings.targetFileSizeKB?.toString() || "");
   }, [settings.targetFileSizeKB]);
 
-  // 目標ファイルサイズ指定は JPEG / WebP のみ対応（PNG は可逆・AVIF は WASM が低速なため）
+  // 目標ファイルサイズ指定は JPEG / WebP のみ対応（PNG は可逆・AVIF / JXL は WASM が低速なため）
   const supportsTargetSize =
     settings.targetFormat === "jpeg" || settings.targetFormat === "webp";
   // 有効な目標サイズが入力されている場合は品質を自動調整するため、品質入力を無効化する
@@ -77,8 +78,8 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
     settings.targetFileSizeKB !== undefined &&
     settings.targetFileSizeKB > 0;
 
-  // EXIF 保持は JPEG / PNG / WebP で対応（AVIF はメタデータ書き込み非対応）
-  const canPreserveExif = settings.targetFormat !== "avif";
+  // EXIF 保持は JPEG / PNG / WebP で対応（AVIF / JXL はメタデータ書き込み非対応）
+  const canPreserveExif = canPreserveExifForFormat(settings.targetFormat);
 
   // value に型注釈を付け、選択肢と ConversionFormat の整合を型で担保する
   const formatOptions: { label: string; value: ConversionFormat }[] = [
@@ -86,6 +87,7 @@ export const ConversionSettings: React.FC<ConversionSettingsProps> = ({
     { label: "PNG", value: "png" },
     { label: "WebP", value: "webp" },
     { label: "AVIF", value: "avif" },
+    { label: "JPEG XL", value: "jxl" },
   ];
 
   const isOptimize = settings.mode === "optimize";

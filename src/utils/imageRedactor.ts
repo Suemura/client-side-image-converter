@@ -14,6 +14,7 @@ import {
 } from "./exifTransfer";
 import { appendFileNameSuffix } from "./fileName";
 import { type CropResult, renderOrientedImage } from "./imageCropper";
+import { fileToDataUrl } from "./imageUtils";
 import {
   applyRedactionsToImageData,
   clampRegionToImage,
@@ -25,20 +26,6 @@ import {
 
 /** 出力ファイル名のサフィックス */
 const REDACTED_SUFFIX = "_redacted";
-
-/**
- * ファイルを DataURL に変換する（EXIF 読み取り用）
- */
-const fileToDataUrl = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      resolve(e.target?.result as string);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
 
 /**
  * キャンバス上のレタッチ領域へモザイク / ぼかし / 塗りつぶしを焼き込む（in-place）。

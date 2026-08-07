@@ -29,6 +29,9 @@ import {
   readExifTiffFromDataUrl,
 } from "./exifTransfer";
 import { renderOrientedImage } from "./imageCropper";
+import { fileToDataUrl } from "./imageUtils";
+import { encodeCanvasToJxlBlob } from "./jxlEncoder";
+import { type ResizeRequest, resolveResizeDimensions } from "./studioCore";
 import {
   type AdjustmentRenderer,
   applyAdjustmentsToCanvas,
@@ -56,6 +59,11 @@ export interface EditOptions {
   outputFormat?: EditOutputFormat;
   /** ロッシー形式（JPEG / WebP）の品質 0-1（既定 0.92）。AVIF は 1-100 へ換算する */
   quality?: number;
+  /**
+   * 出力リサイズ指定（/studio の書き出し用）。ファイルごとの実寸から
+   * `resolveResizeDimensions` で出力寸法を解決する。未指定は原寸のまま（既定挙動不変）
+   */
+  resize?: ResizeRequest;
 }
 
 /** 編集バッチの結果（成功結果と失敗ファイルの両方を返す。convert 経路と同形） */
@@ -86,6 +94,7 @@ const FORMAT_MIME: Record<ConversionFormat, string> = {
   png: "image/png",
   webp: "image/webp",
   avif: "image/avif",
+  jxl: "image/jxl",
 };
 
 /** 出力フォーマット指定と入力形式から、実際の出力フォーマットを解決する */
@@ -149,9 +158,15 @@ export const renderEdited = async (
     lut,
     curve,
   );
+  // 出力リサイズ（/studio の書き出し）。未指定・同寸は原寸のまま
+  const resized = options.resize
+    ? resolveResizeDimensions(width, height, options.resize)
+    : null;
+  const outputWidth = resized?.width ?? width;
+  const outputHeight = resized?.height ?? height;
   const encodeCanvas = document.createElement("canvas");
-  encodeCanvas.width = width;
-  encodeCanvas.height = height;
+  encodeCanvas.width = outputWidth;
+  encodeCanvas.height = outputHeight;
   const encodeCtx = encodeCanvas.getContext("2d");
   if (!encodeCtx) {
     throw new Error("Canvas 2D context is not supported");
@@ -165,15 +180,17 @@ export const renderEdited = async (
   const background = resolveFlattenBackground(format);
   if (background) {
     encodeCtx.fillStyle = background;
-    encodeCtx.fillRect(0, 0, width, height);
+    encodeCtx.fillRect(0, 0, outputWidth, outputHeight);
   }
-  encodeCtx.drawImage(adjustedCanvas, 0, 0);
+  encodeCtx.drawImage(adjustedCanvas, 0, 0, outputWidth, outputHeight);
 
-  // エンコード（AVIF のみ WASM、その他は Canvas.toBlob）
+  // エンコード（AVIF / JXL は WASM、その他は Canvas.toBlob）
   let blob =
     format === "avif"
       ? await encodeCanvasToAvifBlob(encodeCanvas, Math.round(quality * 100))
-      : await canvasToBlob(encodeCanvas, mime, quality);
+      : format === "jxl"
+        ? await encodeCanvasToJxlBlob(encodeCanvas, Math.round(quality * 100))
+        : await canvasToBlob(encodeCanvas, mime, quality);
 
   // EXIF 保持（出力が書き込み可能形式かつソースに読み取り可能な EXIF がある場合のみ）。
   // 向き・寸法はピクセルへ焼き込み済みのため Orientation を 1 に正規化し寸法タグを揃える（crop 経路と同じ）。
@@ -185,15 +202,15 @@ export const renderEdited = async (
       if (exifTiff) {
         const normalizedExif = await normalizeExifForBakedImage(
           exifTiff,
-          width,
-          height,
+          outputWidth,
+          outputHeight,
         );
         blob = await insertExifIntoBlob(
           blob,
           normalizedExif,
           writableFormat,
-          width,
-          height,
+          outputWidth,
+          outputHeight,
         );
       }
     } catch (error) {
@@ -201,16 +218,11 @@ export const renderEdited = async (
     }
   }
 
-  return buildEditResult(file, blob, format);
-};
-
-const fileToDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target?.result as string);
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsDataURL(file);
+  return buildEditResult(file, blob, format, {
+    width: outputWidth,
+    height: outputHeight,
   });
+};
 
 /**
  * 複数の画像へ一括で調整を適用する。

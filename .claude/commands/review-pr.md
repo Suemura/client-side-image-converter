@@ -1,3 +1,11 @@
+---
+description: >-
+  GitHub PR のコードレビューを実施し、インラインコメントを投稿する。
+  「PR #N をレビューして」「この PR 見て」とレビューを依頼されたら使う
+  （通常は PR 作成フックから pr-reviewer エージェント経由で自動実行される）。
+argument-hint: <PR番号>
+---
+
 Github Pull Requestのコードレビューを行ってください。
 
 PR: $ARGUMENTS

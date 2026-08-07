@@ -5,7 +5,13 @@
 
 ## 全体像
 
-※ PR を作らないタスクの独立レビューは reviewer エージェント（sonnet）が担う（`self-review.md`「レビューの二本立て」参照。下図の PR フローには登場しない）。
+タスクのライフサイクルは以下の入口・処理・出口で構成される：
+
+- **入口**: `/create-issue` で要望から Issue を作成 → `/start-issue <Issue番号>` でタスク開始
+- **処理**: `/start-issue` が worktree 内で実装・検証・PR 作成まで自走。途中でコンフリクトが発生した場合は `/resolve-conflicts` で解消。フィードバック対応は `/feedback <Issue番号>` で実施
+- **出口**: `/land <PR番号>` で PR をマージして worktree を削除・main を更新
+
+下図は主フロー（`/start-issue` → 実装 → PR → マージ）を示す。PR を作らないタスクの独立レビューは reviewer エージェント（sonnet）が担う（`self-review.md`「レビューの二本立て」参照。下図には登場しない）。
 
 ```mermaid
 flowchart TD
@@ -18,7 +24,7 @@ flowchart TD
     D -- ファイル編集のたび --> E[PostToolUse フック<br>Biome 自動フォーマット]
     D -- 応答終了時 --> F[Stop フック<br>lint + typecheck + test]
     F -- 失敗 --> D
-    F -- 成功 --> V[Sprint Contract 自己チェック<br>+ HISTORY.md 追記（メインが直接）]
+    F -- 成功 --> V[Sprint Contract 自己チェック]
     V -- ホワイトリスト該当 --> N[docs-sync エージェント（haiku）<br>関連ドキュメントを同期]
     V -- 非該当 --> H[gh pr create]
     N --> H
@@ -52,7 +58,8 @@ flowchart TD
 | --- | --- | --- |
 | Biome 自動フォーマット | PostToolUse（Write\|Edit） | 編集されたファイル（ts/tsx/js/jsx/json/css）を `biome check --write` で即整形 |
 | 完了時チェック<br>`.claude/hooks/check-on-stop.sh` | Stop（応答終了時） | TS/TSX に未コミット変更があれば lint + typecheck + test を実行。失敗すると exit 2 でエラー内容が Claude に差し戻され、自動修正を促す。`stop_hook_active` 判定で無限ループを防止。変更検知はフック stdin の `cwd` を基準に行うため、`/start-issue` の worktree セッション内の変更も検知する（メイン checkout 固定の `CLAUDE_PROJECT_DIR` に戻すと worktree 内変更を取りこぼすので注意） |
-| PR 作成検知<br>`.claude/hooks/pr-created.sh` | PostToolUse（Bash: `gh pr create`） | 出力から PR URL を抽出し、PR 自動レビューフロー（後述）の開始指示をコンテキスト注入。コマンド検証つき（`gh pr create` で始まるコマンドのみ反応） |
+| worktree 残存検知<br>`.claude/hooks/session-start-worktrees.sh` | SessionStart（セッション開始時） | マージ済み PR に対応する worktree（`.claude/worktrees/issue-{番号}/`）が残存していないかスキャン。残存していれば `/land` を案内（worktree 内で以前のセッションが停止した可能性を警告） |
+| PR 作成検知<br>`.claude/hooks/pr-created.sh` | PostToolUse（Bash: `gh pr create`） | 出力から PR URL を抽出し、PR 自動レビューフロー（後述）の開始指示をコンテキスト注入。コマンド検証つき（`gh pr create` で始まるコマンドのみ反応）。PR の mergeable が false（コンフリクト判定）の場合は `/resolve-conflicts` を案内する注意文も追記 |
 
 #### 権限ガード（`permissions`）
 
@@ -70,16 +77,22 @@ flowchart TD
 | エージェント | モデル | 役割 |
 | --- | --- | --- |
 | **planner** | inherit | 非自明なタスク（3ステップ以上）の実装計画を策定。変更ファイル一覧・実装順序・Sprint Contract（検証可能な完了条件）を返す（計画品質を優先しモデルは inherit のまま） |
-| **docs-sync** | haiku | 実装完了後のドキュメント同期。merge-base からの全差分 + 未追跡ファイルを基に、`CLAUDE.md`（横断規約のダイジェスト）/ `docs/ARCHITECTURE.md` / `docs/PATTERNS.md` / `docs/TESTING.md` / `docs/HARNESS.md` / README（日英セット）等の記載を更新する。`docs/HISTORY.md` の変更ログはメインエージェントが直接追記（docs-sync の担当外）。新規ドキュメントは作成せず提案にとどめ、**コードは修正しない**。起動条件は `self-review.md` のホワイトリスト（ユーザー向け機能 / コマンド・ビルド・CI / ハーネス / 構造・テスト方針の変更）に該当する場合のみ |
+| **docs-sync** | haiku | 実装完了後のドキュメント同期。merge-base からの全差分 + 未追跡ファイルを基に、`CLAUDE.md`（横断規約のダイジェスト）/ `docs/ARCHITECTURE.md` / `docs/PATTERNS.md` / `docs/TESTING.md` / `docs/HARNESS.md` / README（日英セット）等の記載を更新する。新規ドキュメントは作成せず提案にとどめ、**コードは修正しない**。起動条件は `self-review.md` のホワイトリスト（ユーザー向け機能 / コマンド・ビルド・CI / ハーネス / 構造・テスト方針の変更）に該当する場合のみ |
 | **reviewer** | sonnet | **PR を作らないタスク専用**の完了前品質レビュー。実装とは独立したコンテキストで動作し、信頼度 80 以上の問題のみ報告し、Pass/Fail を判定。**コードは修正しない**。PR を作るタスクでは起動しない（PR 自動レビューフローに一本化。Issue #124 の二重レビュー解消・案 A） |
 | **pr-reviewer** | sonnet | PR 自動レビューフローの 1 段目。`review-pr.md` の手順に従う薄いラッパー（手順の single source of truth は command 側）。diff 範囲に集中しインラインコメントを投稿 |
 | **pr-comment-resolver** | sonnet | PR 自動レビューフローの 2 段目。`resolve-pr-comments.md` の手順に従う薄いラッパー。TS/TSX 修正時は lint / typecheck / test の 3 点を必ず実行してから push（reviewer 廃止の補完） |
 
 ### 4. コマンド（`.claude/commands/`）
 
+全コマンドは frontmatter の `description` にトリガー語句（「マージして」「コンフリクト解消して」等）を持ち、ユーザーが `/名前` を打たなくても自然言語の依頼からモデルが自動発火できる（Skill 統合。`argument-hint` も定義済み）。
+
 | コマンド | 役割 |
 | --- | --- |
-| `/start-issue <Issue番号>` | GitHub Issue を起点にタスクを開始する入口。Issue 把握 → Issue 専用 worktree の作成（`EnterWorktree` ツールで `.claude/worktrees/issue-{番号}/` に作成、`origin/<デフォルトブランチ>` から分岐）→ ブランチ作成（ラベルから prefix を決定）→ `npm ci` → planner → 実装 → 検証（lint / typecheck / test + Sprint Contract 自己チェック）→ HISTORY.md 追記 + docs-sync（ホワイトリスト該当時のみ）→ push → PR 作成（`Closes #N` 付き）まで自走し、PR 自動レビューフローに接続する。PR 前の reviewer 起動は行わない（独立レビューは PR 自動レビューへ一本化）。worktree で作業するためメイン checkout の状態に影響されず、複数 Issue の並列作業が可能。中断条件（クローズ済み Issue、同一 Issue の既存ブランチ・worktree、`npm ci` 失敗等）に該当する場合のみユーザーに確認する。worktree は PR 作成後も残し、マージ後にユーザー指示で削除する |
+| `/create-issue` | 新しい要望を整理し、受け入れ条件（Definition of Done）を付けた GitHub Issue を作成する入口。既存要望との重複チェック・カテゴリ判定・優先度設定もガイドする |
+| `/start-issue <Issue番号>` | GitHub Issue を起点にタスクを開始する入口。Issue 把握 → Issue 専用 worktree の作成（`EnterWorktree` ツールで `.claude/worktrees/issue-{番号}/` に作成、`origin/<デフォルトブランチ>` から分岐）→ ブランチ作成（ラベルから prefix を決定）→ `npm ci` → planner → 実装 → 検証（lint / typecheck / test + Sprint Contract 自己チェック）→ docs-sync（ホワイトリスト該当時のみ）→ push → PR 作成（`Closes #N` 付き）まで自走し、PR 自動レビューフローに接続する。PR 前の reviewer 起動は行わない（独立レビューは PR 自動レビューへ一本化）。worktree で作業するためメイン checkout の状態に影響されず、複数 Issue の並列作業が可能。中断条件（クローズ済み Issue、同一 Issue の既存ブランチ・worktree、`npm ci` 失敗等）に該当する場合のみユーザーに確認する。worktree は PR 作成後も残し、マージ後にユーザー指示で削除する |
+| `/resolve-conflicts` | origin/main との merge コンフリクトを解消する。PR 直後に mergeable が false（コンフリクト判定）の場合に起動。base を fetch → 現在の worktree ブランチへ merge → 競合箇所を対話的に解決 → lint / typecheck / test → push（worktree 内作業） |
+| `/feedback <Issue番号>` | 動作確認フィードバックを受け、対応する Issue 専用 worktree で修正対応を実施する。修正後に lint / typecheck / test → push（worktree 内作業）。PR マージ前・後問わず実行可 |
+| `/land <PR番号>` | PR をマージする出口コマンド。`gh pr merge`（ask 権限で確認）→ 対応する Issue 専用 worktree（`.claude/worktrees/issue-{番号}/`）・ローカルブランチを削除 → main をローカルに更新（同期）。/start-issue の終点 |
 | `/review-pr <PR番号>` | PR をレビューし、GitHub API でインラインコメント付きレビューを投稿（AI である旨を明記、[重要]/[改善]/[軽微]/[質問] のプレフィックス） |
 | `/resolve-pr-comments <PR番号>` | PR のレビューコメントを読み取り、妥当な指摘は修正して push、質問には回答、不当な指摘には理由を返信（[修正済み]/[対応不要]/[回答]/[確認]） |
 
@@ -160,6 +173,8 @@ CLI からは `gh secret set CLOUDFLARE_API_TOKEN` / `gh secret set CLOUDFLARE_A
 
 ## 変更履歴
 
+- 2026-07-20: セッション履歴分析に基づくコマンド・フック追加（Issue 処理のワークフロー完全自動化）。新規コマンド 4 件：`/create-issue`（要望整理・Issue 作成）、`/land <PR番号>`（PR マージ・worktree 削除・main 更新）、`/resolve-conflicts`（マージコンフリクト解消）、`/feedback <Issue番号>`（フィードバック対応）。新規フック 1 件：SessionStart に `session-start-worktrees.sh`（残存 worktree スキャン・`/land` 案内）。フック修正 1 件：`pr-created.sh` に mergeable が false 時の `/resolve-conflicts` 案内を追加。コマンド一覧・フック一覧・全体像の説明を更新
+- 2026-07-18: `docs/HISTORY.md` を廃止。ハーネス内に読む側のフローが存在しない書き込み専用ファイルで、内容もコミットメッセージ / PR 説明と重複し、全 PR が先頭 prepend で毎回コンフリクトしていたため削除。変更ログの記録先はコミットメッセージと PR 説明（`git log` / `gh pr view` で参照）へ一本化し、CLAUDE.md / `start-issue.md` / `self-review.md` / `workflow-orchestration.md` / docs-sync / reviewer の各定義から追記手順・参照を除去。ハーネス構成の変更経緯は従来どおり本ファイルの変更履歴に記録する
 - 2026-07-17: ハーネス軽量化（Issue #124。実測: 1 Issue あたりハーネス部分だけで約 26 分・39 万トークン）。(1) **二重レビューの解消（案 A）**: PR 前の reviewer 起動を `/start-issue` から削除し、独立レビューを PR 自動レビューフローへ一本化（`/start-issue` の該当ステップは lint / typecheck / test + Sprint Contract 自己チェックに縮退）。reviewer エージェント自体は「PR を作らないタスク専用」として存続（`self-review.md` を二本立てへ再定義）。(2) **モデル指定**: docs-sync → haiku、reviewer → sonnet。PR レビュー系は general-purpose にモデル指定手段がないため専用エージェント **pr-reviewer / pr-comment-resolver**（いずれも sonnet・command 手順に従う薄いラッパー）を新設し、`pr-created.sh` の起動指示を差し替え（エージェント定義が未認識のセッションでは general-purpose で代替するフォールバック付き）。haiku 化した docs-sync の品質不足が観測されたら frontmatter の 1 行を sonnet へ戻すだけでロールバック可能。(3) **探索削減**: 呼び出し側が差分（`--stat`）・変更概要・関連ファイルパスをプロンプトへ埋め込み、各エージェント定義に「渡された差分から読み始め、コードベース全体を探索しない（ツール呼び出し 10 回以下目標）」を明記。CLAUDE.md / rules はサブエージェントへ自動注入されるため planner / reviewer の再読手順を削除。maxTurns を 50 → 30 へ引き下げ（打ち切りレポートの閾値も 24 へ更新）。(4) **docs-sync の起動条件をホワイトリスト化**（`self-review.md` を single source of truth に。バグ修正・リファクタ・依存更新では起動しない）し、`docs/HISTORY.md` の変更ログ追記をメインエージェントの直接作業へ変更（1 エントリの追記にエージェントを使わない）。※ Issue 対応案 4 の「docs-sync / reviewer の並列起動」は、案 A により PR フローから reviewer ステップ自体が消えて並列化の対象がなくなり、PR を作らないフローでは reviewer が docs-sync の編集結果もレビュー対象にするため直列が正しいことから**見送り**
 - 2026-07-16: セキュリティヘッダー対応（Issue #111）に伴い、`npm run build` の postbuild チェーンに CSP 生成を追加（`next-sitemap && node scripts/generate-sw.ts && node scripts/generate-headers.ts`。`out/` の全 HTML からインラインスクリプトの sha256 ハッシュを算出し `out/_headers` へページ別 CSP を冪等追記。Cloudflare Pages の制限超過時はビルドを非ゼロ終了）。E2E に `e2e/security-headers.spec.ts` を追加（serve が `_headers` を解釈しないため、生成された実 CSP を `page.route` で注入し CSP 強制下の全ページ動作を検証）
 - 2026-07-12: デザイン規定 `DESIGN.md` の策定（デザイン刷新 Phase 1、Issue #78）に伴い、reviewer エージェントのチェック観点 5-1（プロジェクトルール準拠）に DESIGN.md 準拠チェック（UI 変更でのハードコード色・規定外の角丸 / 影の検出。画像上オーバーレイ UI 等の固定色例外は DESIGN.md「Do's and Don'ts」参照）を追加。CLAUDE.md コードスタイルガイドラインにも DESIGN.md 準拠の 1 行を追加

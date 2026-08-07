@@ -61,6 +61,16 @@ module.css からは必ず `var(--...)` で参照する。**hex / rgb() の直�
 | `--error-soft` | `#fef2f2` | `#2d1215` | エラーの淡い背景 |
 | `--overlay` | `rgba(0, 0, 0, 0.5)` | `rgba(0, 0, 0, 0.65)` | モーダルの背景幕 |
 
+### ワークスペース（/studio）専用
+
+| トークン | ライト | ダーク | 用途 |
+| --- | --- | --- | --- |
+| `--canvas-bg` | `#e9e9ec` | `#000000` | キャンバス領域の背景（画像の視認用に一段暗い中立色。テキストは置かない） |
+| `--rail-bg` | `#ffffff` | `#141414` | ツールレール・フィルムストリップの背景 |
+
+`--canvas-bg` は画像プレビューの台紙専用で、テキスト・アイコンの背景に使わない
+（コントラスト基準の対象外とするため）。他ページへの流用は禁止。
+
 セマンティック色は**その意味でのみ**使う。「赤っぽい飾りが欲しい」等の装飾目的での流用は禁止。
 情報（info）の通知には `--accent` / `--accent-soft` を使う。
 
@@ -242,6 +252,27 @@ module.css からは必ず `var(--...)` で参照する。**hex / rgb() の直�
 - バー: 背景 `--accent`、角丸 `--radius-full`
 - 進捗数値は 13–14px の tabular-nums で `--muted-foreground`
 
+### Mobile Menu（ハンバーガー + 右ドロワー）
+
+`max-width: 768px` でヘッダーの Navigation / GitHub リンク / ThemeSwitch / LanguageSwitch を
+ドロワーへ収納し、ヘッダー右端にはハンバーガーボタンのみを置く（769px 以上ではハンバーガーを表示しない）。
+
+- ハンバーガーボタン: 40×40px、背景 `--surface`、境界 `1px solid var(--border)`、角丸 `--radius-sm`、
+  アイコンは `--foreground`。`aria-expanded` / `aria-controls` を付与する
+- ドロワー: 画面右端から幅 300px でスライドイン（`transform` 0.2s ease）。
+  背景 `--surface`、`border-left: 1px solid var(--border)`、`--shadow-lg`、高さ 100dvh
+- ドロワーヘッダー: 「メニュー」見出し（16px / 700）+ 閉じるボタン（40×40px、ハンバーガーと同仕様）、
+  `border-bottom: 1px solid var(--border)`
+- ナビリンク: 縦積み、高さ 48px、padding 0 12px、16px / 500、角丸 `--radius-sm`。
+  非現在ページ `--foreground`、hover 背景 `--surface-muted`、
+  **現在ページは背景 `--accent-soft` + 文字 `--accent`**（`aria-current="page"` を付与）
+- 設定行（テーマ / 言語）: ラベル（14px / `--muted-foreground`）左 + 既存の ThemeSwitch / LanguageSwitch 右。
+  ナビとの間は `1px solid var(--border)` の区切り線
+- GitHub リンク: 区切り線の下、外部リンク規定（`--muted-foreground`、hover で `--foreground`）
+- 背景幕: `--overlay`。クリックで閉じる
+- 挙動: Escape で閉じる・開いている間は body スクロールロック・開時に閉じるボタンへフォーカス移動 /
+  閉時にハンバーガーへフォーカス復帰・ページ遷移で自動クローズ（モーダルの挙動規定に準ずる）
+
 ### Header / Navigation / Footer
 
 - Header: 背景 `--background`、`border-bottom: 1px solid var(--border)`、padding 12px 24–40px。
@@ -292,8 +323,8 @@ module.css からは必ず `var(--...)` で参照する。**hex / rgb() の直�
 | --- | --- |
 | `max-width: 1200px` | ワイドレイアウト（/crop・/edit の 2 カラム）の余白・カラム幅圧縮 |
 | `max-width: 900px` | 2 カラム → 1 カラムへの切替（/crop・/edit） |
-| `max-width: 768px` | 標準のモバイル切替（フッター段組解除・モーダル余白縮小等） |
-| `max-width: 640px` | ヘッダーの文字ラベル省略等、最終段の圧縮 |
+| `max-width: 768px` | 標準のモバイル切替（**ヘッダーナビ → ハンバーガー + ドロワー**・フッター段組解除・モーダル余白縮小・ページ余白 16px 化等） |
+| `max-width: 640px` | 最終段の圧縮（ヘッダーの文字ラベル省略は 768px でドロワーへ移行したため廃止） |
 
 - 新規のブレークポイントを増やさず、上記 4 値から選ぶ
 - タッチターゲットは最小 44×44px を目安とする（小型ボタンは padding で確保）

@@ -65,7 +65,7 @@ export interface RedactState {
 /**
  * 出力時、指定インデックスの画像に適用するレタッチ領域を解決する。
  * 未設定のインデックスは空リスト（無加工）を返す。
- * （resolveCropForIndex / resolveAdjustmentForIndex と同じ解決パターン）
+ * （applyScope.resolveScopedValueForIndex と同じ解決パターン）
  */
 export const resolveRegionsForIndex = (
   index: number,

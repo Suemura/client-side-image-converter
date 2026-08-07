@@ -20,6 +20,10 @@ const C2PA_READ_CONCURRENCY = 3;
 
 export interface UseMetadataManagerResult {
   analysis: MetadataAnalysis | null;
+  /** 解析全体が失敗した場合 true（個別ファイルの失敗は analysis.analysisFailures に入る） */
+  analysisError: boolean;
+  /** メタデータ削除処理全体が失敗した場合 true */
+  removeError: boolean;
   isAnalyzing: boolean;
   isProcessing: boolean;
   selectedTags: Set<string>;
@@ -46,6 +50,8 @@ export interface UseMetadataManagerResult {
 
 export const useMetadataManager = (): UseMetadataManagerResult => {
   const [analysis, setAnalysis] = useState<MetadataAnalysis | null>(null);
+  const [analysisError, setAnalysisError] = useState(false);
+  const [removeError, setRemoveError] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
@@ -103,6 +109,7 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
       if (files.length === 0) return;
 
       setIsAnalyzing(true);
+      setAnalysisError(false);
       try {
         const [result, c2pa] = await Promise.all([
           analyzeMetadata(files),
@@ -115,6 +122,10 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
         setRemoveC2pa(false);
       } catch (error) {
         console.error("Failed to analyze metadata:", error);
+        // 解析結果が何も出ない「無反応な失敗」を防ぐため UI へ通知する（Issue #118）
+        setAnalysis(null);
+        setC2paResults(new Map());
+        setAnalysisError(true);
       } finally {
         setIsAnalyzing(false);
       }
@@ -155,6 +166,7 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
     }
 
     setIsProcessing(true);
+    setRemoveError(false);
     setProgressCurrent(0);
     setProgressTotal(analysis.fileMetadata.length);
 
@@ -176,6 +188,7 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
       return cleanedFiles;
     } catch (error) {
       console.error("Failed to remove metadata:", error);
+      setRemoveError(true);
       return [];
     } finally {
       setIsProcessing(false);
@@ -196,6 +209,8 @@ export const useMetadataManager = (): UseMetadataManagerResult => {
 
   return {
     analysis,
+    analysisError,
+    removeError,
     isAnalyzing,
     isProcessing,
     selectedTags,

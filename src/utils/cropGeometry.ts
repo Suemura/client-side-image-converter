@@ -373,34 +373,3 @@ export const clampCropAreaToAspect = (
 
   return { x, y, width, height };
 };
-
-/** crop ページが保持するトリミング状態（一括 / 画像ごとの両モード） */
-export interface CropState {
-  /** true: 全画像へ共有領域・共有変換を適用 / false: 画像ごとに保持 */
-  applyToAll: boolean;
-  /** 一括モードの共有トリミング領域（自然座標） */
-  sharedArea: CropArea | null;
-  /** 一括モードの共有変換 */
-  sharedTransform: CropTransform;
-  /** 画像ごとのトリミング領域（自然座標） */
-  perImageArea: Record<number, CropArea | null>;
-  /** 画像ごとの変換 */
-  perImageTransform: Record<number, CropTransform>;
-}
-
-/**
- * 出力時、指定インデックスの画像に適用するトリミング領域と変換を解決する。
- * 一括モードでは共有値を、画像ごとモードでは当該インデックスの値（未設定は無変換・全体）を返す。
- */
-export const resolveCropForIndex = (
-  index: number,
-  state: CropState,
-): { area: CropArea | null; transform: CropTransform } => {
-  if (state.applyToAll) {
-    return { area: state.sharedArea, transform: state.sharedTransform };
-  }
-  return {
-    area: state.perImageArea[index] ?? null,
-    transform: state.perImageTransform[index] ?? IDENTITY_TRANSFORM,
-  };
-};

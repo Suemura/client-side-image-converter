@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { magicNumber, pngFile } from "./helpers/fixtures";
+import { isServiceWorkerAvailable, waitForServiceWorker } from "./helpers/sw";
 
 // PWA（Web App Manifest + Service Worker）の実ブラウザ検証。
 // 本番同等の静的エクスポート（serve out）に対して実行される。
@@ -19,25 +20,6 @@ const ROUTES = [
   "/redact/",
   "/metadata/",
 ] as const;
-
-// Service Worker が active になりページを制御下に置く（clients.claim）まで待つ。
-// controller が設定される時点で install（プリキャッシュ）は完了している。
-async function waitForServiceWorker(page: import("@playwright/test").Page) {
-  await page.waitForFunction(
-    () => navigator.serviceWorker?.controller != null,
-    undefined,
-    { timeout: 15_000 },
-  );
-}
-
-// sw.js が配信されているか（＝本番ビルドに対して実行されているか）を確認する。
-// dev サーバー再利用時は生成されないため false になる。
-async function isServiceWorkerAvailable(
-  page: import("@playwright/test").Page,
-): Promise<boolean> {
-  const res = await page.request.get("/sw.js");
-  return res.ok();
-}
 
 test.describe("PWA", () => {
   test("manifest と theme-color が出力されている", async ({ page }) => {
@@ -65,6 +47,17 @@ test.describe("PWA", () => {
         (icon: { purpose?: string }) => icon.purpose === "maskable",
       ),
     ).toBeTruthy();
+
+    // share_target（共有シートからの画像受け取り、Issue #105）
+    expect(manifest.share_target.action).toBe("/share-target");
+    expect(manifest.share_target.method).toBe("POST");
+    expect(manifest.share_target.enctype).toBe("multipart/form-data");
+    const shareFiles = manifest.share_target.params.files;
+    expect(shareFiles).toHaveLength(1);
+    expect(shareFiles[0].name).toBe("images");
+    expect(shareFiles[0].accept).toContain("image/jpeg");
+    // convert のみが受理する HEIC も共有シートでは受け取れる（受理 MIME は全ツールの和集合）
+    expect(shareFiles[0].accept).toContain("image/heic");
 
     // theme-color（ライト / ダーク）が出力されている
     await expect(page.locator('head > meta[name="theme-color"]')).toHaveCount(

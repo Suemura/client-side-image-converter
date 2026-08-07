@@ -6,11 +6,9 @@ import {
   blacksToneWeight,
   clampAdjustments,
   DEFAULT_ADJUSTMENTS,
-  type EditState,
   isDefaultAdjustments,
   LUMA_WEIGHTS,
   normalizeAdjustments,
-  resolveAdjustmentForIndex,
   TEMPERATURE_SHIFT,
   TINT_SHIFT,
   whitesToneWeight,
@@ -242,30 +240,5 @@ describe("パイプライン係数の輸出（自動補正の逆算用）", () =
     expect(r).toBeCloseTo(0.5 + 0.5 * TEMPERATURE_SHIFT, 5);
     expect(b).toBeCloseTo(0.5 - 0.5 * TEMPERATURE_SHIFT, 5);
     expect(g).toBeCloseTo(0.5 + 0.5 * TINT_SHIFT, 5);
-  });
-});
-
-describe("resolveAdjustmentForIndex", () => {
-  const shared: AdjustmentState = { ...DEFAULT_ADJUSTMENTS, exposure: 30 };
-  const perImage: AdjustmentState = { ...DEFAULT_ADJUSTMENTS, contrast: 50 };
-
-  it("一括モードは全インデックスで共有調整を返す", () => {
-    const state: EditState = {
-      applyToAll: true,
-      sharedAdjustments: shared,
-      perImageAdjustments: { 0: perImage },
-    };
-    expect(resolveAdjustmentForIndex(0, state)).toBe(shared);
-    expect(resolveAdjustmentForIndex(5, state)).toBe(shared);
-  });
-
-  it("画像ごとモードは当該インデックスの値、未設定は DEFAULT を返す", () => {
-    const state: EditState = {
-      applyToAll: false,
-      sharedAdjustments: shared,
-      perImageAdjustments: { 1: perImage },
-    };
-    expect(resolveAdjustmentForIndex(1, state)).toBe(perImage);
-    expect(resolveAdjustmentForIndex(0, state)).toBe(DEFAULT_ADJUSTMENTS);
   });
 });

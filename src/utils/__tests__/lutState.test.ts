@@ -6,9 +6,6 @@ import {
   findLutPreset,
   isDefaultLutSelection,
   LUT_PRESETS,
-  type LutSelection,
-  type LutSelectionState,
-  resolveLutForIndex,
 } from "../lutState";
 
 describe("DEFAULT_LUT_SELECTION", () => {
@@ -41,42 +38,5 @@ describe("LUT_PRESETS", () => {
   it("findLutPreset で ID から引ける", () => {
     expect(findLutPreset(LUT_PRESETS[0].id)).toEqual(LUT_PRESETS[0]);
     expect(findLutPreset("no-such-id")).toBeUndefined();
-  });
-});
-
-describe("resolveLutForIndex", () => {
-  const shared: LutSelection = { lutId: "cinematic", strength: 80 };
-  const perImage: Record<number, LutSelection> = {
-    0: { lutId: "warm", strength: 40 },
-    2: { lutId: CUSTOM_LUT_ID, strength: 100 },
-  };
-
-  it("一括モードでは全インデックスで共有選択を返す", () => {
-    const state: LutSelectionState = {
-      applyToAll: true,
-      sharedLut: shared,
-      perImageLut: perImage,
-    };
-    expect(resolveLutForIndex(0, state)).toEqual(shared);
-    expect(resolveLutForIndex(5, state)).toEqual(shared);
-  });
-
-  it("画像ごとモードでは当該インデックスの選択を返す", () => {
-    const state: LutSelectionState = {
-      applyToAll: false,
-      sharedLut: shared,
-      perImageLut: perImage,
-    };
-    expect(resolveLutForIndex(0, state)).toEqual(perImage[0]);
-    expect(resolveLutForIndex(2, state)).toEqual(perImage[2]);
-  });
-
-  it("画像ごとモードで未設定インデックスは既定（未選択）を返す", () => {
-    const state: LutSelectionState = {
-      applyToAll: false,
-      sharedLut: shared,
-      perImageLut: perImage,
-    };
-    expect(resolveLutForIndex(1, state)).toEqual(DEFAULT_LUT_SELECTION);
   });
 });

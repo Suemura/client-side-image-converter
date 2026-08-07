@@ -12,6 +12,12 @@ import {
   computeCacheVersion,
   getCacheName,
 } from "../src/utils/precache.ts";
+import {
+  SHARE_CACHE_NAME,
+  SHARE_PAYLOAD_URL,
+  SHARE_RECEIVE_PATH,
+  SHARE_TARGET_ACTION,
+} from "../src/utils/shareTarget.ts";
 import { listFiles } from "./listFiles.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,7 +38,11 @@ async function main(): Promise<void> {
   // 壊れないよう関数形式を使う。
   const sw = template
     .replaceAll("__CACHE_NAME__", () => cacheName)
-    .replaceAll("__PRECACHE_URLS__", () => JSON.stringify(urls));
+    .replaceAll("__PRECACHE_URLS__", () => JSON.stringify(urls))
+    .replaceAll("__SHARE_TARGET_ACTION__", () => SHARE_TARGET_ACTION)
+    .replaceAll("__SHARE_CACHE_NAME__", () => SHARE_CACHE_NAME)
+    .replaceAll("__SHARE_PAYLOAD_URL__", () => SHARE_PAYLOAD_URL)
+    .replaceAll("__SHARE_RECEIVE_PATH__", () => SHARE_RECEIVE_PATH);
 
   await writeFile(swOutPath, sw, "utf8");
   console.log(

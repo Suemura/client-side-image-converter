@@ -165,6 +165,13 @@
   color: var(--error);
 }
 
+.folderSaveMessage {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  margin: -8px 0 16px;
+}
+
 .targetWarningText {
   font-size: 12px;
   font-weight: 500;

@@ -330,5 +330,14 @@
 
   .actionButtons {
     justify-content: center;
+    flex-direction: column;
+  }
+
+  /* 主要 CTA を全幅・高さ 48px にする（モバイルデザイン準拠） */
+  .actionButtons button {
+    width: 100%;
+    max-width: none;
+    height: 48px;
+    font-size: 16px;
   }
 }

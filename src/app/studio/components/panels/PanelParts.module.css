@@ -1,0 +1,124 @@
+/* 各ツールパネル共通の小物（チェックボックス行・ノート・適用ボタン等） */
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--foreground);
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.note {
+  padding: 10px 12px;
+  background: var(--surface-muted);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+
+.applyButton {
+  flex: 2;
+}
+
+.infoBox {
+  padding: 10px 12px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.infoBoxValue {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressBox {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progressRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.progressTrack {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent);
+}
+
+/* レタッチの AI 自動検出セクション */
+.detectSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.detectHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detectTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* ToolPanel のヘッダーバッジと同じ見た目（AI 機能の目印） */
+.aiBadge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
+}
+
+.detectError {
+  font-size: 12px;
+  color: var(--error);
+  margin: 0;
+}
+
+.sizeRow {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.sizeRow b {
+  color: var(--foreground);
+}

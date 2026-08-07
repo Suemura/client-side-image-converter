@@ -10,6 +10,7 @@ import {
   normalizeExifForBakedImage,
   readExifTiffFromDataUrl,
 } from "./exifTransfer";
+import { fileToDataUrl } from "./imageUtils";
 
 // 既存の import 経路（`from "../utils/imageCropper"`）を維持するため型を再エクスポートする
 export type { CropArea, CropTransform } from "./cropGeometry";
@@ -28,20 +29,6 @@ export interface CropJob {
   area: CropArea | null;
   transform: CropTransform;
 }
-
-/**
- * ファイルをDataURLに変換
- */
-const fileToDataUrl = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      resolve(e.target?.result as string);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
 
 /**
  * 画像ファイルをHTMLImageElementとして読み込む。

@@ -3,14 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ErrorNotice } from "../../components/ErrorNotice";
 import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
 import { useHandoffReceiver } from "../../hooks/useHandoffReceiver";
+import { useImageNavigation } from "../../hooks/useImageNavigation";
 import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import type { CropArea } from "../../utils/cropGeometry";
+import { isImageFile } from "../../utils/fileUtils";
 import type { CropResult } from "../../utils/imageCropper";
 import { renderOrientedImage } from "../../utils/imageCropper";
 import { redactImages } from "../../utils/imageRedactor";
@@ -34,7 +37,12 @@ const EMPTY_REGIONS: RedactRegion[] = [];
 export default function RedactPage() {
   const { t } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
-  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  const {
+    currentIndex: currentPreviewIndex,
+    setCurrentIndex: setCurrentPreviewIndex,
+    handlePrevious: handlePreviousImage,
+    handleNext: handleNextImage,
+  } = useImageNavigation(files.length);
   const [sourceCanvas, setSourceCanvas] = useState<HTMLCanvasElement | null>(
     null,
   );
@@ -43,6 +51,10 @@ export default function RedactPage() {
   const [progressTotal, setProgressTotal] = useState(0);
   const [redactResults, setRedactResults] = useState<CropResult[]>([]);
   const [preserveExif, setPreserveExif] = useState(false);
+  // バッチ全体が失敗した場合のエラー通知
+  const [batchError, setBatchError] = useState(false);
+  // プレビュー生成の失敗通知（次の生成成功でクリアする）
+  const [previewError, setPreviewError] = useState(false);
 
   // 隠し方の設定（ページ全体で 1 つ）と画像ごとのレタッチ領域
   const [redactStyle, setRedactStyle] =
@@ -70,6 +82,7 @@ export default function RedactPage() {
       .then((canvas) => {
         if (!cancelled) {
           setSourceCanvas(canvas);
+          setPreviewError(false);
         }
       })
       .catch((error) => {
@@ -78,6 +91,7 @@ export default function RedactPage() {
         // 誤認させるため、プレースホルダー表示へフォールバックする
         if (!cancelled) {
           setSourceCanvas(null);
+          setPreviewError(true);
         }
       });
     return () => {
@@ -92,15 +106,15 @@ export default function RedactPage() {
 
   const handleFilesSelected = useCallback(
     (selectedFiles: File[]) => {
-      const imageFiles = selectedFiles.filter((file) =>
-        file.type.startsWith("image/"),
-      );
+      const imageFiles = selectedFiles.filter(isImageFile);
       setFiles(imageFiles);
       setCurrentPreviewIndex(0);
       setRedactResults([]);
+      setBatchError(false);
+      setPreviewError(false);
       resetRedactSettings();
     },
-    [resetRedactSettings],
+    [resetRedactSettings, setCurrentPreviewIndex],
   );
 
   // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
@@ -114,10 +128,12 @@ export default function RedactPage() {
     setFiles([]);
     setCurrentPreviewIndex(0);
     setRedactResults([]);
+    setBatchError(false);
+    setPreviewError(false);
     setSourceCanvas(null);
     resetRedactSettings();
     clearHandoffNotice();
-  }, [resetRedactSettings, clearHandoffNotice]);
+  }, [resetRedactSettings, clearHandoffNotice, setCurrentPreviewIndex]);
 
   // 領域操作（リスト操作は redactCore の純粋関数に委譲する）
   const handleAddRegion = useCallback(
@@ -169,16 +185,6 @@ export default function RedactPage() {
     }));
   }, [currentPreviewIndex]);
 
-  const handlePreviousImage = useCallback(() => {
-    if (files.length === 0) return;
-    setCurrentPreviewIndex((i) => (i > 0 ? i - 1 : files.length - 1));
-  }, [files.length]);
-
-  const handleNextImage = useCallback(() => {
-    if (files.length === 0) return;
-    setCurrentPreviewIndex((i) => (i < files.length - 1 ? i + 1 : 0));
-  }, [files.length]);
-
   // 全画像の指定済み領域の合計（実行ボタンの活性判定）
   const totalRegionCount = useMemo(
     () =>
@@ -195,6 +201,7 @@ export default function RedactPage() {
     setIsProcessing(true);
     setProgressCurrent(0);
     setProgressTotal(files.length);
+    setBatchError(false);
 
     try {
       const results = await redactImages(
@@ -210,6 +217,7 @@ export default function RedactPage() {
       setRedactResults(results);
     } catch (error) {
       console.error("Redact error:", error);
+      setBatchError(true);
     } finally {
       setIsProcessing(false);
     }
@@ -263,6 +271,10 @@ export default function RedactPage() {
                   <p className={styles.centerDescription}>
                     {t("redact.dragToAddRegion")}
                   </p>
+
+                  <ErrorNotice
+                    message={previewError ? t("redact.previewError") : null}
+                  />
 
                   <RedactToolbar
                     redactStyle={redactStyle}
@@ -356,6 +368,10 @@ export default function RedactPage() {
                   />
                 </div>
               )}
+
+              <ErrorNotice
+                message={batchError ? t("redact.redactError") : null}
+              />
 
               {hasResults ? (
                 <ConversionResults

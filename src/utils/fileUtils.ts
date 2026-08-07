@@ -4,6 +4,7 @@
 
 import {
   HEIC_EXTENSIONS,
+  RAW_EXTENSIONS,
   SUPPORTED_IMAGE_FORMATS,
   TIFF_EXTENSIONS,
 } from "./constants";
@@ -193,6 +194,10 @@ const FORMAT_EXTENSION_FALLBACKS: ReadonlyArray<{
     mimeTypes: SUPPORTED_IMAGE_FORMATS.TIFF_FORMATS,
     extensions: TIFF_EXTENSIONS,
   },
+  {
+    mimeTypes: SUPPORTED_IMAGE_FORMATS.RAW_FORMATS,
+    extensions: RAW_EXTENSIONS,
+  },
 ];
 
 /**
@@ -248,6 +253,25 @@ export const isTiffFile = (file: File): boolean => {
 };
 
 /**
+ * ファイルがカメラ RAW 形式かどうかを確認する
+ * RAW は TIFF ベースの形式が多く、OS / ブラウザによって MIME が image/tiff や
+ * application/octet-stream・空文字と揺れて報告されるため、matchesFormat と異なり
+ * MIME が既知でも拡張子を優先して判定する（image/tiff 誤報告の NEF / DNG 等を
+ * TIFF デコーダーに流さないため。呼び出し側でも isTiffFile より前に判定すること）
+ * @param file - チェックするファイル
+ * @returns RAW の場合はtrue
+ */
+export const isRawFile = (file: File): boolean => {
+  const extension = getFileExtension(file.name).toLowerCase();
+  if ((RAW_EXTENSIONS as readonly string[]).includes(extension)) {
+    return true;
+  }
+  return (SUPPORTED_IMAGE_FORMATS.RAW_FORMATS as readonly string[]).includes(
+    file.type,
+  );
+};
+
+/**
  * ファイルタイプが指定された形式に含まれているかを確認する
  * HEIC/HEIF や TIFF が許可されている場合は拡張子によるフォールバック判定も行う
  * @param file - チェックするファイル
@@ -266,6 +290,30 @@ export const isAcceptedFileType = (
       mimeTypes.some((type) => acceptedTypes.includes(type)) &&
       matchesFormat(file, mimeTypes, extensions),
   );
+};
+
+/**
+ * ファイルの実効 MIME タイプを解決する。
+ * file.type が特定できない（空文字 / application/octet-stream）場合は、
+ * 拡張子（FORMAT_EXTENSION_FALLBACKS）から実際の形式を推定して返す。
+ * isAcceptedFileType の拡張子フォールバック判定と整合させることで、
+ * 「拡張子フォールバックで受理はしたが、生の file.type を使う後続処理（送り先候補の
+ * 算出など）とは食い違う」乖離を防ぐ。
+ * @param file - 対象ファイル
+ * @returns 実効 MIME タイプ（推定できない場合は file.type をそのまま返す）
+ */
+export const resolveEffectiveMimeType = (file: File): string => {
+  if (!isUnknownMimeType(file)) {
+    return file.type;
+  }
+  const extension = getFileExtension(file.name).toLowerCase();
+  for (const { mimeTypes, extensions } of FORMAT_EXTENSION_FALLBACKS) {
+    const index = extensions.indexOf(extension);
+    if (index !== -1) {
+      return mimeTypes[index] ?? mimeTypes[0];
+    }
+  }
+  return file.type;
 };
 
 /**
@@ -355,29 +403,40 @@ const MIME_DISPLAY_NAMES: Record<string, string> = {
 
 /**
  * 許可された MIME タイプの配列から対応フォーマットの表示ラベルを生成する
+ * RAW の MIME 群（10 種以上）は列挙するとラベルが冗長になるため、
+ * 最初に登場した位置で単一トークン "RAW" に集約する
  * @param acceptedTypes - 許可されたMIMEタイプの配列
- * @returns カンマ区切りの表示ラベル（例: "JPG, PNG, WebP"）
+ * @returns カンマ区切りの表示ラベル（例: "JPG, PNG, WebP, RAW"）
  */
 export const formatAcceptedTypesLabel = (
   acceptedTypes: readonly string[],
 ): string => {
-  return acceptedTypes
-    .map(
-      (type) =>
-        MIME_DISPLAY_NAMES[type] ?? type.replace("image/", "").toUpperCase(),
-    )
-    .join(", ");
+  const rawFormats = SUPPORTED_IMAGE_FORMATS.RAW_FORMATS as readonly string[];
+  const labels: string[] = [];
+  for (const type of acceptedTypes) {
+    if (rawFormats.includes(type)) {
+      if (!labels.includes("RAW")) {
+        labels.push("RAW");
+      }
+      continue;
+    }
+    labels.push(
+      MIME_DISPLAY_NAMES[type] ?? type.replace("image/", "").toUpperCase(),
+    );
+  }
+  return labels.join(", ");
 };
 
 /**
  * ファイルタイプバッジの表示ラベルを生成する
  * MIME タイプが特定できない場合（HEIC 等）は isHeicFile と同じ基準で
- * 拡張子によるフォールバック表示を行う
+ * 拡張子によるフォールバック表示を行う。RAW も MIME 由来のラベルが
+ * "X-ADOBE-DNG" のように冗長になるため拡張子で表示する（例: "NEF" / "DNG"）
  * @param file - 対象のファイル
  * @returns バッジに表示するラベル（例: "HEIC" / "PNG" / "FILE"）
  */
 export const getFileTypeBadgeLabel = (file: File): string => {
-  if (isUnknownMimeType(file)) {
+  if (isUnknownMimeType(file) || isRawFile(file)) {
     return getFileExtension(file.name).replace(".", "").toUpperCase() || "FILE";
   }
   return file.type.split("/")[1]?.toUpperCase() || "FILE";

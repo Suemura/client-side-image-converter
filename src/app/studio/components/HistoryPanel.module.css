@@ -1,0 +1,230 @@
+/* 履歴パネル（PC: サイドパネル / スマホ: ボトムシート）。上部バーの undo / redo と同一スタックを表示する */
+
+.panel {
+  position: relative;
+  width: 232px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* --- スマホ: ボトムシート --- */
+
+.sheetOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.sheetBackdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: var(--overlay);
+  cursor: pointer;
+}
+
+.sheet {
+  position: relative;
+  max-height: 70%;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: 18px 18px 0 0;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sheetHandle {
+  width: 36px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--border-strong);
+  margin: 8px auto 0;
+  flex-shrink: 0;
+}
+
+/* --- 共通 --- */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clearButton {
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.clearButton:hover:not(:disabled) {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+
+.clearButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.closeButton {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.closeButton:hover {
+  background: var(--surface-muted);
+  color: var(--foreground);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--foreground);
+  cursor: pointer;
+  text-align: left;
+}
+
+.row:hover {
+  background: var(--surface-muted);
+}
+
+.current,
+.current:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.rowIcon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+
+.current .rowIcon {
+  color: var(--accent);
+}
+
+.rowLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowTime {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.current .rowTime {
+  color: var(--accent);
+}
+
+.note {
+  margin: 0;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+/* --- クリアの確認ダイアログ --- */
+
+.confirmOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.confirmDialog {
+  width: 100%;
+  max-width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.confirmText {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--foreground);
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

@@ -2,6 +2,8 @@
  * 画像処理関連のユーティリティ関数群
  */
 
+import { isRawFile } from "./fileUtils";
+
 /**
  * ファイルから32x32サイズのサムネイルを生成する
  * @param file - サムネイルを生成するファイル
@@ -9,7 +11,9 @@
  */
 export const generateThumbnail = (file: File): Promise<string | null> => {
   return new Promise((resolve) => {
-    if (!file.type.startsWith("image/")) {
+    // RAW はブラウザの Image でデコードできず onerror で null になるだけなので、
+    // 数十 MB のファイルを readAsDataURL で無駄にメモリ展開する前に即 null を返す
+    if (!file.type.startsWith("image/") || isRawFile(file)) {
       resolve(null);
       return;
     }

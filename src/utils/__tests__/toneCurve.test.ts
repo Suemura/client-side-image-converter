@@ -15,9 +15,7 @@ import {
   MAX_CURVE_POINTS,
   moveCurvePoint,
   removeCurvePoint,
-  resolveToneCurveForIndex,
   sampleCurveTable,
-  type ToneCurveEditState,
   type ToneCurveState,
 } from "../toneCurve";
 
@@ -257,7 +255,7 @@ describe("applyToneCurveToPixel", () => {
   });
 });
 
-describe("isDefault / resolveToneCurveForIndex", () => {
+describe("isDefaultToneCurve / isDefaultCurvePoints", () => {
   it("既定状態の判定", () => {
     expect(isDefaultToneCurve(DEFAULT_TONE_CURVE)).toBe(true);
     expect(isDefaultCurvePoints(identityPoints())).toBe(true);
@@ -265,33 +263,5 @@ describe("isDefault / resolveToneCurveForIndex", () => {
     expect(
       isDefaultToneCurve({ rgb: liftedPoints(), luminance: identityPoints() }),
     ).toBe(false);
-  });
-
-  it("一括モードでは共有カーブを返す", () => {
-    const shared: ToneCurveState = {
-      rgb: liftedPoints(),
-      luminance: identityPoints(),
-    };
-    const state: ToneCurveEditState = {
-      applyToAll: true,
-      sharedToneCurve: shared,
-      perImageToneCurve: { 1: DEFAULT_TONE_CURVE },
-    };
-    expect(resolveToneCurveForIndex(0, state)).toBe(shared);
-    expect(resolveToneCurveForIndex(1, state)).toBe(shared);
-  });
-
-  it("画像ごとモードでは当該インデックスの値（未設定は恒等）を返す", () => {
-    const perImage: ToneCurveState = {
-      rgb: liftedPoints(),
-      luminance: identityPoints(),
-    };
-    const state: ToneCurveEditState = {
-      applyToAll: false,
-      sharedToneCurve: perImage,
-      perImageToneCurve: { 1: perImage },
-    };
-    expect(resolveToneCurveForIndex(1, state)).toBe(perImage);
-    expect(resolveToneCurveForIndex(0, state)).toBe(DEFAULT_TONE_CURVE);
   });
 });

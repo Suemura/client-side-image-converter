@@ -26,7 +26,7 @@ const notoSans = Noto_Sans({
 // トップページ（"/"）のメタデータ兼サイト全体の既定値。
 // 各ルートの layout.tsx が固有の title / description で上書きする。
 const HOME_DESCRIPTION =
-  "JPEG・PNG・WebP・AVIF などの画像フォーマット変換、トリミング、EXIF メタデータ削除をすべてブラウザ内で実行。画像をサーバーに送信しないプライバシー重視の無料ツールです。";
+  "JPEG・PNG・WebP・AVIF・JPEG XL などの画像フォーマット変換、トリミング、EXIF メタデータ削除をすべてブラウザ内で実行。画像をサーバーに送信しないプライバシー重視の無料ツールです。";
 // トップページのタイトル。title.default / openGraph.title / twitter.title で共通利用し、
 // og:title には title.template（"%s | サイト名"）が効かないため直値をそろえて drift を防ぐ。
 const HOME_TITLE = `${SITE_NAME} | ブラウザ内で完結する画像変換・トリミングツール`;

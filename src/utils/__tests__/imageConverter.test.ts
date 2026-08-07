@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   calculateTargetSize,
+  canPreserveExifForFormat,
   convertMultipleImages,
   FLATTEN_BACKGROUND_COLOR,
   resolveFlattenBackground,
@@ -95,11 +96,26 @@ describe("resolveFlattenBackground", () => {
     expect(resolveFlattenBackground("png")).toBeNull();
   });
 
-  it("WebP / AVIF では null を返す（アルファ保持）", () => {
+  it("WebP / AVIF / JXL では null を返す（アルファ保持）", () => {
     expect(resolveFlattenBackground("webp", 10)).toBeNull();
     expect(resolveFlattenBackground("webp", 90)).toBeNull();
     expect(resolveFlattenBackground("avif", 10)).toBeNull();
     expect(resolveFlattenBackground("avif", 90)).toBeNull();
+    expect(resolveFlattenBackground("jxl", 10)).toBeNull();
+    expect(resolveFlattenBackground("jxl", 90)).toBeNull();
+  });
+});
+
+describe("canPreserveExifForFormat", () => {
+  it("EXIF 書き込み対応形式（JPEG / PNG / WebP）は true を返す", () => {
+    expect(canPreserveExifForFormat("jpeg")).toBe(true);
+    expect(canPreserveExifForFormat("png")).toBe(true);
+    expect(canPreserveExifForFormat("webp")).toBe(true);
+  });
+
+  it("WASM エンコーダー形式（AVIF / JXL）は false を返す", () => {
+    expect(canPreserveExifForFormat("avif")).toBe(false);
+    expect(canPreserveExifForFormat("jxl")).toBe(false);
   });
 });
 

@@ -11,7 +11,21 @@ import { createFileNameUniquifier } from "./fileName";
 import type { CropResult } from "./imageCropper";
 
 /** ツール識別子（ハンドオフの送り元・送り先） */
-export type ToolId = "convert" | "crop" | "edit" | "redact" | "metadata";
+export type ToolId =
+  | "convert"
+  | "upscale"
+  | "remove-bg"
+  | "crop"
+  | "edit"
+  | "redact"
+  | "metadata";
+
+/**
+ * ハンドオフの送り元。ツールに加え、共有シート受け口ページ（/share、Issue #105）
+ * からの送出は "share" で表す（どの ToolId とも一致しないため、送り先候補の
+ * 自己除外ロジックにそのまま乗る）
+ */
+export type HandoffOrigin = ToolId | "share";
 
 /** ツールのメタ定義。ハンドオフと Navigation で共有する単一の真実 */
 export interface HandoffTool {
@@ -32,6 +46,16 @@ export interface HandoffTool {
 }
 
 /**
+ * 統合ワークスペース（/studio）のナビゲーション項目。
+ * ハンドオフ対象外（ワークスペース内で連携が完結する）ため HANDOFF_TOOLS には含めず、
+ * Navigation だけが参照する。
+ */
+export const STUDIO_NAV_ITEM = {
+  path: "/studio",
+  labelKey: "navigation.studio",
+} as const;
+
+/**
  * 全ツールのメタ定義（Navigation の表示順に並べる）。
  * acceptedTypes は各ページが FileUploadArea に渡している受理形式と同じ定数を参照し、
  * 送り先候補の判定と実際の取り込みフィルタが乖離しないようにする。
@@ -49,6 +73,22 @@ export const HANDOFF_TOOLS: readonly HandoffTool[] = [
     path: "/convert",
     labelKey: "navigation.convert",
     acceptedTypes: SUPPORTED_IMAGE_FORMATS.CONVERT_UPLOAD_FORMATS,
+    canReceiveHandoff: true,
+  },
+  {
+    // 「拡大 → 編集 / 圧縮」のフロー順で convert の直後・edit の前に置く（Issue #100）
+    id: "upscale",
+    path: "/upscale",
+    labelKey: "navigation.upscale",
+    acceptedTypes: SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
+    canReceiveHandoff: true,
+  },
+  {
+    // 「拡大 → 背景除去 → 編集」のフロー順で upscale の直後・edit の前に置く（Issue #99）
+    id: "remove-bg",
+    path: "/remove-bg",
+    labelKey: "navigation.remove-bg",
+    acceptedTypes: SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS,
     canReceiveHandoff: true,
   },
   {
@@ -85,11 +125,11 @@ export const findHandoffTool = (id: ToolId): HandoffTool | undefined =>
  * - 受け取り未配線（canReceiveHandoff: false）のツールは除外する
  * - 結果の全 MIME タイプを受理できるツールだけを返す（一部しか受理できない
  *   ツールへ送って黙って欠落させない。混在バッチは全形式対応の送り先のみ）
- * @param origin - 送り元ツールの id
+ * @param origin - 送り元（ツールの id または共有シート受け口の "share"）
  * @param resultMimeTypes - 結果ファイルの MIME タイプ一覧（重複可・空なら候補なし）
  */
 export const resolveHandoffTargets = (
-  origin: ToolId,
+  origin: HandoffOrigin,
   resultMimeTypes: readonly string[],
 ): HandoffTool[] => {
   if (resultMimeTypes.length === 0) {
@@ -101,6 +141,24 @@ export const resolveHandoffTargets = (
       tool.canReceiveHandoff &&
       resultMimeTypes.every((mime) => tool.acceptedTypes.includes(mime)),
   );
+};
+
+/**
+ * 共有シート（manifest の share_target）で受理する MIME タイプの一覧を算出する。
+ * 受け取り可能ツールの acceptedTypes の和集合（重複なし）にすることで、
+ * 「受け取ったがどのツールにも渡せない」形式を共有シートに出さない。
+ */
+export const resolveShareAcceptTypes = (): string[] => {
+  const types = new Set<string>();
+  for (const tool of HANDOFF_TOOLS) {
+    if (!tool.canReceiveHandoff) {
+      continue;
+    }
+    for (const mime of tool.acceptedTypes) {
+      types.add(mime);
+    }
+  }
+  return [...types];
 };
 
 /**
@@ -141,8 +199,8 @@ export const cropResultsToFiles = (results: readonly CropResult[]): File[] =>
 /** ページ間で引き継ぐペイロード。File 実体のみを保持する（ObjectURL は持たない） */
 export interface HandoffPayload {
   files: File[];
-  /** 送り元ツール（到着バナーの文言に使う） */
-  origin: ToolId;
+  /** 送り元ツールまたは共有シート受け口（到着バナーの文言に使う） */
+  origin: HandoffOrigin;
   /**
    * 送出時刻。Issue #70 が定めるペイロード形状 { files, origin, sentAt } の一部。
    * 現状のストアロジックはパス名（sentFromPathname / arrivedPathname）だけで

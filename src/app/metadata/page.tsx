@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ErrorNotice } from "../../components/ErrorNotice";
 import { FileDetailModal } from "../../components/FileDetailModal";
 import { HandoffNotice } from "../../components/HandoffNotice";
 import { HandoffSend } from "../../components/HandoffSend";
@@ -20,6 +21,7 @@ import {
   downloadFile,
   downloadMultipleFiles,
 } from "../../utils/fileDownloader";
+import { isImageFile } from "../../utils/fileUtils";
 import { assessPrivacyRisk } from "../../utils/metadataManager";
 import { ImageUploadSection } from "../convert/components/ImageUploadSection";
 import { ProvenanceSection } from "./components/ProvenanceSection";
@@ -33,9 +35,13 @@ export default function MetadataPage() {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imageUrls, setImageUrls] = useState<Map<string, string>>(new Map());
+  // ダウンロード失敗の通知（次の実行開始でクリアする）
+  const [downloadError, setDownloadError] = useState(false);
 
   const {
     analysis,
+    analysisError,
+    removeError,
     isAnalyzing,
     isProcessing,
     selectedTags,
@@ -73,7 +79,7 @@ export default function MetadataPage() {
   const handleFilesSelected = useCallback(
     async (files: File[]) => {
       // 画像ファイルのみをフィルタリング
-      const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+      const imageFiles = files.filter(isImageFile);
       setSelectedFiles(imageFiles);
 
       // 既存のURLをクリーンアップ
@@ -144,6 +150,7 @@ export default function MetadataPage() {
   const handleRemoveAndDownload = useCallback(async () => {
     if (!analysis || !hasRemovalTarget) return;
 
+    setDownloadError(false);
     const cleanedFiles = await removeSelectedMetadata();
     if (cleanedFiles.length > 0) {
       try {
@@ -155,12 +162,11 @@ export default function MetadataPage() {
         }
       } catch (error) {
         // jszip チャンクのロード失敗等でダウンロードできない場合はユーザーへ通知する
-        // （既存の Results.tsx と同じ通知方法。通知 UI の統一は Issue #118 で対応予定）
         console.error("Download error:", error);
-        alert(t("results.downloadError"));
+        setDownloadError(true);
       }
     }
-  }, [analysis, hasRemovalTarget, removeSelectedMetadata, t]);
+  }, [analysis, hasRemovalTarget, removeSelectedMetadata]);
 
   // クリーンアップ
   useEffect(() => {
@@ -285,6 +291,11 @@ export default function MetadataPage() {
                   {t("metadata.metadataAnalysis")}
                 </h2>
 
+                {/* 解析全体の失敗（exif-js のロード失敗等）。無反応な失敗を防ぐ */}
+                <ErrorNotice
+                  message={analysisError ? t("metadata.analysisError") : null}
+                />
+
                 {isAnalyzing ? (
                   <div className={styles.loadingState}>
                     <div className={styles.loadingSpinner} />
@@ -292,6 +303,15 @@ export default function MetadataPage() {
                   </div>
                 ) : analysis ? (
                   <>
+                    {/* 解析に失敗したファイルの一覧（空メタデータ = 安全との誤認を防ぐ） */}
+                    <ErrorNotice
+                      message={
+                        analysis.analysisFailures.length > 0
+                          ? t("metadata.analysisFailures")
+                          : null
+                      }
+                      fileNames={analysis.analysisFailures}
+                    />
                     {/* プライバシーリスクタグ */}
                     {analysis.privacyRiskTags.size > 0 && (
                       <div style={{ marginBottom: "24px" }}>
@@ -413,6 +433,16 @@ export default function MetadataPage() {
                         </p>
                       </div>
                     )}
+
+                    {/* 削除処理・ダウンロードの失敗通知 */}
+                    <ErrorNotice
+                      message={removeError ? t("metadata.removeError") : null}
+                    />
+                    <ErrorNotice
+                      message={
+                        downloadError ? t("results.downloadError") : null
+                      }
+                    />
 
                     {/* アクションボタン */}
                     <div className={styles.actionButtons}>

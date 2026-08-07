@@ -6,8 +6,7 @@
  * 分離した軽量な参照（`lutId` + `strength`）だけを状態として持つ。実データは `lutId → LutData` の
  * レジストリ（edit ページの ref）側に保持し、本モジュールは選択の解決のみを担う。
  *
- * dual-store の解決は `adjustments.ts` の `resolveAdjustmentForIndex`（crop の
- * `cropGeometry.resolveCropForIndex` 由来）を鏡写しにする。単体テスト対象。
+ * dual-store の解決は `applyScope.resolveScopedValueForIndex` で行う。単体テスト対象。
  */
 
 /** 選択中の LUT と適用強度 */
@@ -73,28 +72,3 @@ export const findLutPreset = (id: string): LutPreset | undefined =>
 /** LUT が未選択かどうか */
 export const isDefaultLutSelection = (selection: LutSelection): boolean =>
   selection.lutId === null;
-
-/** edit ページが保持する LUT 選択状態（全画像一括 / 画像ごと） */
-export interface LutSelectionState {
-  /** true: 全画像へ共有選択を適用 / false: 画像ごとに保持 */
-  applyToAll: boolean;
-  /** 一括モードの共有選択 */
-  sharedLut: LutSelection;
-  /** 画像ごとの選択（未設定インデックスは未選択） */
-  perImageLut: Record<number, LutSelection>;
-}
-
-/**
- * 出力時、指定インデックスの画像へ適用する LUT 選択を解決する。
- * 一括モードでは共有選択を、画像ごとモードでは当該インデックスの選択（未設定は未選択）を返す。
- * （`resolveAdjustmentForIndex` を踏襲）
- */
-export const resolveLutForIndex = (
-  index: number,
-  state: LutSelectionState,
-): LutSelection => {
-  if (state.applyToAll) {
-    return state.sharedLut;
-  }
-  return state.perImageLut[index] ?? DEFAULT_LUT_SELECTION;
-};

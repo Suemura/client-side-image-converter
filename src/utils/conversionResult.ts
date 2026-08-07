@@ -81,6 +81,7 @@ export const buildEditResult = (
   originalFile: File,
   blob: Blob,
   format: ConversionFormat,
+  dimensions?: { width: number; height: number },
 ): ConversionResult => {
   const url = URL.createObjectURL(blob);
   const originalFilename = originalFile.name;
@@ -98,5 +99,8 @@ export const buildEditResult = (
     filename,
     originalFilename,
     file: resultFile,
+    // 出力寸法（/studio のリネーム規則 {width} / {height} 用）
+    width: dimensions?.width,
+    height: dimensions?.height,
   };
 };

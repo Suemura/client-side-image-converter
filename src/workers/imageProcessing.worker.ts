@@ -12,21 +12,24 @@
 import { encodeCanvasToAvifBlob } from "../utils/avifEncoder";
 import {
   calculateTargetSize,
+  canPreserveExifForFormat,
   resolveFlattenBackground,
   searchQualityForTargetSize,
 } from "../utils/conversionCore";
 import {
-  type ExifWritableFormat,
   insertExifIntoBlob,
   readExifTiffFromDataUrl,
 } from "../utils/exifTransfer";
 import { decodeHeicToImageData } from "../utils/heicDecoder";
 import { optimizeImageBuffer } from "../utils/imageOptimizer";
 import { uint8ArrayToBase64 } from "../utils/imageUtils";
+import { encodeCanvasToJxlBlob } from "../utils/jxlEncoder";
 import {
   PNG_COMPRESSED_QUALITY_HINT,
   pngQualityStrategy,
 } from "../utils/pngQuality";
+import { decodeRawToImageData } from "../utils/rawDecoder";
+import type { RawDevelopParams } from "../utils/rawDevelopment";
 import { decodeTiffToImageData } from "../utils/tiffDecoder";
 import type { DecodeKind, WorkerRequest, WorkerResponse } from "./messages";
 
@@ -35,6 +38,7 @@ const decodeToBitmap = async (
   buffer: ArrayBuffer,
   fileType: string,
   decodeKind: DecodeKind,
+  rawDevelopParams?: RawDevelopParams,
 ): Promise<ImageBitmap> => {
   if (decodeKind === "heic") {
     const { data, width, height } = await decodeHeicToImageData(
@@ -44,6 +48,15 @@ const decodeToBitmap = async (
   }
   if (decodeKind === "tiff") {
     const { data, width, height } = await decodeTiffToImageData(buffer);
+    return createImageBitmap(new ImageData(data, width, height));
+  }
+  if (decodeKind === "raw") {
+    // libraw-wasm は内部で自前の Worker を生成する（ネスト Worker）。
+    // 非対応環境では例外になり、当該ファイルはメインスレッドへフォールバックする
+    const { data, width, height } = await decodeRawToImageData(
+      buffer,
+      rawDevelopParams,
+    );
     return createImageBitmap(new ImageData(data, width, height));
   }
   // 標準フォーマット（JPEG/PNG/WebP/BMP など）は Blob から直接デコードする。
@@ -111,19 +124,25 @@ const processRequest = async (
     return { blob: new Blob([outBuffer], { type: mime }) };
   }
 
-  // EXIF 保持は AVIF 以外の出力かつ標準フォーマットのソースでのみ有効（HEIC/TIFF は保持対象外）。
+  // EXIF 保持は書き込み対応形式（JPEG / PNG / WebP）への出力かつ標準フォーマットのソースで
+  // のみ有効（AVIF / JXL・HEIC/TIFF ソースは保持対象外）。
   // メインスレッドの convertImage と同じ条件・読み取り経路を再現する。
   let exifTiff: Uint8Array | null = null;
   if (
     options.preserveExif === true &&
-    options.format !== "avif" &&
+    canPreserveExifForFormat(options.format) &&
     decodeKind === "standard"
   ) {
     const dataUrl = `data:${fileType};base64,${uint8ArrayToBase64(new Uint8Array(buffer))}`;
     exifTiff = await readExifTiffFromDataUrl(dataUrl, fileType);
   }
 
-  const bitmap = await decodeToBitmap(buffer, fileType, decodeKind);
+  const bitmap = await decodeToBitmap(
+    buffer,
+    fileType,
+    decodeKind,
+    options.rawDevelopParams,
+  );
   const { width, height } = calculateTargetSize(
     bitmap.width,
     bitmap.height,
@@ -152,6 +171,8 @@ const processRequest = async (
     blob = await encodePng(canvas, options.quality);
   } else if (options.format === "avif") {
     blob = await encodeCanvasToAvifBlob(canvas, options.quality);
+  } else if (options.format === "jxl") {
+    blob = await encodeCanvasToJxlBlob(canvas, options.quality);
   } else {
     // JPEG / WebP
     const mimeType = `image/${options.format}`;
@@ -174,12 +195,12 @@ const processRequest = async (
   }
 
   // EXIF を出力形式（JPEG / PNG / WebP）に応じて挿入する
-  if (exifTiff && options.format !== "avif") {
+  if (exifTiff && canPreserveExifForFormat(options.format)) {
     try {
       blob = await insertExifIntoBlob(
         blob,
         exifTiff,
-        options.format as ExifWritableFormat,
+        options.format,
         width,
         height,
       );

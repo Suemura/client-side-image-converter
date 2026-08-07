@@ -45,13 +45,17 @@ export const truncateFileName = (fileName: string, maxLength = 12): string => {
  * - 連番を付けた結果が既出の実ファイル名と衝突する場合（例: photo.png / photo_2.png を
  *   両方 JPEG 変換すると photo.jpeg の連番候補 photo_2.jpeg が実在名と重なる）は、
  *   一意になるまで連番をインクリメントする
+ * @param initialUsedNames - あらかじめ使用済みとして扱うファイル名（出力先フォルダの
+ *   既存ファイル名等）。これらと衝突する入力は初出でも連番へ回る
  * @returns ファイル名を受け取り一意化済みのファイル名を返す関数（呼び出しごとに採番状態を共有）
  */
-export const createFileNameUniquifier = (): ((name: string) => string) => {
+export const createFileNameUniquifier = (
+  initialUsedNames?: Iterable<string>,
+): ((name: string) => string) => {
   // 元のファイル名 → 次に試す連番（同名 n 件目の探索を毎回 2 から始めない）
   const nameCounts = new Map<string, number>();
   // 採番済みの実ファイル名（連番候補との衝突チェック用）
-  const usedNames = new Set<string>();
+  const usedNames = new Set<string>(initialUsedNames);
 
   return (name: string): string => {
     if (!usedNames.has(name)) {
@@ -96,6 +100,24 @@ export const appendFileNameSuffix = (
   const base = fileName.substring(0, lastDotIndex);
   const extension = fileName.substring(lastDotIndex);
   return `${base}${suffix}${extension}`;
+};
+
+/**
+ * ファイル名の拡張子を指定の拡張子へ置き換える。
+ * 拡張子がない場合（ドットで始まる隠しファイル等を含む）は末尾へ付与する
+ * （例: "photo.jpg" + "png" → "photo.png"）。
+ * @param fileName - 元のファイル名
+ * @param extension - 新しい拡張子（ドットなし。例: "png"）
+ */
+export const replaceFileExtension = (
+  fileName: string,
+  extension: string,
+): string => {
+  const lastDotIndex = fileName.lastIndexOf(".");
+  if (lastDotIndex <= 0) {
+    return `${fileName}.${extension}`;
+  }
+  return `${fileName.substring(0, lastDotIndex)}.${extension}`;
 };
 
 /**

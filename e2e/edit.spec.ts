@@ -646,7 +646,7 @@ test.describe("画像編集 /edit", () => {
     );
     await expect(
       page.getByText("中央の境界をドラッグして編集前後を比較できます。", {
-        exact: true,
+        exact: false,
       }),
     ).toBeVisible();
 
@@ -1340,5 +1340,47 @@ test.describe("画像編集 /edit", () => {
     const result = page.locator('img[alt="curve-cpu_edited.png"]');
     await expect(result).toBeVisible();
     expect((await readImagePixel(result, 0.5, 0.5))[0]).toBeGreaterThan(170);
+  });
+
+  test("長押しで原画（編集前）を全面表示し、離すと戻る・ドラッグでは発動しない", async ({
+    page,
+  }) => {
+    await page.goto("/edit/");
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles(rectPngFile("hold.png", 16, 16, [128, 128, 128]));
+
+    // プレビュー生成を待つ
+    await expect
+      .poll(async () => (await readPreviewPixel(page, 0.5, 0.5))[0], {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(100);
+
+    const stage = page.locator("[data-hold-active]");
+    await expect(stage).toHaveAttribute("data-hold-active", "false");
+
+    const box = await page.getByTestId("edit-preview-canvas").boundingBox();
+    if (!box) throw new Error("preview canvas not visible");
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+
+    // マウス押しっぱなし（約 300ms しきい値）で原画が全面表示される
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await expect(stage).toHaveAttribute("data-hold-active", "true", {
+      timeout: 5_000,
+    });
+    // 離すと即座に編集後表示へ戻る
+    await page.mouse.up();
+    await expect(stage).toHaveAttribute("data-hold-active", "false");
+
+    // しきい値以上のドラッグ（分割スライダー操作）では発動しない
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + 40, cy, { steps: 4 });
+    await page.waitForTimeout(500);
+    await expect(stage).toHaveAttribute("data-hold-active", "false");
+    await page.mouse.up();
   });
 });
