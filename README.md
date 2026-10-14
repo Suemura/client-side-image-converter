@@ -117,12 +117,11 @@ This project is published under the [MIT License](LICENSE).
 
 This project uses open-source libraries with the following licenses:
 
-- **MIT License**: Major libraries including Next.js and React
-- **Apache-2.0 License**: Some libraries including TypeScript
+- **MIT License**: Major libraries including Next.js, React, i18next / react-i18next, ONNX Runtime Web, piexifjs, exif-js, and UTIF (utif2), plus JSZip (dual-licensed `MIT OR GPL-3.0-or-later`; used under MIT)
+- **Apache-2.0 License**: jSquash codecs (@jsquash/avif, @jsquash/jpeg, @jsquash/jxl, @jsquash/oxipng, @jsquash/webp) and TypeScript
 - **ISC License**: heic-decode (HEIC/HEIF decoding), libraw-wasm (WASM wrapper of LibRaw used for camera RAW decoding)
 - **LGPL-3.0 License**: libheif-js (WASM build of libheif used for HEIC/HEIF decoding; used as an unmodified npm package and isolated in a separate dynamically imported chunk)
 - **LGPL-2.1 / CDDL-1.0 (dual license)**: LibRaw (the RAW processing engine bundled in libraw-wasm; used as an unmodified npm package and isolated in a separate dynamically imported chunk)
-- **MPL-2.0 License**: Axe Core (accessibility validation)
 
 All dependencies are commercially usable. Please refer to each library's license file for details.
 
