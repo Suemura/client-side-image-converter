@@ -115,12 +115,11 @@ npx biome format src/ --write
 
 このプロジェクトは以下のライセンスを持つオープンソースライブラリを使用しています：
 
-- **MIT License**: Next.js, React 等の主要ライブラリ
-- **Apache-2.0 License**: TypeScript 等の一部ライブラリ
+- **MIT License**: Next.js, React, i18next / react-i18next, ONNX Runtime Web, piexifjs, exif-js, UTIF（utif2）等の主要ライブラリ、および JSZip（`MIT OR GPL-3.0-or-later` のデュアルライセンス。MIT として利用）
+- **Apache-2.0 License**: jSquash のコーデック（@jsquash/avif, @jsquash/jpeg, @jsquash/jxl, @jsquash/oxipng, @jsquash/webp）、TypeScript
 - **ISC License**: heic-decode（HEIC/HEIF デコード）、libraw-wasm（カメラ RAW のデコードに使用する LibRaw の WASM ラッパー）
 - **LGPL-3.0 License**: libheif-js（HEIC/HEIF デコードに使用する libheif の WASM ビルド。未改変の npm パッケージのままライブラリとして利用し、動的 import による独立チャンクに分離）
 - **LGPL-2.1 / CDDL-1.0（デュアルライセンス）**: LibRaw（libraw-wasm に同梱される RAW 現像エンジン。未改変の npm パッケージのままライブラリとして利用し、動的 import による独立チャンクに分離）
-- **MPL-2.0 License**: Axe Core（アクセシビリティ検証）
 
 すべての依存関係は商用利用可能なライセンスです。詳細は各ライブラリのライセンスファイルをご確認ください。
 
