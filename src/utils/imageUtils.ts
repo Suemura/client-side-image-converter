@@ -2,6 +2,8 @@
  * 画像処理関連のユーティリティ関数群
  */
 
+import { isRawFile } from "./fileUtils";
+
 /**
  * ファイルから32x32サイズのサムネイルを生成する
  * @param file - サムネイルを生成するファイル
@@ -9,7 +11,9 @@
  */
 export const generateThumbnail = (file: File): Promise<string | null> => {
   return new Promise((resolve) => {
-    if (!file.type.startsWith("image/")) {
+    // RAW はブラウザの Image でデコードできず onerror で null になるだけなので、
+    // 数十 MB のファイルを readAsDataURL で無駄にメモリ展開する前に即 null を返す
+    if (!file.type.startsWith("image/") || isRawFile(file)) {
       resolve(null);
       return;
     }
@@ -131,6 +135,24 @@ export const base64ToUint8Array = (base64: string): Uint8Array<ArrayBuffer> => {
   }
 
   return uint8Array;
+};
+
+/**
+ * Uint8ArrayをBase64文字列に変換する
+ *
+ * 大きなバッファでも `String.fromCharCode(...arr)` のスタック超過を避けるため
+ * チャンク単位で変換する。Worker から EXIF 読み取り用の DataURL を組み立てる際に使用する。
+ * @param bytes - 変換するバイト列
+ * @returns Base64文字列
+ */
+export const uint8ArrayToBase64 = (bytes: Uint8Array): string => {
+  const CHUNK_SIZE = 0x8000; // 32KB ずつ処理してコールスタック超過を防ぐ
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
 };
 
 /**

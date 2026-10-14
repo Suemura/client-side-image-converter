@@ -1,8 +1,8 @@
 import { formatFileSize } from "@utils/fileName";
-import EXIF from "exif-js";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import styles from "./FileDetailModal.module.css";
 
 interface FileDetailModalProps {
   file: File;
@@ -45,13 +45,15 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
     [t, i18n.language],
   );
 
-  const extractExifData = useCallback((file: File): Promise<ExifData> => {
-    return new Promise((resolve) => {
-      if (!file.type.startsWith("image/")) {
-        resolve({});
-        return;
-      }
+  const extractExifData = useCallback(async (file: File): Promise<ExifData> => {
+    if (!file.type.startsWith("image/")) {
+      return {};
+    }
 
+    // exif-js はモーダルで EXIF を表示する時のみロードし、初期バンドルへ影響させない
+    const { default: EXIF } = await import("exif-js");
+
+    return new Promise((resolve) => {
       EXIF.getData(file, function (this) {
         const allMetaData = EXIF.getAllTags(this);
         const relevantData: ExifData = {};
@@ -95,6 +97,11 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
   useEffect(() => {
     if (!isOpen || !file) return;
 
+    // ファイル切替時に前のファイルの EXIF が残らないよう先にリセットし、
+    // 動的 import 分のレイテンシで解決順が逆転しても古い結果を無視する（stale フラグ）
+    let stale = false;
+    setExifData({});
+
     // 画像URLを作成
     const url = URL.createObjectURL(file);
     setImageUrl(url);
@@ -108,10 +115,17 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
       img.src = url;
     }
 
-    // EXIF情報を取得
-    extractExifData(file).then(setExifData);
+    // EXIF情報を取得（動的 import の失敗時は EXIF なしとして表示する）
+    extractExifData(file)
+      .then((data) => {
+        if (!stale) setExifData(data);
+      })
+      .catch(() => {
+        if (!stale) setExifData({});
+      });
 
     return () => {
+      stale = true;
       URL.revokeObjectURL(url);
     };
   }, [file, isOpen, extractExifData]);
@@ -152,19 +166,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
 
   return (
     <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "20px",
-      }}
+      className={styles.overlay}
       onClick={handleBackdropClick}
       onKeyDown={(e) => {
         if (e.key === "Escape") {
@@ -174,79 +176,24 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
       role="dialog"
       aria-modal="true"
     >
-      <div
-        style={{
-          backgroundColor: "var(--background)",
-          borderRadius: "12px",
-          maxWidth: "90vw",
-          maxHeight: "90vh",
-          width: "100%",
-          display: "flex",
-          overflow: "hidden",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-        }}
-      >
+      <div className={styles.modal}>
         {/* 画像表示エリア */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "var(--background)",
-            position: "relative",
-          }}
-        >
+        <div className={styles.imageArea}>
           {file.type.startsWith("image/") && imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={imageUrl}
               alt={file.name}
-              style={{
-                maxWidth: "100%",
-                maxHeight: "100%",
-                objectFit: "contain",
-              }}
+              className={styles.previewImage}
             />
           ) : file.type.startsWith("image/") ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "18px",
-                color: "var(--muted-foreground)",
-              }}
-            >
-              {t("fileDetails.loading")}
-            </div>
+            <div className={styles.loading}>{t("fileDetails.loading")}</div>
           ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "16px",
-                color: "var(--muted-foreground)",
-              }}
-            >
-              <div
-                style={{
-                  width: "80px",
-                  height: "80px",
-                  backgroundColor: "var(--primary)",
-                  borderRadius: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "24px",
-                  fontWeight: "bold",
-                  color: "var(--foreground)",
-                }}
-              >
+            <div className={styles.noPreview}>
+              <div className={styles.noPreviewIcon}>
                 {file.type.split("/")[1]?.toUpperCase() || "FILE"}
               </div>
-              <p style={{ fontSize: "18px", fontWeight: "500" }}>
+              <p className={styles.noPreviewText}>
                 {t("fileDetails.cannotPreview")}
               </p>
             </div>
@@ -256,22 +203,7 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            style={{
-              position: "absolute",
-              top: "16px",
-              right: "16px",
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              color: "white",
-              border: "none",
-              borderRadius: "50%",
-              width: "32px",
-              height: "32px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              fontSize: "18px",
-            }}
+            className={styles.closeButton}
             aria-label={t("fileDetails.close")}
           >
             ×
@@ -279,73 +211,42 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
         </div>
 
         {/* ファイル情報エリア */}
-        <div
-          style={{
-            width: "400px",
-            padding: "24px",
-            backgroundColor: "var(--background)",
-            borderLeft: "1px solid var(--border-dashed)",
-            overflow: "auto",
-          }}
-        >
-          <h3
-            style={{
-              fontSize: "18px",
-              fontWeight: "bold",
-              marginBottom: "16px",
-              color: "var(--foreground)",
-            }}
-          >
-            {t("fileDetails.title")}
-          </h3>
+        <div className={styles.infoPanel}>
+          <h3 className={styles.infoTitle}>{t("fileDetails.title")}</h3>
 
           {/* 基本情報 */}
-          <div style={{ marginBottom: "24px" }}>
-            <h4
-              style={{
-                fontSize: "14px",
-                fontWeight: "600",
-                marginBottom: "8px",
-                color: "var(--foreground)",
-              }}
-            >
+          <div className={styles.section}>
+            <h4 className={styles.sectionTitle}>
               {t("fileDetails.basicInfo")}
             </h4>
-            <div style={{ fontSize: "14px", lineHeight: "1.6" }}>
-              <div style={{ marginBottom: "4px" }}>
+            <div className={styles.metaList}>
+              <div className={styles.metaItem}>
                 <strong>{t("fileDetails.fileName")}:</strong>
                 <br />
-                <span
-                  style={{
-                    color: "var(--muted-foreground)",
-                    wordBreak: "break-all",
-                  }}
-                >
-                  {file.name}
-                </span>
+                <span className={styles.metaValueBreak}>{file.name}</span>
               </div>
-              <div style={{ marginBottom: "4px" }}>
+              <div className={styles.metaItem}>
                 <strong>{t("fileDetails.fileSize")}:</strong>{" "}
-                <span style={{ color: "var(--muted-foreground)" }}>
+                <span className={styles.metaValue}>
                   {formatFileSize(file.size)}
                 </span>
               </div>
-              <div style={{ marginBottom: "4px" }}>
+              <div className={styles.metaItem}>
                 <strong>{t("fileDetails.fileFormat")}:</strong>{" "}
-                <span style={{ color: "var(--muted-foreground)" }}>
+                <span className={styles.metaValue}>
                   {file.type || t("fileDetails.unknown")}
                 </span>
               </div>
-              <div style={{ marginBottom: "4px" }}>
+              <div className={styles.metaItem}>
                 <strong>{t("fileDetails.lastModified")}:</strong>{" "}
-                <span style={{ color: "var(--muted-foreground)" }}>
+                <span className={styles.metaValue}>
                   {formatDateTime(file.lastModified)}
                 </span>
               </div>
               {imageSize && (
-                <div style={{ marginBottom: "4px" }}>
+                <div className={styles.metaItem}>
                   <strong>{t("fileDetails.imageSize")}:</strong>{" "}
-                  <span style={{ color: "var(--muted-foreground)" }}>
+                  <span className={styles.metaValue}>
                     {imageSize.width} × {imageSize.height} {t("common.px")}
                   </span>
                 </div>
@@ -356,21 +257,14 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
           {/* EXIF情報 */}
           {Object.keys(exifData).length > 0 && (
             <div>
-              <h4
-                style={{
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  marginBottom: "8px",
-                  color: "var(--foreground)",
-                }}
-              >
+              <h4 className={styles.sectionTitle}>
                 {t("fileDetails.exifInfo")}
               </h4>
-              <div style={{ fontSize: "14px", lineHeight: "1.6" }}>
+              <div className={styles.metaList}>
                 {Object.entries(exifData).map(([key, value]) => (
-                  <div key={key} style={{ marginBottom: "4px" }}>
+                  <div key={key} className={styles.metaItem}>
                     <strong>{t(`fileDetails.exifTags.${key}`, key)}:</strong>{" "}
-                    <span style={{ color: "var(--muted-foreground)" }}>
+                    <span className={styles.metaValue}>
                       {value?.toString() || t("fileDetails.unknown")}
                     </span>
                   </div>
@@ -382,23 +276,10 @@ export const FileDetailModal: React.FC<FileDetailModalProps> = ({
           {Object.keys(exifData).length === 0 &&
             file.type.startsWith("image/") && (
               <div>
-                <h4
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    marginBottom: "8px",
-                    color: "var(--foreground)",
-                  }}
-                >
+                <h4 className={styles.sectionTitle}>
                   {t("fileDetails.exifInfo")}
                 </h4>
-                <p
-                  style={{
-                    fontSize: "14px",
-                    color: "var(--muted-foreground)",
-                    fontStyle: "italic",
-                  }}
-                >
+                <p className={styles.exifEmpty}>
                   {t("fileDetails.exifInfoNotFound")}
                 </p>
               </div>

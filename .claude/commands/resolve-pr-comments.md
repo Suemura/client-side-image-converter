@@ -1,3 +1,11 @@
+---
+description: >-
+  GitHub PR のレビューコメントを読み取り、修正対応・回答・返信・push を行う。
+  「レビューコメントに対応して」「PR #N の指摘を直して」と言われたら使う
+  （通常は PR 作成フックから pr-comment-resolver エージェント経由で自動実行される）。
+argument-hint: <PR番号>
+---
+
 Github Pull Requestのレビューコメントを読み取り、指摘への対応・質問への回答・必要な修正を行ってください。
 
 PR: $ARGUMENTS
@@ -59,8 +67,7 @@ gh api repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}/comments/{COMMENT_ID}/replies \
 
 - 修正はレビュー指摘の範囲に留め、関係のないコード変更は行わない
 - 修正後は `npm run lint:fix` を実行してコードを整える
-- 型エラーが懸念される場合は `npm run typecheck` も実行する
-- `src/utils/` を修正した場合は `npm run test` でテストが通ることを確認する
+- **TS/TSX ファイルを修正した場合は `npm run lint` / `npm run typecheck` / `npm run test` の 3 点を必ず実行し、すべて成功してからコミットする**（PR 前の reviewer レビューは廃止済みのため、ここが push 前の最終検証になる）
 - 修正をコミット・プッシュしてPRに反映する
 
 ## 出力

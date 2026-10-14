@@ -5,7 +5,7 @@ description: エージェントのワークフロー・オーケストレーシ�
 # ワークフロー・オーケストレーション
 
 ## Issue 起点のタスク開始（/start-issue）
-- GitHub Issue に紐づくタスクは `/start-issue <Issue番号>` で開始する。Issue の把握 → ブランチ作成 → planner → 実装 → 検証 → docs-sync → reviewer → PR 作成（自動レビューフロー起動）まで、本ルールのフロー全体を 1 コマンドで自走する。
+- GitHub Issue に紐づくタスクは `/start-issue <Issue番号>` で開始する。Issue の把握 → worktree・ブランチ作成 → planner → 実装 → 検証 → docs-sync → PR 作成（自動レビューフロー起動）まで、本ルールのフロー全体を 1 コマンドで自走する。作業は Issue 専用の git worktree（`.claude/worktrees/` 配下）で行われるため、複数 Issue の並列作業が可能。
 - 詳細手順は `.claude/commands/start-issue.md` を single source of truth とし、本ルール側には手順を重複記述しない。
 
 ## 実装計画の策定
@@ -18,23 +18,25 @@ description: エージェントのワークフロー・オーケストレーシ�
 - メインのコンテキストウィンドウをクリーンに保つため、subagent を惜しみなく活用する。
 - 以下は**必ず subagent に委譲する**:
   - **実装計画**: planner エージェント（上記参照。Plan Mode で計画済みならスキップ）
-  - **ドキュメント同期**: docs-sync エージェント（下記「完了前の検証」参照）
-  - **完了前レビュー**: reviewer エージェント（`self-review.md` ルール参照）
+  - **ドキュメント同期**: docs-sync エージェント（起動条件は `self-review.md` のホワイトリスト参照）
+  - **完了前レビュー**: PR を作成するタスクでは PR 自動レビューフロー（pr-reviewer / pr-comment-resolver）に一本化し、PR 前の reviewer は起動しない。PR を作らないタスクのみ reviewer エージェント（`self-review.md` ルール参照）
   - **リサーチ・調査**: Explore タイプの subagent
+- **サブエージェントには差分とコンテキストを手渡す**: 起動プロンプトに差分（`git diff --stat` 等）・変更概要・関連ファイルパスを埋め込み、エージェントがコードベースをゼロから探索し直さないようにする（`self-review.md`「コンテキスト手渡し」参照）。
 - 複雑な問題には、subagent を介してコンピュートリソースを投入し、1つの subagent につき1つのタスクとする。
 
 ## 完了前の検証
 - 動作を証明しないまま、タスクを完了にしてはならない。
 - 「これを見た人間（またはStaff engineer）は承認するか？」と自問し、テストを実行・ログを確認し、正確性を示す。
-- 変更がドキュメント記載事項（コマンド・構成・ワークフロー・ユーザー向け機能）に触れる場合は、reviewer の前に **docs-sync エージェント**を起動してドキュメントを同期する（`self-review.md` ルール参照）。
-- タスク完了前に **reviewer エージェント**を起動する（`self-review.md` ルール参照）。
+- 変更が `self-review.md` の起動条件ホワイトリストに該当する場合は、**docs-sync エージェント**を起動してドキュメントを同期する。変更ログはコミットメッセージと PR 説明に書く（変更ログ用ドキュメントは持たない）。
+- 独立レビューは `self-review.md`「レビューの二本立て」に従う（PR を作るタスクは PR 自動レビュー、作らないタスクは reviewer エージェント）。
 
 ## PR 作成後の自動レビューフロー
 - `gh pr create` で PR を作成すると、フック（`.claude/hooks/pr-created.sh`）が自動レビューフローの開始を指示する。
 - フローの内容:
-  1. **general-purpose サブエージェント**を起動し、`.claude/commands/review-pr.md` の手順に従って PR をレビューさせ、インラインコメントを投稿させる
-  2. レビュー完了後、**別の general-purpose サブエージェント**を起動し、`.claude/commands/resolve-pr-comments.md` の手順に従ってコメント対応（修正・返信）をさせる
+  1. **pr-reviewer サブエージェント**（利用できない場合は general-purpose で代替）を起動し、`.claude/commands/review-pr.md` の手順に従って PR をレビューさせ、インラインコメントを投稿させる
+  2. レビュー完了後、**pr-comment-resolver サブエージェント**（利用できない場合は general-purpose で代替）を起動し、`.claude/commands/resolve-pr-comments.md` の手順に従ってコメント対応（修正・返信）をさせる
   3. 対応結果のサマリーをユーザーに報告する
+- 各エージェントの起動プロンプトには Issue / タスクの要約・変更ファイル一覧・実装意図を埋め込む（探索削減）。
 - PR 作成コマンドは単独で実行すること（`git push && gh pr create` のような複合コマンドはフックが発火しない）。
 - 手動で実行したい場合は `/review-pr <PR番号>` と `/resolve-pr-comments <PR番号>` を使用する。
 

@@ -1,0 +1,76 @@
+/* DESIGN.md「カード / パネル」規定（浮遊する通知パネルのため --shadow-md） */
+.container {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px 10px 16px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.message {
+  font-size: 14px;
+  color: var(--foreground);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* DESIGN.md「Button」primary 規定に準拠した小型ボタン */
+.installButton {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent-foreground);
+  background-color: var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  white-space: nowrap;
+  transition: filter 0.15s ease;
+}
+
+.installButton:hover {
+  filter: brightness(1.08);
+}
+
+.installButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.dismissButton {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted-foreground);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease;
+}
+
+.dismissButton:hover {
+  color: var(--foreground);
+}
+
+.dismissButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    left: 16px;
+    right: 16px;
+    transform: none;
+    justify-content: space-between;
+  }
+}

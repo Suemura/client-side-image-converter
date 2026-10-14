@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
   "vcs": {
     "enabled": false,
     "clientKind": "git",
@@ -7,33 +7,36 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": [".next/", ".wrangler/"]
+    "includes": ["**", "!**/.next/", "!**/.wrangler/"]
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2
   },
-  "organizeImports": {
-    "enabled": true
-  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "a11y": {
         "noSvgWithoutTitle": "off",
         "useKeyWithClickEvents": "off",
         "useSemanticElements": "off",
         "useAltText": "off",
         "useValidAnchor": "off",
-        "useAriaPropsForRole": "off"
+        "useAriaPropsForRole": "off",
+        "noStaticElementInteractions": "off"
       },
       "suspicious": {
-        "noExplicitAny": "warn"
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "off"
       },
       "complexity": {
         "noStaticOnlyClass": "warn"
+      },
+      "performance": {
+        "noImgElement": "off"
       }
     }
   },

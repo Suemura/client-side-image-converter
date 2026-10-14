@@ -1,0 +1,30 @@
+/* DESIGN.md「通知ボックス」規定（エラー: --error / --error-soft） */
+.container {
+  background-color: var(--error-soft);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--error);
+  padding: 12px 16px;
+  margin-top: 24px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--error);
+  margin-bottom: 8px;
+}
+
+.title:last-child {
+  margin-bottom: 0;
+}
+
+.fileList {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.fileItem {
+  font-size: 14px;
+  color: var(--error);
+  word-break: break-all;
+}

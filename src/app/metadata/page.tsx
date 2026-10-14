@@ -1,17 +1,27 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ErrorNotice } from "../../components/ErrorNotice";
 import { FileDetailModal } from "../../components/FileDetailModal";
+import { HandoffNotice } from "../../components/HandoffNotice";
+import { HandoffSend } from "../../components/HandoffSend";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
-import { useMetadataManager } from "../../hooks/useMetadataManager";
+import { RadioButtonGroup } from "../../components/RadioButtonGroup";
+import { useHandoffReceiver } from "../../hooks/useHandoffReceiver";
+import {
+  type GpsMode,
+  useMetadataManager,
+} from "../../hooks/useMetadataManager";
+import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
 import {
   downloadFile,
   downloadMultipleFiles,
 } from "../../utils/fileDownloader";
+import { isImageFile } from "../../utils/fileUtils";
 import { assessPrivacyRisk } from "../../utils/metadataManager";
 import { ImageUploadSection } from "../convert/components/ImageUploadSection";
 import styles from "./page.module.css";
@@ -24,26 +34,45 @@ export default function MetadataPage() {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imageUrls, setImageUrls] = useState<Map<string, string>>(new Map());
+  // ダウンロード失敗の通知（次の実行開始でクリアする）
+  const [downloadError, setDownloadError] = useState(false);
 
   const {
     analysis,
+    analysisError,
+    removeError,
     isAnalyzing,
     isProcessing,
     selectedTags,
+    gpsMode,
     progressCurrent,
     progressTotal,
     analyzeFiles,
     toggleTag,
     selectAllPrivacyTags,
     clearSelection,
+    setGpsMode,
     removeSelectedMetadata,
   } = useMetadataManager();
+
+  // GPS 処理モードの選択肢（削除 / 市区町村レベルに丸める）
+  const gpsModeOptions = [
+    { label: t("metadata.gpsMode.remove"), value: "remove" },
+    { label: t("metadata.gpsMode.round"), value: "round" },
+  ];
+
+  // 解析結果に GPS 関連タグが含まれるか（GPS モード UI の表示判定に使う）
+  const hasGpsTags = analysis
+    ? Array.from(analysis.allTags).some((tag) =>
+        tag.toLowerCase().includes("gps"),
+      )
+    : false;
 
   // ファイル選択時の処理
   const handleFilesSelected = useCallback(
     async (files: File[]) => {
       // 画像ファイルのみをフィルタリング
-      const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+      const imageFiles = files.filter(isImageFile);
       setSelectedFiles(imageFiles);
 
       // 既存のURLをクリーンアップ
@@ -67,6 +96,12 @@ export default function MetadataPage() {
     [analyzeFiles, imageUrls],
   );
 
+  // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
+  const { notice: handoffNotice, clearNotice: clearHandoffNotice } =
+    useHandoffReceiver(SUPPORTED_IMAGE_FORMATS.UPLOAD_FORMATS, (files) => {
+      void handleFilesSelected(files);
+    });
+
   const handleClearFiles = useCallback(() => {
     setSelectedFiles([]);
     // URLをクリーンアップ
@@ -74,7 +109,8 @@ export default function MetadataPage() {
       URL.revokeObjectURL(url);
     }
     setImageUrls(new Map());
-  }, [imageUrls]);
+    clearHandoffNotice();
+  }, [imageUrls, clearHandoffNotice]);
 
   const handleImageClick = useCallback((file: File) => {
     setSelectedFileForModal(file);
@@ -86,17 +122,41 @@ export default function MetadataPage() {
     setSelectedFileForModal(null);
   }, []);
 
+  // ハンドオフ送出用: 選択中ファイルの MIME タイプ一覧（クリーニングは形式を変えない）。
+  // 既知の制約: BMP のみ Canvas フォールバック（removeAllMetadataWithCanvas）の
+  // toBlob がブラウザ非対応のため実バイトが PNG になり、type ラベルだけ image/bmp の
+  // まま残る（受け側のデコードはバイトスニッフィングで動くため実害はない）
+  const handoffMimeTypes = useMemo(
+    () => [...new Set(selectedFiles.map((file) => file.type))],
+    [selectedFiles],
+  );
+
+  // ハンドオフ送出用: クリーニングを実行して結果 File[] を返す（送出クリック時にのみ実行）
+  const handleCleanForHandoff = useCallback(async (): Promise<File[]> => {
+    if (!analysis || selectedTags.size === 0) {
+      return [];
+    }
+    return await removeSelectedMetadata();
+  }, [analysis, selectedTags, removeSelectedMetadata]);
+
   // メタデータ削除とダウンロード
   const handleRemoveAndDownload = useCallback(async () => {
     if (!analysis || selectedTags.size === 0) return;
 
+    setDownloadError(false);
     const cleanedFiles = await removeSelectedMetadata();
     if (cleanedFiles.length > 0) {
-      // クリーニング済みファイルをダウンロード
-      if (cleanedFiles.length === 1) {
-        downloadFile(cleanedFiles[0], `cleaned_${cleanedFiles[0].name}`);
-      } else {
-        await downloadMultipleFiles(cleanedFiles, "cleaned_images");
+      try {
+        // クリーニング済みファイルをダウンロード
+        if (cleanedFiles.length === 1) {
+          downloadFile(cleanedFiles[0], `cleaned_${cleanedFiles[0].name}`);
+        } else {
+          await downloadMultipleFiles(cleanedFiles, "cleaned_images");
+        }
+      } catch (error) {
+        // jszip チャンクのロード失敗等でダウンロードできない場合はユーザーへ通知する
+        console.error("Download error:", error);
+        setDownloadError(true);
       }
     }
   }, [analysis, selectedTags, removeSelectedMetadata]);
@@ -173,6 +233,10 @@ export default function MetadataPage() {
           <h1 className={styles.pageTitle}>{t("metadata.title")}</h1>
           <p className={styles.pageSubtitle}>{t("metadata.subtitle")}</p>
 
+          <HandoffNotice
+            notice={handoffNotice}
+            onDismiss={clearHandoffNotice}
+          />
           <ImageUploadSection
             files={selectedFiles}
             onFilesSelected={handleFilesSelected}
@@ -220,6 +284,11 @@ export default function MetadataPage() {
                   {t("metadata.metadataAnalysis")}
                 </h2>
 
+                {/* 解析全体の失敗（exif-js のロード失敗等）。無反応な失敗を防ぐ */}
+                <ErrorNotice
+                  message={analysisError ? t("metadata.analysisError") : null}
+                />
+
                 {isAnalyzing ? (
                   <div className={styles.loadingState}>
                     <div className={styles.loadingSpinner} />
@@ -227,6 +296,15 @@ export default function MetadataPage() {
                   </div>
                 ) : analysis ? (
                   <>
+                    {/* 解析に失敗したファイルの一覧（空メタデータ = 安全との誤認を防ぐ） */}
+                    <ErrorNotice
+                      message={
+                        analysis.analysisFailures.length > 0
+                          ? t("metadata.analysisFailures")
+                          : null
+                      }
+                      fileNames={analysis.analysisFailures}
+                    />
                     {/* プライバシーリスクタグ */}
                     {analysis.privacyRiskTags.size > 0 && (
                       <div style={{ marginBottom: "24px" }}>
@@ -304,7 +382,7 @@ export default function MetadataPage() {
                       style={{
                         marginBottom: "16px",
                         padding: "12px",
-                        backgroundColor: "var(--muted)",
+                        backgroundColor: "var(--surface-muted)",
                         borderRadius: "8px",
                       }}
                     >
@@ -319,6 +397,34 @@ export default function MetadataPage() {
                       </p>
                     </div>
 
+                    {/* GPS 処理モード（GPS タグがある場合のみ表示） */}
+                    {hasGpsTags && (
+                      <div className={styles.gpsModeSection}>
+                        <h3 className={styles.gpsModeTitle}>
+                          {t("metadata.gpsMode.title")}
+                        </h3>
+                        <RadioButtonGroup
+                          name="gpsMode"
+                          options={gpsModeOptions}
+                          selectedValue={gpsMode}
+                          onChange={(value) => setGpsMode(value as GpsMode)}
+                        />
+                        <p className={styles.gpsModeHelp}>
+                          {t("metadata.gpsMode.help")}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* 削除処理・ダウンロードの失敗通知 */}
+                    <ErrorNotice
+                      message={removeError ? t("metadata.removeError") : null}
+                    />
+                    <ErrorNotice
+                      message={
+                        downloadError ? t("results.downloadError") : null
+                      }
+                    />
+
                     {/* アクションボタン */}
                     <div className={styles.actionButtons}>
                       <Button
@@ -326,14 +432,14 @@ export default function MetadataPage() {
                         onClick={selectAllPrivacyTags}
                         disabled={analysis.privacyRiskTags.size === 0}
                       >
-                        リスクタグを選択
+                        {t("metadata.selectRiskTags")}
                       </Button>
                       <Button
                         variant="secondary"
                         onClick={clearSelection}
                         disabled={selectedTags.size === 0}
                       >
-                        選択クリア
+                        {t("metadata.clearSelection")}
                       </Button>
                       <Button
                         variant="primary"
@@ -345,6 +451,17 @@ export default function MetadataPage() {
                           : t("metadata.downloadCleanedImages")}
                       </Button>
                     </div>
+
+                    {/* クリーニング結果をダウンロードせず次のツールへ送る導線 */}
+                    {selectedTags.size > 0 && (
+                      <HandoffSend
+                        origin="metadata"
+                        mimeTypes={handoffMimeTypes}
+                        getFiles={handleCleanForHandoff}
+                        labelKey="handoff.cleanAndSendTo"
+                        disabled={isProcessing}
+                      />
+                    )}
                   </>
                 ) : (
                   <div className={styles.emptyState}>
@@ -363,7 +480,10 @@ export default function MetadataPage() {
                   {t("metadata.processing")}
                 </h3>
                 <p className={styles.progressInfo}>
-                  {progressCurrent} / {progressTotal} ファイル
+                  {t("metadata.progressFiles", {
+                    current: progressCurrent,
+                    total: progressTotal,
+                  })}
                 </p>
                 <div className={styles.progressBar}>
                   <div

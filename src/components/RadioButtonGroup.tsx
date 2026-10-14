@@ -1,4 +1,5 @@
 import type React from "react";
+import styles from "./RadioButtonGroup.module.css";
 
 interface RadioButtonOption {
   label: string;
@@ -19,26 +20,15 @@ export const RadioButtonGroup: React.FC<RadioButtonGroupProps> = ({
   onChange,
 }) => {
   return (
-    <div className="flex gap-3 p-4" style={{ flexWrap: "wrap" }}>
+    <div className={styles.group}>
       {options.map((option) => (
         <label
           key={option.value}
-          className="cursor-pointer relative"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: "0.75rem",
-            border:
-              selectedValue === option.value
-                ? "3px solid var(--primary)"
-                : "1px solid var(--border-dashed)",
-            padding: selectedValue === option.value ? "0 0.875rem" : "0 1rem",
-            height: "2.75rem",
-            color: "var(--foreground)",
-            fontSize: "0.875rem",
-            fontWeight: "500",
-          }}
+          className={
+            selectedValue === option.value
+              ? `${styles.option} ${styles.optionSelected}`
+              : styles.option
+          }
         >
           {option.label}
           <input
@@ -47,10 +37,7 @@ export const RadioButtonGroup: React.FC<RadioButtonGroupProps> = ({
             value={option.value}
             checked={selectedValue === option.value}
             onChange={(e) => onChange(e.target.value)}
-            style={{
-              position: "absolute",
-              visibility: "hidden",
-            }}
+            className={styles.input}
           />
         </label>
       ))}

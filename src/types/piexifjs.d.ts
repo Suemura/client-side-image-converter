@@ -132,13 +132,19 @@ declare module "piexifjs" {
     InteroperabilityIndex: number;
   }
 
-  const ImageIFD: ImageIFD;
-  const ExifIFD: ExifIFD;
-  const GPSIFD: GPSIFD;
-  const InteropIFD: InteropIFD;
+  interface PiexifLibrary {
+    ImageIFD: ImageIFD;
+    ExifIFD: ExifIFD;
+    GPSIFD: GPSIFD;
+    InteropIFD: InteropIFD;
+    load(data: string): ExifObj;
+    dump(exifObj: ExifObj): string;
+    insert(exif: string, data: string): string;
+    remove(data: string): string;
+  }
 
-  function load(data: string): ExifObj;
-  function dump(exifObj: ExifObj): string;
-  function insert(exif: string, data: string): string;
-  function remove(data: string): string;
+  // CJS モジュールのため export = で宣言する（exif-js.d.ts と同形式）。
+  // esModuleInterop により、静的 default import と動的 import の .default の両方が型付けされる
+  const piexif: PiexifLibrary;
+  export = piexif;
 }

@@ -1,0 +1,48 @@
+/* DESIGN.md「通知ボックス」規定（情報 = --accent 系） */
+.container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 16px;
+  margin-bottom: 12px;
+  background-color: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+}
+
+.textContainer {
+  flex: 1;
+}
+
+.text {
+  font-size: 14px;
+  color: var(--accent);
+  margin: 0;
+}
+
+.skippedText {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 4px 0 0 0;
+}
+
+.dismissButton {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0 4px;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.dismissButton:hover {
+  color: var(--foreground);
+}
+
+.dismissButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

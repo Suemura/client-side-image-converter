@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import React from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
@@ -17,6 +16,7 @@ export default function Home() {
     "icon_convert_dark.svg",
   );
   const cropIcon = useThemeAwareImage("icon_crop.svg", "icon_crop_dark.svg");
+  const editIcon = useThemeAwareImage("icon_edit.svg", "icon_edit_dark.svg");
   const batchIcon = useThemeAwareImage("icon_batch.svg", "icon_batch_dark.svg");
 
   return (
@@ -32,9 +32,29 @@ export default function Home() {
                 {t("home.startConverting")}
               </Button>
             </Link>
+            <Link href="/upscale">
+              <Button variant="secondary" size="large">
+                {t("home.tryUpscaleTool")}
+              </Button>
+            </Link>
+            <Link href="/remove-bg">
+              <Button variant="secondary" size="large">
+                {t("home.tryRemoveBgTool")}
+              </Button>
+            </Link>
             <Link href="/crop">
               <Button variant="secondary" size="large">
                 {t("home.tryCropTool")}
+              </Button>
+            </Link>
+            <Link href="/edit">
+              <Button variant="secondary" size="large">
+                {t("home.tryEditTool")}
+              </Button>
+            </Link>
+            <Link href="/redact">
+              <Button variant="secondary" size="large">
+                {t("home.tryRedactTool")}
               </Button>
             </Link>
             <Link href="/metadata">
@@ -66,7 +86,7 @@ export default function Home() {
               <img
                 className={styles.featureIcon}
                 src={convertIcon}
-                alt="フォーマット変換アイコン"
+                alt={t("home.features.formatConversion.iconAlt")}
                 suppressHydrationWarning
               />
               <h3 className={styles.featureTitle}>
@@ -82,7 +102,7 @@ export default function Home() {
               <img
                 className={styles.featureIcon}
                 src={cropIcon}
-                alt="画像トリミングアイコン"
+                alt={t("home.features.imageCropping.iconAlt")}
                 suppressHydrationWarning
               />
               <h3 className={styles.featureTitle}>
@@ -94,11 +114,27 @@ export default function Home() {
             </div>
 
             <div className={styles.featureCard}>
+              {/* 画像編集アイコン */}
+              <img
+                className={styles.featureIcon}
+                src={editIcon}
+                alt={t("home.features.imageEditing.iconAlt")}
+                suppressHydrationWarning
+              />
+              <h3 className={styles.featureTitle}>
+                {t("home.features.imageEditing.title")}
+              </h3>
+              <p className={styles.featureDescription}>
+                {t("home.features.imageEditing.description")}
+              </p>
+            </div>
+
+            <div className={styles.featureCard}>
               {/* バッチ処理アイコン */}
               <img
                 className={styles.featureIcon}
                 src={batchIcon}
-                alt="バッチ処理アイコン"
+                alt={t("home.features.batchProcessing.iconAlt")}
                 suppressHydrationWarning
               />
               <h3 className={styles.featureTitle}>

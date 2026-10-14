@@ -7,36 +7,66 @@
     "title": "Client-Side Image Converter",
     "github": "GitHub"
   },
+  "mobileMenu": {
+    "title": "メニュー",
+    "open": "メニューを開く",
+    "close": "閉じる",
+    "theme": "テーマ",
+    "language": "言語"
+  },
   "navigation": {
     "top": "トップ",
+    "studio": "スタジオ",
     "crop": "トリミング",
     "convert": "変換",
+    "upscale": "AI拡大",
+    "remove-bg": "背景除去",
+    "edit": "編集",
+    "redact": "モザイク",
     "metadata": "メタデータ"
   },
   "home": {
     "title": "Client-Side Image Converter",
     "subtitle": "クライアントサイドで画像を一括で変換・トリミングできます。\nサーバに画像を送信しないプライバシー重視の画像変換ツールです。",
     "startConverting": "変換",
+    "tryUpscaleTool": "AI画像拡大",
+    "tryRemoveBgTool": "背景除去",
     "tryCropTool": "トリミング",
+    "tryEditTool": "画像編集",
+    "tryRedactTool": "モザイク・ぼかし",
     "tryMetadataTool": "メタデータ管理",
     "viewOnGithub": "GitHubで見る",
     "features": {
       "formatConversion": {
         "title": "フォーマット変換",
-        "description": "JPEG、PNG、WebPなどの\n画像フォーマット間で\n品質･サイズを調整しながら\n変換できます。"
+        "description": "JPEG、PNG、WebP、AVIF、JPEG XL などの画像フォーマット間で、品質・サイズを調整しながら変換できます。",
+        "iconAlt": "フォーマット変換アイコン"
       },
       "imageCropping": {
         "title": "画像トリミング",
-        "description": "直感的な操作で画像を\n完璧なサイズにトリミングできます。"
+        "description": "直感的な操作で画像を完璧なサイズにトリミングできます。",
+        "iconAlt": "画像トリミングアイコン"
+      },
+      "imageEditing": {
+        "title": "画像編集",
+        "description": "露光・コントラスト・彩度・色温度などの調整に加え、LUT フィルタ（プリセット・.cube 取り込み）で写真を美しく仕上げます。",
+        "iconAlt": "画像編集アイコン"
       },
       "batchProcessing": {
         "title": "バッチ処理",
-        "description": "複数の画像を一度に処理し、\nダウンロードできます。"
+        "description": "複数の画像を一度に処理し、まとめてダウンロードできます。",
+        "iconAlt": "バッチ処理アイコン"
       }
     }
   },
   "convert": {
     "title": "変換設定",
+    "mode": "処理モード",
+    "modeConvert": "フォーマット変換",
+    "modeOptimize": "最適化（形式を維持）",
+    "optimizeDescription": "元の形式のまま再圧縮してファイルサイズを削減します。PNG は可逆（ピクセル不変）、JPEG / WebP は高品質で再エンコード（実質劣化最小）。削減できない場合は元のファイルをそのまま採用します。対応形式は PNG / JPEG / WebP です。",
+    "optimize": "最適化",
+    "optimizing": "最適化中...",
     "targetFormat": "対象フォーマット",
     "qualitySettings": "品質設定",
     "quality": "品質 (%)",
@@ -48,15 +78,44 @@
     "converting": "変換中...",
     "pleaseSelectFiles": "変換するファイルを選択してください",
     "conversionError": "変換中にエラーが発生しました。",
+    "conversionFailures": "以下のファイルは変換できませんでした（未対応の形式、または破損している可能性があります）",
     "auto": "自動",
     "pngQualityNotice": "PNG形式は可逆圧縮のため、品質設定は適用されません。常に最高品質で出力されます。",
     "pngQualityExperimental": "PNG形式での品質制御を実験的にサポートしています。低い値ではファイルサイズが小さくなりますが、画質が劣化する場合があります。",
     "pngQualityHelp": "PNG品質: 95以上=標準PNG、70-94=中圧縮、70未満=高圧縮（画質劣化あり）",
     "qualityDescription": "品質: 低い値ほどファイルサイズが小さくなりますが、画質が劣化します",
+    "qualityDisabledByTargetSize": "目標ファイルサイズが指定されているため、品質は自動調整されます。",
+    "targetFileSize": "目標ファイルサイズ（オプション）",
+    "targetFileSizeLabel": "目標サイズ (KB)",
+    "targetFileSizeHelp": "指定すると、目標サイズ以下になるよう品質を自動調整します（JPEG / WebP のみ）。空欄の場合は上記の品質設定が使われます。",
+    "targetFileSizeUnsupported": "目標ファイルサイズの指定は JPEG / WebP でのみ対応しています。",
     "metadataSettings": "メタデータ設定",
     "preserveExif": "EXIF情報を保持",
-    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が変換後の画像に保持されます。JPEG形式でのみ有効です。",
-    "preserveExifJpegOnly": "EXIF情報の保持はJPEG形式でのみ対応しています。"
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が変換後の画像に保持されます。JPEG / PNG / WebP で有効です。",
+    "preserveExifUnsupported": "EXIF情報の保持は AVIF / JPEG XL では対応していません。",
+    "rawDevelop": {
+      "title": "RAW 現像設定",
+      "description": "RAW の生データに対して現像パラメータを適用します。現像後の編集より階調の余地が大きく、白飛び・黒つぶれの復元に有利です。設定はすべての RAW ファイルに一括で適用されます。",
+      "exposure": "露出補正",
+      "exposureLabel": "露出 (EV)",
+      "exposureHelp": "リニアな生データ上で露出をシフトします。0 以外を指定すると、補正を打ち消さないよう自動明るさ調整が無効になります。",
+      "whiteBalance": "ホワイトバランス",
+      "wbCamera": "カメラ設定",
+      "wbAuto": "自動",
+      "wbManual": "色温度指定",
+      "colorTemperature": "色温度 (K)",
+      "colorTemperatureHelp": "撮影時の光源の色温度を指定して中和します（低い値で寒色寄り、高い値で暖色寄りの仕上がり）。カメラ実測値の再現ではなく相対的な調整用です。",
+      "highlight": "ハイライト復元",
+      "highlightClip": "クリップ（標準）",
+      "highlightBlend": "ブレンド",
+      "highlightRebuild": "再構築",
+      "preview": "プレビュー",
+      "previewLoading": "現像中...",
+      "previewNote": "プレビューは先頭の RAW ファイルを半分サイズで簡易現像したものです。",
+      "previewError": "プレビューの現像に失敗しました。変換は実行できる場合があります。",
+      "reset": "現像設定をリセット",
+      "resetItem": "リセット"
+    }
   },
   "crop": {
     "title": "トリミングツール",
@@ -78,7 +137,7 @@
     "reCrop": "再トリミング",
     "croppingInProgress": "トリミング中...",
     "preserveExif": "EXIF情報を保持",
-    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）がトリミング後の画像に保持されます。JPEG形式でのみ有効です。",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）がトリミング後の画像に保持されます。JPEG / PNG / WebP で有効です。",
     "filesSelected": "選択中のファイル",
     "cropSettings": "トリミング設定",
     "previewAndCrop": "プレビューとトリミング",
@@ -87,7 +146,186 @@
     "previewImage": "画像をプレビュー",
     "batchCropDescription": "複数の画像を選択してまとめてトリミングできます",
     "previousImage": "前の画像",
-    "nextImage": "次の画像"
+    "nextImage": "次の画像",
+    "dragToMove": "ドラッグして移動",
+    "dragToResize": "ドラッグしてリサイズ",
+    "aspectRatio": "アスペクト比",
+    "aspectFree": "自由",
+    "transform": "回転・反転",
+    "rotateLeft": "左に90°回転",
+    "rotateRight": "右に90°回転",
+    "flipHorizontal": "左右反転",
+    "flipVertical": "上下反転",
+    "applyMode": "適用範囲",
+    "applyToAll": "全画像一括",
+    "perImage": "画像ごと",
+    "applyModeHelp": "「全画像一括」は現在の設定を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に領域・回転を指定できます。",
+    "cropError": "トリミング処理中にエラーが発生しました。",
+    "previewError": "プレビューを生成できませんでした（未対応の形式、または破損している可能性があります）。"
+  },
+  "edit": {
+    "title": "画像編集",
+    "subtitle": "露光・コントラスト・彩度・色温度などを調整して写真を仕上げます。複数の画像へ同じ調整をまとめて適用できます。",
+    "previewTitle": "プレビュー（編集前 / 編集後）",
+    "adjustments": "調整",
+    "selectImageFirst": "画像を選択してください",
+    "light": "ライト",
+    "color": "カラー",
+    "detail": "ディテール",
+    "effects": "効果",
+    "exposure": "露光量",
+    "gamma": "ガンマ",
+    "brightness": "輝度",
+    "contrast": "コントラスト",
+    "highlights": "ハイライト",
+    "shadows": "シャドウ",
+    "whites": "白レベル",
+    "blacks": "黒レベル",
+    "saturation": "彩度",
+    "vibrance": "自然な彩度",
+    "temperature": "色温度",
+    "tint": "色合い",
+    "hue": "色相",
+    "monochrome": "モノクロ",
+    "sharpness": "シャープネス",
+    "clarity": "明瞭度",
+    "vignette": "ビネット",
+    "grain": "グレイン",
+    "reset": "リセット",
+    "resetAll": "すべてリセット",
+    "outputFormat": "出力フォーマット",
+    "formatOriginal": "元の形式を維持",
+    "preserveExif": "EXIF情報を保持",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報など）が編集後の画像に保持されます。JPEG / PNG / WebP 出力で有効です。",
+    "preserveExifUnsupported": "EXIF情報の保持は AVIF / JPEG XL では対応していません。",
+    "apply": "編集を適用",
+    "reEdit": "再編集",
+    "editingInProgress": "編集中...",
+    "selectNewImage": "新しい画像を選択",
+    "before": "編集前",
+    "after": "編集後",
+    "compareHint": "中央の境界をドラッグして編集前後を比較できます。画像を長押しすると編集前を全面表示できます。",
+    "applyModeHelp": "「全画像一括」は現在の調整を全ての画像に適用します。「画像ごと」は ←/→ で画像を切り替えながら個別に調整を指定できます。",
+    "editFailures": "以下のファイルは編集できませんでした（未対応の形式、または破損している可能性があります）",
+    "editError": "編集処理中にエラーが発生しました。",
+    "previewError": "プレビューを生成できませんでした（未対応の形式、または破損している可能性があります）。",
+    "auto": {
+      "title": "自動補正",
+      "levels": "オートレベル",
+      "whiteBalance": "自動ホワイトバランス",
+      "eyedropper": "WB スポイト",
+      "eyedropperHint": "無彩色（グレー）にしたい点をプレビューでクリックしてください（Esc で解除）"
+    },
+    "histogram": {
+      "title": "ヒストグラム",
+      "rgb": "RGB",
+      "luminance": "輝度"
+    },
+    "toneCurve": {
+      "title": "トーンカーブ",
+      "rgb": "RGB",
+      "luminance": "輝度",
+      "hint": "クリックで点を追加、ドラッグで移動、ダブルクリックで削除できます。",
+      "reset": "カーブをリセット"
+    },
+    "lut": {
+      "title": "フィルター (LUT)",
+      "none": "なし",
+      "strength": "適用強度",
+      "upload": "LUT を読み込む",
+      "uploadHint": ".cube ファイル、または HALD CLUT の PNG に対応しています。",
+      "custom": "カスタム",
+      "invalidFile": "LUT ファイルを読み込めませんでした。.cube または HALD CLUT の PNG かご確認ください。",
+      "presets": {
+        "cinematic": "シネマ",
+        "movie": "ムービー",
+        "film": "フィルム",
+        "teal": "ティール",
+        "nightfall": "ナイト",
+        "cool": "寒色",
+        "warm": "暖色",
+        "urban": "アーバン",
+        "retro": "レトロ",
+        "vintage": "ヴィンテージ",
+        "mono": "モノクロ"
+      }
+    }
+  },
+  "redact": {
+    "title": "モザイク・ぼかしツール",
+    "subtitle": "顔や写り込みなど見せたくない部分をモザイク・ぼかし・塗りつぶしで隠します。処理した部分は画像に焼き込まれ、元に戻せません。",
+    "selectRedactArea": "隠す領域を選択",
+    "dragToAddRegion": "ドラッグして隠したい範囲を追加してください（複数の範囲を指定できます）",
+    "selectImageFirst": "画像を選択してください",
+    "mode": "隠し方",
+    "modeMosaic": "モザイク",
+    "modeBlur": "ぼかし",
+    "modeFill": "塗りつぶし",
+    "mosaicSize": "モザイクの粗さ (px)",
+    "blurStrength": "ぼかしの強さ (px)",
+    "fillColor": "塗りつぶしの色",
+    "strengthHelp": "大きな領域では、内容が判読できないよう強度が自動的に引き上げられます。",
+    "clearRegions": "この画像の領域をクリア",
+    "removeRegion": "領域 {{index}} を削除",
+    "regionCount": "指定中の領域: {{count}} 件",
+    "startRedacting": "レタッチを適用",
+    "reRedact": "再適用",
+    "redactingInProgress": "処理中...",
+    "processedFiles": "処理済みファイル",
+    "processingPlaceholder": "処理後にここに結果が表示されます",
+    "selectNewImage": "新しい画像を選択",
+    "noRegionHelp": "領域を指定していない画像は加工されずに再保存されます。",
+    "preserveExif": "EXIF情報を保持",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報、位置情報など）が処理後の画像に保持されます。JPEG / PNG / WebP で有効です。EXIF内の埋め込みサムネイルにはレタッチ前の画像が残るため、常に削除されます。",
+    "reset": "リセット",
+    "redactError": "レタッチ処理中にエラーが発生しました。",
+    "previewError": "プレビューを生成できませんでした（未対応の形式、または破損している可能性があります）。"
+  },
+  "upscale": {
+    "title": "AI画像拡大ツール",
+    "subtitle": "AI（超解像モデル Real-ESRGAN）で画像を2倍・4倍に高精細に拡大します。処理はすべてブラウザ内で完結し、画像はサーバーに送信されません。",
+    "settings": "拡大設定",
+    "scaleLabel": "拡大倍率",
+    "scale2x": "2倍",
+    "scale4x": "4倍",
+    "preserveExif": "EXIF情報を保持",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報、位置情報など）が拡大後の画像に保持されます。JPEG / PNG / WebP で有効です。",
+    "modelNote": "初回実行時にAIモデル（約31MB）をダウンロードします。2回目以降はキャッシュから読み込むためダウンロードは不要です。",
+    "sizeLimitNote": "長辺 {{max}}px までの画像を処理できます。",
+    "selectImageFirst": "画像を選択してください",
+    "startUpscaling": "拡大を実行",
+    "reUpscale": "再実行",
+    "cancel": "キャンセル",
+    "preparingModel": "AIモデルを準備中... {{percent}}%",
+    "upscalingProgress": "拡大中（{{current}} / {{total}} 枚）",
+    "processedFiles": "処理済みファイル",
+    "processingPlaceholder": "処理後にここに結果が表示されます",
+    "selectNewImage": "新しい画像を選択",
+    "cancelledNotice": "処理をキャンセルしました。完了済みのファイルのみ表示しています。",
+    "upscaleError": "拡大処理中にエラーが発生しました。"
+  },
+  "removeBg": {
+    "title": "背景除去ツール",
+    "subtitle": "AI（セグメンテーションモデル U²-Net）で画像の背景を切り抜き、透過画像を作成します。処理はすべてブラウザ内で完結し、画像はサーバーに送信されません。",
+    "settings": "出力設定",
+    "formatLabel": "出力形式",
+    "formatPng": "PNG",
+    "formatWebp": "WebP",
+    "preserveExif": "EXIF情報を保持",
+    "preserveExifHelp": "チェックすると、元画像のEXIF情報（撮影日時、カメラ情報、位置情報など）が背景除去後の画像に保持されます。",
+    "modelNote": "初回実行時にAIモデル（約31MB）をダウンロードします。2回目以降はキャッシュから読み込むためダウンロードは不要で、オフラインでも動作します。",
+    "sizeLimitNote": "長辺 {{max}}px までの画像を処理できます。",
+    "transparentNote": "背景が透過になるため、出力は PNG または WebP です（JPEG は透過非対応）。",
+    "selectImageFirst": "画像を選択してください",
+    "startRemoving": "背景除去を実行",
+    "reRemove": "再実行",
+    "cancel": "キャンセル",
+    "preparingModel": "AIモデルを準備中... {{percent}}%",
+    "removingProgress": "背景除去中（{{current}} / {{total}} 枚）",
+    "processedFiles": "処理済みファイル",
+    "processingPlaceholder": "処理後にここに結果が表示されます",
+    "selectNewImage": "新しい画像を選択",
+    "cancelledNotice": "処理をキャンセルしました。完了済みのファイルのみ表示しています。"
   },
   "fileUpload": {
     "dropFiles": "ファイルをここにドロップ",
@@ -99,7 +337,12 @@
     "clearList": "リストをクリア",
     "dragDropLabel": "画像をドラッグ&ドロップ",
     "dropFilesHere": "ファイルをここにドロップ",
-    "viewDetails": "の詳細を表示"
+    "viewDetails": "{{name}}の詳細を表示",
+    "dropAreaLabel": "ファイルをドラッグ&ドロップまたはクリックして選択",
+    "filesSelectedCount": "{{count}}個のファイル選択済み",
+    "supportedFormats": "対応形式: {{formats}}",
+    "pasteAndFolderHint": "クリップボードから貼り付け（Ctrl/⌘+V）やフォルダのドロップにも対応",
+    "limitExceeded": "一度に扱えるファイルは最大 {{max}} 件です。上限を超えた分は取り込まれませんでした。"
   },
   "fileDetails": {
     "title": "ファイル詳細",
@@ -146,6 +389,12 @@
     "fileUnit": "ファイル",
     "downloadZip": "Zipでダウンロード",
     "creating": "作成中...",
+    "saveToFolder": "フォルダへ保存",
+    "savingToFolder": "保存中...",
+    "savedToFolder": "{{count}}件のファイルをフォルダへ保存しました",
+    "noEntriesToSave": "保存できるファイルがありません",
+    "saveToFolderError": "一部のファイルを保存できませんでした（{{written}}/{{total}}件保存済み）",
+    "saveToFolderFailed": "フォルダへの保存に失敗しました。",
     "clear": "クリア",
     "originalSize": "元のサイズ",
     "convertedSize": "変換後サイズ",
@@ -154,12 +403,18 @@
     "preview": "プレビュー",
     "originalImage": "元画像",
     "convertedImage": "変換後画像",
-    "croppedImage": "トリミング後画像"
+    "croppedImage": "トリミング後画像",
+    "viewDetails": "{{name}}の詳細を表示",
+    "viewComparison": "{{name}}の変換前後比較を表示",
+    "processingError": "処理エラー",
+    "downloadError": "ファイルのダウンロードに失敗しました。",
+    "targetSizeNotAchieved": "目標サイズまで圧縮できませんでした（最小サイズで出力）"
   },
   "comparison": {
     "original": "変換前",
     "converted": "変換後",
-    "instruction": "境界線をドラッグして変換前後の画像を比較"
+    "instruction": "境界線をドラッグして変換前後の画像を比較",
+    "processed": "処理後"
   },
   "common": {
     "files": "個",
@@ -167,7 +422,9 @@
     "kb": "KB",
     "mb": "MB",
     "gb": "GB",
-    "px": "px"
+    "px": "px",
+    "close": "閉じる",
+    "image": "画像"
   },
   "metadata": {
     "title": "画像メタデータ・プライバシー管理",
@@ -183,6 +440,9 @@
     "noMetadataFound": "メタデータが見つかりませんでした",
     "metadataRemoved": "メタデータが削除されました",
     "analyzingMetadata": "メタデータを分析中...",
+    "analysisError": "メタデータの解析に失敗しました。時間をおいて再度お試しください。",
+    "analysisFailures": "以下のファイルはメタデータを解析できませんでした（メタデータが残っている可能性があります）",
+    "removeError": "メタデータの削除処理中にエラーが発生しました。",
     "processingNote": "※ JPEG形式: 選択されたタグのみ削除、その他の形式: すべてのメタデータを削除",
     "processingMethod": {
       "selective": "選択的削除",
@@ -192,7 +452,16 @@
       "high": "高",
       "medium": "中",
       "low": "低"
-    }
+    },
+    "gpsMode": {
+      "title": "GPS位置情報の処理",
+      "remove": "削除",
+      "round": "市区町村レベルに丸める",
+      "help": "「丸める」を選ぶと、位置情報を約1km四方の精度に落として残します（JPEG形式のみ。その他の形式は全削除）。"
+    },
+    "selectRiskTags": "リスクタグを選択",
+    "clearSelection": "選択クリア",
+    "progressFiles": "{{current}} / {{total}} ファイル"
   },
   "footer": {
     "privacyMessage": "すべての画像処理はお使いのデバイス内で完結し、サーバーへのアップロードは一切行いません。",
@@ -205,5 +474,173 @@
     "allRightsReserved": "All rights reserved.",
     "madeWith": "プライバシーを重視して",
     "forPrivacy": "で作られました"
+  },
+  "install": {
+    "title": "アプリをインストール",
+    "message": "オフラインでも使えるようにインストールできます。",
+    "button": "インストール",
+    "dismiss": "閉じる"
+  },
+  "handoff": {
+    "sendTo": "この結果を次のツールへ（ダウンロード不要で続けて処理）",
+    "cleanAndSendTo": "選択したメタデータを削除して次のツールへ（ダウンロード不要で続けて処理）",
+    "sendToTool": "{{tool}}へ送る",
+    "received": "{{tool}}の結果 {{count}} 件を引き継ぎました",
+    "receivedFromShare": "共有シートから {{count}} 件を引き継ぎました",
+    "skipped": "{{count}} 件は対応形式外または件数上限のため取り込めませんでした",
+    "dismiss": "閉じる"
+  },
+  "studio": {
+    "brand": "Image Studio",
+    "backHome": "ホームへ戻る",
+    "tools": {
+      "crop": "切り抜き",
+      "adjust": "調整",
+      "retouch": "レタッチ",
+      "upscale": "AI拡大",
+      "removebg": "AI背景",
+      "info": "情報"
+    },
+    "panel": {
+      "cropTitle": "切り抜き",
+      "cropDescription": "トリミング・回転・反転",
+      "adjustTitle": "調整",
+      "adjustDescription": "露光・色・ディテールを非破壊で編集",
+      "retouchTitle": "レタッチ",
+      "retouchDescription": "見せたくない部分を隠します。適用後は戻せません。",
+      "upscaleTitle": "AIアップスケール",
+      "upscaleDescription": "超解像で解像度を拡大（端末内で処理）",
+      "removebgTitle": "AI背景除去",
+      "removebgDescription": "被写体を残して背景を透過",
+      "infoTitle": "情報 / メタデータ",
+      "infoDescription": "EXIFを確認し、プライバシー情報を削除",
+      "aiBadge": "AI"
+    },
+    "topbar": {
+      "editedOnly": "編集後",
+      "compare": "前後比較",
+      "undo": "元に戻す",
+      "redo": "やり直す",
+      "export": "書き出し"
+    },
+    "filmstrip": {
+      "batch": "一括処理",
+      "count": "{{count}} 枚",
+      "add": "追加",
+      "applyToAll": "全画像に同じ編集を適用",
+      "thumbnail": "{{name}} を選択"
+    },
+    "canvas": {
+      "zoomIn": "拡大表示",
+      "zoomOut": "縮小表示",
+      "dropHint": "画像を追加してワークスペースを開始",
+      "previewError": "プレビューを生成できませんでした",
+      "originalBadge": "編集前"
+    },
+    "crop": {
+      "apply": "トリミングを適用",
+      "reset": "リセット"
+    },
+    "adjust": {
+      "confirm": "この調整を確定",
+      "reset": "リセット",
+      "confirmHelp": "確定すると調整を画像へ焼き込み、次のツールの入力になります"
+    },
+    "retouch": {
+      "apply": "レタッチを適用",
+      "detect": {
+        "title": "自動検出",
+        "run": "顔・ナンバープレートを検出",
+        "running": "検出中…",
+        "detecting": "検出しています…",
+        "preparingModel": "AIモデルを準備中... {{percent}}%",
+        "modelNote": "初回はAIモデル（約6MB）をダウンロードします（以降はキャッシュから読み込み）。画像は送信されません。",
+        "empty": "検出されませんでした",
+        "failed": "AIモデルを読み込めませんでした。接続を確認し、画像を切り替えると再試行できます。",
+        "unsupported": "この環境ではAI検出を利用できません",
+        "count": {
+          "face": "顔 {{count}} 件",
+          "plate": "ナンバープレート {{count}} 件"
+        },
+        "label": {
+          "face": "顔",
+          "plate": "ナンバー"
+        },
+        "addToRegions": "検出した{{count}}件をレタッチ領域に追加"
+      }
+    },
+    "upscale": {
+      "run": "アップスケール実行",
+      "outputSize": "{{srcWidth}}×{{srcHeight}} → {{width}}×{{height}}",
+      "processing": "超解像 処理中… {{percent}}%"
+    },
+    "removebg": {
+      "run": "背景を除去",
+      "transparentPreview": "適用後は透過部分が市松模様で表示されます"
+    },
+    "info": {
+      "remove": "選択したメタデータを削除"
+    },
+    "export": {
+      "title": "書き出し",
+      "description": "形式・品質・サイズを指定して出力",
+      "format": "出力フォーマット",
+      "quality": "品質",
+      "estimatedSize": "推定サイズ: 約 {{size}} / 枚",
+      "estimatedSizeUnavailable": "推定サイズ: —",
+      "estimating": "推定サイズ: 計算中…",
+      "resize": "リサイズ（任意）",
+      "width": "幅 (px)",
+      "height": "高さ (px)",
+      "auto": "自動",
+      "keepAspect": "アスペクト比を維持",
+      "rename": "リネーム規則（任意）",
+      "renamePreview": "プレビュー: {{names}}",
+      "preserveExif": "EXIF情報を保持",
+      "target": "対象",
+      "targetCurrent": "この画像",
+      "targetAll": "全{{count}}枚（ZIP）",
+      "cancel": "キャンセル",
+      "run": "書き出す",
+      "running": "書き出し中…",
+      "close": "閉じる",
+      "error": "書き出しに失敗しました"
+    },
+    "applyError": "適用に失敗しました",
+    "applyFailures": "一部の画像で適用に失敗しました",
+    "history": {
+      "title": "履歴",
+      "clear": "クリア",
+      "close": "閉じる",
+      "note": "行をクリックでその時点に戻せます。戻した後の操作はやり直しできます。",
+      "noteMobile": "タップでその時点に戻せます。戻した後の操作はやり直しできます。",
+      "confirmTitle": "履歴のクリア",
+      "confirmMessage": "履歴をすべて破棄して元画像の状態に戻します。この操作は取り消せません。",
+      "confirmCancel": "キャンセル",
+      "confirmClear": "クリアする",
+      "labels": {
+        "load": "元画像を読み込み",
+        "add": "画像を追加（{{count}}枚）",
+        "crop": "切り抜き",
+        "cropRatio": "切り抜き {{ratio}}",
+        "adjust": "調整（{{count}}項目）",
+        "retouchMosaic": "レタッチ モザイク（{{count}}件）",
+        "retouchBlur": "レタッチ ぼかし（{{count}}件）",
+        "retouchFill": "レタッチ 塗りつぶし（{{count}}件）",
+        "upscale": "AI拡大 {{scale}}x",
+        "removebg": "AI背景除去",
+        "metadata": "メタデータを削除"
+      }
+    }
+  },
+  "share": {
+    "title": "共有シートから受け取り",
+    "loading": "共有された画像を確認しています…",
+    "unsupported": "この環境では共有シートからの画像の受け取りに対応していません。",
+    "empty": "共有された画像はありません",
+    "emptyHint": "このページはスマホの共有シートから画像を共有したときの受け口です。受け取った画像はページを離れると破棄され、サーバーには送信されません。",
+    "goHome": "ホームへ戻る",
+    "receivedCount": "{{count}} 件の画像を受け取りました",
+    "sendTo": "受け取った画像を使うツールを選んでください"
   }
 }

@@ -1,0 +1,5 @@
+/* 旧ユーティリティクラス size-4（16px 角）からの移行 */
+.logo {
+  width: 16px;
+  height: 16px;
+}

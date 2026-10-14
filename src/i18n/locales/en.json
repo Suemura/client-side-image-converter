@@ -7,36 +7,66 @@
     "title": "Client-Side Image Converter",
     "github": "GitHub"
   },
+  "mobileMenu": {
+    "title": "Menu",
+    "open": "Open menu",
+    "close": "Close",
+    "theme": "Theme",
+    "language": "Language"
+  },
   "navigation": {
     "top": "Top",
+    "studio": "Studio",
     "crop": "Crop",
     "convert": "Convert",
+    "upscale": "AI Upscale",
+    "remove-bg": "Background Removal",
+    "edit": "Edit",
+    "redact": "Redact",
     "metadata": "Metadata"
   },
   "home": {
     "title": "Client-Side Image Converter",
     "subtitle": "Convert and crop images in batches on the client-side.\nA privacy-focused image conversion tool that never sends images to servers.",
     "startConverting": "Start Converting",
+    "tryUpscaleTool": "AI Upscaler",
+    "tryRemoveBgTool": "Background Remover",
     "tryCropTool": "Try Crop Tool",
+    "tryEditTool": "Image Editor",
+    "tryRedactTool": "Mosaic / Blur",
     "tryMetadataTool": "Metadata Manager",
     "viewOnGithub": "View on GitHub",
     "features": {
       "formatConversion": {
         "title": "Format Conversion",
-        "description": "Convert between image formats\nsuch as JPEG, PNG, WebP\nwhile adjusting quality and size."
+        "description": "Convert between image formats such as JPEG, PNG, WebP, AVIF, and JPEG XL while adjusting quality and size.",
+        "iconAlt": "Format conversion icon"
       },
       "imageCropping": {
         "title": "Image Cropping",
-        "description": "Crop images to perfect sizes\nwith intuitive operations."
+        "description": "Crop images to perfect sizes with intuitive operations.",
+        "iconAlt": "Image cropping icon"
+      },
+      "imageEditing": {
+        "title": "Image Editing",
+        "description": "Adjust exposure, contrast, saturation, and color temperature, plus LUT filters (presets and .cube import) to perfect your photos.",
+        "iconAlt": "Image editing icon"
       },
       "batchProcessing": {
         "title": "Batch Processing",
-        "description": "Process multiple images at once\nand download them together."
+        "description": "Process multiple images at once and download them together.",
+        "iconAlt": "Batch processing icon"
       }
     }
   },
   "convert": {
     "title": "Conversion Settings",
+    "mode": "Processing Mode",
+    "modeConvert": "Format Conversion",
+    "modeOptimize": "Optimize (keep format)",
+    "optimizeDescription": "Re-compresses the image in its original format to reduce file size. PNG is lossless (pixels unchanged); JPEG / WebP are re-encoded at high quality (essentially minimal loss). If it can't be made smaller, the original file is kept. Supported formats: PNG / JPEG / WebP.",
+    "optimize": "Optimize",
+    "optimizing": "Optimizing...",
     "targetFormat": "Target Format",
     "qualitySettings": "Quality Settings",
     "quality": "Quality (%)",
@@ -48,15 +78,44 @@
     "converting": "Converting...",
     "pleaseSelectFiles": "Please select files to convert",
     "conversionError": "An error occurred during conversion.",
+    "conversionFailures": "The following files could not be converted (unsupported or possibly corrupted)",
     "auto": "Auto",
     "pngQualityNotice": "PNG format uses lossless compression, so quality settings are not applied. Output is always at maximum quality.",
     "pngQualityExperimental": "Experimental PNG quality control is supported. Lower values result in smaller file sizes but may reduce image quality.",
     "pngQualityHelp": "PNG Quality: 95+=Standard PNG, 70-94=Medium compression, <70=High compression (quality loss)",
     "qualityDescription": "Quality: Lower values result in smaller file sizes but reduced image quality",
+    "qualityDisabledByTargetSize": "Quality is adjusted automatically because a target file size is set.",
+    "targetFileSize": "Target File Size (Optional)",
+    "targetFileSizeLabel": "Target Size (KB)",
+    "targetFileSizeHelp": "When set, quality is adjusted automatically to keep the output at or below the target size (JPEG / WebP only). Leave empty to use the quality setting above.",
+    "targetFileSizeUnsupported": "Target file size is only supported for JPEG / WebP.",
     "metadataSettings": "Metadata Settings",
     "preserveExif": "Preserve EXIF Information",
-    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the converted image. Only available for JPEG format.",
-    "preserveExifJpegOnly": "EXIF preservation is only supported for JPEG format."
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the converted image. Available for JPEG / PNG / WebP.",
+    "preserveExifUnsupported": "EXIF preservation is not supported for AVIF / JPEG XL.",
+    "rawDevelop": {
+      "title": "RAW Development",
+      "description": "Applies development parameters to the RAW sensor data. This preserves far more tonal range than editing after development, which helps recover highlights and shadows. Settings apply to all RAW files at once.",
+      "exposure": "Exposure Compensation",
+      "exposureLabel": "Exposure (EV)",
+      "exposureHelp": "Shifts exposure on the linear sensor data. Any non-zero value disables automatic brightening so the shift is not cancelled out.",
+      "whiteBalance": "White Balance",
+      "wbCamera": "As Shot",
+      "wbAuto": "Auto",
+      "wbManual": "Color Temperature",
+      "colorTemperature": "Temperature (K)",
+      "colorTemperatureHelp": "Neutralizes the light source at the specified color temperature (lower values look cooler, higher values warmer). This is a relative adjustment, not a reproduction of the camera's measured value.",
+      "highlight": "Highlight Recovery",
+      "highlightClip": "Clip (default)",
+      "highlightBlend": "Blend",
+      "highlightRebuild": "Rebuild",
+      "preview": "Preview",
+      "previewLoading": "Developing...",
+      "previewNote": "The preview is a quick half-size development of the first RAW file.",
+      "previewError": "Failed to develop the preview. Conversion may still work.",
+      "reset": "Reset Development Settings",
+      "resetItem": "Reset"
+    }
   },
   "crop": {
     "title": "Image Cropping Tool",
@@ -78,7 +137,7 @@
     "reCrop": "Re-Crop",
     "croppingInProgress": "Cropping in progress...",
     "preserveExif": "Preserve EXIF Information",
-    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the cropped image. Only available for JPEG format.",
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, etc.) from the original image will be preserved in the cropped image. Available for JPEG / PNG / WebP.",
     "filesSelected": "Selected Files",
     "cropSettings": "Crop Settings",
     "previewAndCrop": "Preview and Crop",
@@ -87,7 +146,186 @@
     "previewImage": "Preview Image",
     "batchCropDescription": "Select multiple images to crop them together",
     "previousImage": "Previous Image",
-    "nextImage": "Next Image"
+    "nextImage": "Next Image",
+    "dragToMove": "Drag to move",
+    "dragToResize": "Drag to resize",
+    "aspectRatio": "Aspect Ratio",
+    "aspectFree": "Free",
+    "transform": "Rotate & Flip",
+    "rotateLeft": "Rotate 90° left",
+    "rotateRight": "Rotate 90° right",
+    "flipHorizontal": "Flip horizontal",
+    "flipVertical": "Flip vertical",
+    "applyMode": "Apply To",
+    "applyToAll": "All images",
+    "perImage": "Per image",
+    "applyModeHelp": "\"All images\" applies the current settings to every image. \"Per image\" lets you set the crop area and rotation individually while switching images with ←/→.",
+    "cropError": "An error occurred while cropping.",
+    "previewError": "Failed to generate the preview (unsupported format or possibly corrupted)."
+  },
+  "edit": {
+    "title": "Image Editor",
+    "subtitle": "Fine-tune your photos with exposure, contrast, saturation, color temperature and more. Apply the same adjustments across multiple images at once.",
+    "previewTitle": "Preview (Before / After)",
+    "adjustments": "Adjustments",
+    "selectImageFirst": "Please select an image",
+    "light": "Light",
+    "color": "Color",
+    "detail": "Detail",
+    "effects": "Effects",
+    "exposure": "Exposure",
+    "gamma": "Gamma",
+    "brightness": "Brightness",
+    "contrast": "Contrast",
+    "highlights": "Highlights",
+    "shadows": "Shadows",
+    "whites": "Whites",
+    "blacks": "Blacks",
+    "saturation": "Saturation",
+    "vibrance": "Vibrance",
+    "temperature": "Temperature",
+    "tint": "Tint",
+    "hue": "Hue",
+    "monochrome": "Monochrome",
+    "sharpness": "Sharpness",
+    "clarity": "Clarity",
+    "vignette": "Vignette",
+    "grain": "Grain",
+    "reset": "Reset",
+    "resetAll": "Reset all",
+    "outputFormat": "Output format",
+    "formatOriginal": "Keep original format",
+    "preserveExif": "Preserve EXIF",
+    "preserveExifHelp": "When checked, the original EXIF data (capture date, camera info, etc.) is preserved in the edited image. Available for JPEG / PNG / WebP output.",
+    "preserveExifUnsupported": "Preserving EXIF is not supported for AVIF / JPEG XL.",
+    "apply": "Apply edits",
+    "reEdit": "Re-edit",
+    "editingInProgress": "Editing...",
+    "selectNewImage": "Select new image",
+    "before": "Before",
+    "after": "After",
+    "compareHint": "Drag the divider in the middle to compare before and after. Press and hold the image to view the original.",
+    "applyModeHelp": "\"All images\" applies the current adjustments to every image. \"Per image\" lets you set adjustments individually while switching images with ←/→.",
+    "editFailures": "The following files could not be edited (unsupported format or possibly corrupted)",
+    "editError": "An error occurred while editing.",
+    "previewError": "Failed to generate the preview (unsupported format or possibly corrupted).",
+    "auto": {
+      "title": "Auto Enhance",
+      "levels": "Auto Levels",
+      "whiteBalance": "Auto White Balance",
+      "eyedropper": "WB Eyedropper",
+      "eyedropperHint": "Click a point in the preview that should be neutral gray (press Esc to cancel)"
+    },
+    "histogram": {
+      "title": "Histogram",
+      "rgb": "RGB",
+      "luminance": "Luminance"
+    },
+    "toneCurve": {
+      "title": "Tone curve",
+      "rgb": "RGB",
+      "luminance": "Luminance",
+      "hint": "Click to add a point, drag to move, double-click to remove.",
+      "reset": "Reset curve"
+    },
+    "lut": {
+      "title": "Filter (LUT)",
+      "none": "None",
+      "strength": "Strength",
+      "upload": "Load LUT",
+      "uploadHint": "Supports .cube files or HALD CLUT PNG.",
+      "custom": "Custom",
+      "invalidFile": "Could not load the LUT file. Please check it is a .cube or HALD CLUT PNG.",
+      "presets": {
+        "cinematic": "Cinematic",
+        "movie": "Movie",
+        "film": "Film",
+        "teal": "Teal",
+        "nightfall": "Nightfall",
+        "cool": "Cool",
+        "warm": "Warm",
+        "urban": "Urban",
+        "retro": "Retro",
+        "vintage": "Vintage",
+        "mono": "Mono"
+      }
+    }
+  },
+  "redact": {
+    "title": "Mosaic & Blur Tool",
+    "subtitle": "Hide faces and other sensitive details with mosaic, blur, or solid fill. Redactions are baked into the image and cannot be undone.",
+    "selectRedactArea": "Select Areas to Hide",
+    "dragToAddRegion": "Drag on the preview to add areas you want to hide (multiple areas supported)",
+    "selectImageFirst": "Please select images first",
+    "mode": "Redaction Style",
+    "modeMosaic": "Mosaic",
+    "modeBlur": "Blur",
+    "modeFill": "Fill",
+    "mosaicSize": "Mosaic Block Size (px)",
+    "blurStrength": "Blur Strength (px)",
+    "fillColor": "Fill Color",
+    "strengthHelp": "For large areas, the strength is automatically increased so the content cannot be recognized.",
+    "clearRegions": "Clear Areas on This Image",
+    "removeRegion": "Remove area {{index}}",
+    "regionCount": "Areas selected: {{count}}",
+    "startRedacting": "Apply Redaction",
+    "reRedact": "Re-Apply",
+    "redactingInProgress": "Processing...",
+    "processedFiles": "Processed Files",
+    "processingPlaceholder": "Results will appear here after processing",
+    "selectNewImage": "Select New Images",
+    "noRegionHelp": "Images without any selected areas are re-saved without redaction.",
+    "preserveExif": "Preserve EXIF Information",
+    "preserveExifHelp": "When checked, EXIF information (date taken, camera info, location, etc.) from the original image will be preserved in the processed image. Available for JPEG / PNG / WebP. The embedded EXIF thumbnail is always removed because it contains the image before redaction.",
+    "reset": "Reset",
+    "redactError": "An error occurred while redacting.",
+    "previewError": "Failed to generate the preview (unsupported format or possibly corrupted)."
+  },
+  "upscale": {
+    "title": "AI Image Upscaler",
+    "subtitle": "Upscale images 2x or 4x with an AI super-resolution model (Real-ESRGAN). Everything runs in your browser — your images are never uploaded.",
+    "settings": "Upscale Settings",
+    "scaleLabel": "Scale",
+    "scale2x": "2x",
+    "scale4x": "4x",
+    "preserveExif": "Preserve EXIF data",
+    "preserveExifHelp": "When checked, EXIF data from the original image (date taken, camera info, location, etc.) is preserved in the upscaled image. Available for JPEG / PNG / WebP.",
+    "modelNote": "The AI model (about 31MB) is downloaded on first run. Subsequent runs load it from the cache, so no download is needed.",
+    "sizeLimitNote": "Images up to {{max}}px on the long side can be processed.",
+    "selectImageFirst": "Please select images first",
+    "startUpscaling": "Upscale",
+    "reUpscale": "Upscale Again",
+    "cancel": "Cancel",
+    "preparingModel": "Preparing AI model... {{percent}}%",
+    "upscalingProgress": "Upscaling ({{current}} / {{total}})",
+    "processedFiles": "Processed Files",
+    "processingPlaceholder": "Results will appear here after processing",
+    "selectNewImage": "Select New Images",
+    "cancelledNotice": "Processing was cancelled. Only completed files are shown.",
+    "upscaleError": "An error occurred while upscaling."
+  },
+  "removeBg": {
+    "title": "Background Remover",
+    "subtitle": "Cut out image backgrounds with an AI segmentation model (U²-Net) and create transparent images. Everything runs in your browser — your images are never uploaded.",
+    "settings": "Output Settings",
+    "formatLabel": "Output format",
+    "formatPng": "PNG",
+    "formatWebp": "WebP",
+    "preserveExif": "Preserve EXIF data",
+    "preserveExifHelp": "When checked, EXIF data from the original image (date taken, camera info, location, etc.) is preserved in the output image.",
+    "modelNote": "The AI model (about 31MB) is downloaded on first run. Subsequent runs load it from the cache, so it also works offline.",
+    "sizeLimitNote": "Images up to {{max}}px on the long side can be processed.",
+    "transparentNote": "The background becomes transparent, so the output is PNG or WebP (JPEG does not support transparency).",
+    "selectImageFirst": "Please select images first",
+    "startRemoving": "Remove Background",
+    "reRemove": "Run Again",
+    "cancel": "Cancel",
+    "preparingModel": "Preparing AI model... {{percent}}%",
+    "removingProgress": "Removing background ({{current}} / {{total}})",
+    "processedFiles": "Processed Files",
+    "processingPlaceholder": "Results will appear here after processing",
+    "selectNewImage": "Select New Images",
+    "cancelledNotice": "Processing was cancelled. Only completed files are shown."
   },
   "fileUpload": {
     "dropFiles": "Drop files here",
@@ -99,7 +337,13 @@
     "clearList": "Clear List",
     "dragDropLabel": "Drag & Drop Images",
     "dropFilesHere": "Drop files here",
-    "viewDetails": "View details for"
+    "viewDetails": "View details for {{name}}",
+    "dropAreaLabel": "Drag & drop files or click to select",
+    "filesSelectedCount_one": "{{count}} file selected",
+    "filesSelectedCount_other": "{{count}} files selected",
+    "supportedFormats": "Supported formats: {{formats}}",
+    "pasteAndFolderHint": "You can also paste from the clipboard (Ctrl/⌘+V) or drop a folder",
+    "limitExceeded": "You can work with up to {{max}} files at once. Files beyond the limit were not added."
   },
   "fileDetails": {
     "title": "File Details",
@@ -146,6 +390,12 @@
     "fileUnit": "file(s)",
     "downloadZip": "Download as ZIP",
     "creating": "Creating...",
+    "saveToFolder": "Save to Folder",
+    "savingToFolder": "Saving...",
+    "savedToFolder": "Saved {{count}} file(s) to the folder",
+    "noEntriesToSave": "No files available to save",
+    "saveToFolderError": "Some files could not be saved ({{written}} of {{total}} saved)",
+    "saveToFolderFailed": "Failed to save files to the folder.",
     "clear": "Clear",
     "originalSize": "Original Size",
     "convertedSize": "Converted Size",
@@ -154,12 +404,18 @@
     "preview": "Preview",
     "originalImage": "Original Image",
     "convertedImage": "Converted Image",
-    "croppedImage": "Cropped Image"
+    "croppedImage": "Cropped Image",
+    "viewDetails": "View details for {{name}}",
+    "viewComparison": "Show before/after comparison for {{name}}",
+    "processingError": "Processing error",
+    "downloadError": "Failed to download files.",
+    "targetSizeNotAchieved": "Could not compress down to the target size (output at minimum size)"
   },
   "comparison": {
     "original": "Original",
     "converted": "Converted",
-    "instruction": "Drag the divider to compare before and after images"
+    "instruction": "Drag the divider to compare before and after images",
+    "processed": "Processed"
   },
   "common": {
     "files": "",
@@ -167,7 +423,9 @@
     "kb": "KB",
     "mb": "MB",
     "gb": "GB",
-    "px": "px"
+    "px": "px",
+    "close": "Close",
+    "image": "Image"
   },
   "metadata": {
     "title": "Image Metadata & Privacy Manager",
@@ -183,6 +441,9 @@
     "noMetadataFound": "No metadata found",
     "metadataRemoved": "Metadata removed successfully",
     "analyzingMetadata": "Analyzing metadata...",
+    "analysisError": "Failed to analyze metadata. Please try again later.",
+    "analysisFailures": "Metadata could not be analyzed for the following files (metadata may still be present)",
+    "removeError": "An error occurred while removing metadata.",
     "processingNote": "* JPEG format: Only selected tags removed, Other formats: All metadata removed",
     "processingMethod": {
       "selective": "Selective",
@@ -192,7 +453,16 @@
       "high": "HIGH",
       "medium": "MED",
       "low": "LOW"
-    }
+    },
+    "gpsMode": {
+      "title": "GPS Location Handling",
+      "remove": "Remove",
+      "round": "Round to city level",
+      "help": "Choosing \"Round\" keeps the location at roughly 1 km precision instead of removing it (JPEG only; other formats are fully stripped)."
+    },
+    "selectRiskTags": "Select Risk Tags",
+    "clearSelection": "Clear Selection",
+    "progressFiles": "{{current}} / {{total}} files"
   },
   "footer": {
     "privacyMessage": "All image processing is done locally on your device. No images are ever uploaded to any server.",
@@ -205,5 +475,176 @@
     "allRightsReserved": "All rights reserved.",
     "madeWith": "Made with",
     "forPrivacy": "for privacy"
+  },
+  "install": {
+    "title": "Install app",
+    "message": "Install this app to use it offline.",
+    "button": "Install",
+    "dismiss": "Dismiss"
+  },
+  "handoff": {
+    "sendTo": "Send these results to another tool (no download needed)",
+    "cleanAndSendTo": "Remove selected metadata and send to another tool (no download needed)",
+    "sendToTool": "Send to {{tool}}",
+    "received": "Received {{count}} result(s) from {{tool}}",
+    "receivedFromShare": "Received {{count}} file(s) from the share sheet",
+    "skipped": "{{count}} file(s) could not be imported (unsupported format or file limit)",
+    "dismiss": "Dismiss"
+  },
+  "studio": {
+    "brand": "Image Studio",
+    "backHome": "Back to home",
+    "tools": {
+      "crop": "Crop",
+      "adjust": "Adjust",
+      "retouch": "Retouch",
+      "upscale": "AI Upscale",
+      "removebg": "AI BG",
+      "info": "Info"
+    },
+    "panel": {
+      "cropTitle": "Crop",
+      "cropDescription": "Trim, rotate and flip",
+      "adjustTitle": "Adjust",
+      "adjustDescription": "Non-destructive light, color and detail edits",
+      "retouchTitle": "Retouch",
+      "retouchDescription": "Hide sensitive areas. Cannot be undone after applying.",
+      "upscaleTitle": "AI Upscale",
+      "upscaleDescription": "Enlarge with super-resolution (on-device)",
+      "removebgTitle": "AI Background Removal",
+      "removebgDescription": "Keep the subject and make the background transparent",
+      "infoTitle": "Info / Metadata",
+      "infoDescription": "Review EXIF and remove privacy data",
+      "aiBadge": "AI"
+    },
+    "topbar": {
+      "editedOnly": "Edited",
+      "compare": "Compare",
+      "undo": "Undo",
+      "redo": "Redo",
+      "export": "Export"
+    },
+    "filmstrip": {
+      "batch": "Batch",
+      "count": "{{count}} images",
+      "add": "Add",
+      "applyToAll": "Apply the same edits to all images",
+      "thumbnail": "Select {{name}}"
+    },
+    "canvas": {
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "dropHint": "Add images to start the workspace",
+      "previewError": "Failed to generate the preview",
+      "originalBadge": "Before"
+    },
+    "crop": {
+      "apply": "Apply crop",
+      "reset": "Reset"
+    },
+    "adjust": {
+      "confirm": "Confirm adjustments",
+      "reset": "Reset",
+      "confirmHelp": "Confirming bakes the adjustments into the image for the next tool"
+    },
+    "retouch": {
+      "apply": "Apply retouch",
+      "detect": {
+        "title": "Auto Detect",
+        "run": "Detect faces & license plates",
+        "running": "Detecting…",
+        "detecting": "Scanning image…",
+        "preparingModel": "Preparing AI model... {{percent}}%",
+        "modelNote": "The first run downloads the AI models (about 6MB); they are cached afterwards. Your images are never uploaded.",
+        "empty": "Nothing was detected",
+        "failed": "Failed to load the AI models. Check your connection and switch images to retry.",
+        "unsupported": "AI detection is not available in this environment",
+        "count": {
+          "face_one": "{{count}} face",
+          "face_other": "{{count}} faces",
+          "plate_one": "{{count}} license plate",
+          "plate_other": "{{count}} license plates"
+        },
+        "label": {
+          "face": "Face",
+          "plate": "Plate"
+        },
+        "addToRegions_one": "Add {{count}} detected region",
+        "addToRegions_other": "Add {{count}} detected regions"
+      }
+    },
+    "upscale": {
+      "run": "Run upscale",
+      "outputSize": "{{srcWidth}}×{{srcHeight}} → {{width}}×{{height}}",
+      "processing": "Upscaling… {{percent}}%"
+    },
+    "removebg": {
+      "run": "Remove background",
+      "transparentPreview": "After applying, transparent areas are shown as a checkerboard"
+    },
+    "info": {
+      "remove": "Remove selected metadata"
+    },
+    "export": {
+      "title": "Export",
+      "description": "Choose format, quality and size",
+      "format": "Output format",
+      "quality": "Quality",
+      "estimatedSize": "Estimated size: about {{size}} / image",
+      "estimatedSizeUnavailable": "Estimated size: —",
+      "estimating": "Estimated size: calculating…",
+      "resize": "Resize (optional)",
+      "width": "Width (px)",
+      "height": "Height (px)",
+      "auto": "Auto",
+      "keepAspect": "Keep aspect ratio",
+      "rename": "Rename pattern (optional)",
+      "renamePreview": "Preview: {{names}}",
+      "preserveExif": "Preserve EXIF data",
+      "target": "Target",
+      "targetCurrent": "This image",
+      "targetAll": "All {{count}} (ZIP)",
+      "cancel": "Cancel",
+      "run": "Export",
+      "running": "Exporting…",
+      "close": "Close",
+      "error": "Export failed"
+    },
+    "applyError": "Failed to apply",
+    "applyFailures": "Some images could not be processed",
+    "history": {
+      "title": "History",
+      "clear": "Clear",
+      "close": "Close",
+      "note": "Click a row to return to that point. You can redo after going back.",
+      "noteMobile": "Tap a row to return to that point. You can redo after going back.",
+      "confirmTitle": "Clear history",
+      "confirmMessage": "This discards all history and restores the original images. This cannot be undone.",
+      "confirmCancel": "Cancel",
+      "confirmClear": "Clear",
+      "labels": {
+        "load": "Loaded original images",
+        "add": "Added images ({{count}})",
+        "crop": "Crop",
+        "cropRatio": "Crop {{ratio}}",
+        "adjust": "Adjust ({{count}} items)",
+        "retouchMosaic": "Retouch: mosaic ({{count}})",
+        "retouchBlur": "Retouch: blur ({{count}})",
+        "retouchFill": "Retouch: fill ({{count}})",
+        "upscale": "AI upscale {{scale}}x",
+        "removebg": "AI background removal",
+        "metadata": "Removed metadata"
+      }
+    }
+  },
+  "share": {
+    "title": "Received from Share Sheet",
+    "loading": "Checking for shared images…",
+    "unsupported": "Receiving images from the share sheet is not supported in this environment.",
+    "empty": "No shared images",
+    "emptyHint": "This page receives images shared from your phone's share sheet. Received images are discarded when you leave the page and are never sent to any server.",
+    "goHome": "Back to Home",
+    "receivedCount": "Received {{count}} image(s)",
+    "sendTo": "Choose a tool to process the received images"
   }
 }

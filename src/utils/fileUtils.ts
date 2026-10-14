@@ -2,6 +2,13 @@
  * ファイル処理関連のユーティリティ関数群
  */
 
+import {
+  HEIC_EXTENSIONS,
+  RAW_EXTENSIONS,
+  SUPPORTED_IMAGE_FORMATS,
+  TIFF_EXTENSIONS,
+} from "./constants";
+
 /**
  * URL管理のためのヘルパー関数群
  */
@@ -106,6 +113,51 @@ export const addUniqueFiles = (
   return [...existingFiles, ...uniqueNewFiles];
 };
 
+/** 上限付きマージの結果 */
+export interface AddUniqueFilesWithLimitResult {
+  /** 重複除外し上限件数までに切り詰めたファイル配列 */
+  files: File[];
+  /** 上限超過で一部を取り込めなかった場合は true */
+  truncated: boolean;
+}
+
+/**
+ * ファイル配列から重複を除外して追加し、合計件数を上限まで切り詰める
+ * 上限を超えた場合は先頭から limit 件を残し、truncated=true を返す
+ * （大量投入時のフリーズ/メモリ圧迫を防ぐためのハード上限。呼び出し側で警告表示に使う）
+ * @param existingFiles - 既存のファイル配列
+ * @param newFiles - 新しいファイル配列
+ * @param limit - 合計件数の上限
+ * @returns 切り詰めたファイル配列と、上限超過で切り捨てたかどうか
+ */
+export const addUniqueFilesWithLimit = (
+  existingFiles: File[],
+  newFiles: File[],
+  limit: number,
+): AddUniqueFilesWithLimitResult => {
+  const merged = addUniqueFiles(existingFiles, newFiles);
+  if (merged.length <= limit) {
+    return { files: merged, truncated: false };
+  }
+  return { files: merged.slice(0, limit), truncated: true };
+};
+
+/**
+ * 上限警告を「件数の減少（削除・クリア）」で消してよいか判定する
+ * 「件数 < 上限」だけを条件にすると、フォルダ走査が上限で打ち切られた際に件数が
+ * 上限未満でも出す警告を追加操作直後に消してしまうため、「件数が減少し、かつ上限未満」
+ * を条件にする（追加操作では消さない）
+ * @param prevLength - 直前のファイル件数
+ * @param nextLength - 現在のファイル件数
+ * @param limit - 件数の上限
+ * @returns 警告を消すべきなら true
+ */
+export const shouldClearLimitWarningOnDecrease = (
+  prevLength: number,
+  nextLength: number,
+  limit: number,
+): boolean => nextLength < prevLength && nextLength < limit;
+
 /**
  * ファイルタイプが画像かどうかを確認する
  * @param file - チェックするファイル
@@ -116,16 +168,152 @@ export const isImageFile = (file: File): boolean => {
 };
 
 /**
+ * ファイルの MIME タイプが特定できないかどうかを確認する
+ * HEIC などはブラウザによって MIME が空文字や application/octet-stream として報告されるため、
+ * その場合は拡張子によるフォールバック判定・表示の対象とする
+ * @param file - チェックするファイル
+ * @returns MIME タイプが特定できない場合はtrue
+ */
+export const isUnknownMimeType = (file: File): boolean => {
+  return file.type === "" || file.type === "application/octet-stream";
+};
+
+/**
+ * MIME タイプだけでは判定・選択できない形式の拡張子フォールバック定義
+ * （MIME が特定できないブラウザ・OS 向けに、判定と accept 属性の両方で使用する）
+ */
+const FORMAT_EXTENSION_FALLBACKS: ReadonlyArray<{
+  mimeTypes: readonly string[];
+  extensions: readonly string[];
+}> = [
+  {
+    mimeTypes: SUPPORTED_IMAGE_FORMATS.HEIC_FORMATS,
+    extensions: HEIC_EXTENSIONS,
+  },
+  {
+    mimeTypes: SUPPORTED_IMAGE_FORMATS.TIFF_FORMATS,
+    extensions: TIFF_EXTENSIONS,
+  },
+  {
+    mimeTypes: SUPPORTED_IMAGE_FORMATS.RAW_FORMATS,
+    extensions: RAW_EXTENSIONS,
+  },
+];
+
+/**
+ * MIME タイプ群または拡張子フォールバックでファイル形式を判定する
+ * @param file - チェックするファイル
+ * @param mimeTypes - 対象形式のMIMEタイプの配列
+ * @param extensions - 対象形式の拡張子の配列（ドット付き・小文字）
+ * @returns 対象形式の場合はtrue
+ */
+const matchesFormat = (
+  file: File,
+  mimeTypes: readonly string[],
+  extensions: readonly string[],
+): boolean => {
+  if (mimeTypes.includes(file.type)) {
+    return true;
+  }
+  if (isUnknownMimeType(file)) {
+    const extension = getFileExtension(file.name).toLowerCase();
+    return extensions.includes(extension);
+  }
+  return false;
+};
+
+/**
+ * ファイルがHEIC/HEIF形式かどうかを確認する
+ * HEIC は MIME タイプが空になるブラウザがあるため、
+ * MIME が特定できない場合のみ拡張子でフォールバック判定する
+ * @param file - チェックするファイル
+ * @returns HEIC/HEIF の場合はtrue
+ */
+export const isHeicFile = (file: File): boolean => {
+  return matchesFormat(
+    file,
+    SUPPORTED_IMAGE_FORMATS.HEIC_FORMATS,
+    HEIC_EXTENSIONS,
+  );
+};
+
+/**
+ * ファイルがTIFF形式かどうかを確認する
+ * TIFF も MIME タイプが特定されない環境があるため、
+ * MIME が特定できない場合のみ拡張子でフォールバック判定する
+ * @param file - チェックするファイル
+ * @returns TIFF の場合はtrue
+ */
+export const isTiffFile = (file: File): boolean => {
+  return matchesFormat(
+    file,
+    SUPPORTED_IMAGE_FORMATS.TIFF_FORMATS,
+    TIFF_EXTENSIONS,
+  );
+};
+
+/**
+ * ファイルがカメラ RAW 形式かどうかを確認する
+ * RAW は TIFF ベースの形式が多く、OS / ブラウザによって MIME が image/tiff や
+ * application/octet-stream・空文字と揺れて報告されるため、matchesFormat と異なり
+ * MIME が既知でも拡張子を優先して判定する（image/tiff 誤報告の NEF / DNG 等を
+ * TIFF デコーダーに流さないため。呼び出し側でも isTiffFile より前に判定すること）
+ * @param file - チェックするファイル
+ * @returns RAW の場合はtrue
+ */
+export const isRawFile = (file: File): boolean => {
+  const extension = getFileExtension(file.name).toLowerCase();
+  if ((RAW_EXTENSIONS as readonly string[]).includes(extension)) {
+    return true;
+  }
+  return (SUPPORTED_IMAGE_FORMATS.RAW_FORMATS as readonly string[]).includes(
+    file.type,
+  );
+};
+
+/**
  * ファイルタイプが指定された形式に含まれているかを確認する
+ * HEIC/HEIF や TIFF が許可されている場合は拡張子によるフォールバック判定も行う
  * @param file - チェックするファイル
  * @param acceptedTypes - 許可されたMIMEタイプの配列
  * @returns 許可されている場合はtrue
  */
 export const isAcceptedFileType = (
   file: File,
-  acceptedTypes: string[],
+  acceptedTypes: readonly string[],
 ): boolean => {
-  return acceptedTypes.includes(file.type);
+  if (acceptedTypes.includes(file.type)) {
+    return true;
+  }
+  return FORMAT_EXTENSION_FALLBACKS.some(
+    ({ mimeTypes, extensions }) =>
+      mimeTypes.some((type) => acceptedTypes.includes(type)) &&
+      matchesFormat(file, mimeTypes, extensions),
+  );
+};
+
+/**
+ * ファイルの実効 MIME タイプを解決する。
+ * file.type が特定できない（空文字 / application/octet-stream）場合は、
+ * 拡張子（FORMAT_EXTENSION_FALLBACKS）から実際の形式を推定して返す。
+ * isAcceptedFileType の拡張子フォールバック判定と整合させることで、
+ * 「拡張子フォールバックで受理はしたが、生の file.type を使う後続処理（送り先候補の
+ * 算出など）とは食い違う」乖離を防ぐ。
+ * @param file - 対象ファイル
+ * @returns 実効 MIME タイプ（推定できない場合は file.type をそのまま返す）
+ */
+export const resolveEffectiveMimeType = (file: File): string => {
+  if (!isUnknownMimeType(file)) {
+    return file.type;
+  }
+  const extension = getFileExtension(file.name).toLowerCase();
+  for (const { mimeTypes, extensions } of FORMAT_EXTENSION_FALLBACKS) {
+    const index = extensions.indexOf(extension);
+    if (index !== -1) {
+      return mimeTypes[index] ?? mimeTypes[0];
+    }
+  }
+  return file.type;
 };
 
 /**
@@ -136,9 +324,122 @@ export const isAcceptedFileType = (
  */
 export const filterValidFiles = (
   files: File[],
-  acceptedTypes: string[],
+  acceptedTypes: readonly string[],
 ): File[] => {
   return files.filter((file) => isAcceptedFileType(file, acceptedTypes));
+};
+
+/** クリップボードの 1 アイテムの最小構造型（DataTransferItem 互換） */
+export interface ClipboardItemLike {
+  readonly kind: string;
+  getAsFile(): File | null;
+}
+
+/** paste イベントの clipboardData の最小構造型（DataTransfer 互換） */
+export interface ClipboardDataLike {
+  readonly files?: ArrayLike<File> | null;
+  readonly items?: ArrayLike<ClipboardItemLike> | null;
+}
+
+/**
+ * クリップボード（paste イベント）のデータからファイルを取り出す
+ * .files を優先し、無ければ .items の kind === "file" を getAsFile() で取得する
+ * （画像に限らず全ファイルを返す。MIME フィルタは呼び出し側で行う）
+ * @param clipboardData - paste イベントの clipboardData
+ * @returns 取り出したファイル配列
+ */
+export const getFilesFromClipboardData = (
+  clipboardData: ClipboardDataLike | null,
+): File[] => {
+  if (!clipboardData) {
+    return [];
+  }
+  if (clipboardData.files && clipboardData.files.length > 0) {
+    return Array.from(clipboardData.files);
+  }
+  if (clipboardData.items) {
+    const files: File[] = [];
+    for (const item of Array.from(clipboardData.items)) {
+      if (item.kind === "file") {
+        const file = item.getAsFile();
+        if (file) {
+          files.push(file);
+        }
+      }
+    }
+    return files;
+  }
+  return [];
+};
+
+/**
+ * input[accept] 属性用の文字列を構築する
+ * HEIC/HEIF や TIFF は MIME タイプだけではファイル選択できない環境があるため拡張子も併記する
+ * @param acceptedTypes - 許可されたMIMEタイプの配列
+ * @returns accept 属性に設定する文字列
+ */
+export const buildAcceptAttribute = (
+  acceptedTypes: readonly string[],
+): string => {
+  const fallbackExtensions = FORMAT_EXTENSION_FALLBACKS.flatMap(
+    ({ mimeTypes, extensions }) =>
+      mimeTypes.some((type) => acceptedTypes.includes(type))
+        ? [...extensions]
+        : [],
+  );
+  return [...acceptedTypes, ...fallbackExtensions].join(",");
+};
+
+/** 対応フォーマット表示用の MIME タイプ表示名 */
+const MIME_DISPLAY_NAMES: Record<string, string> = {
+  "image/jpeg": "JPG",
+  "image/png": "PNG",
+  "image/webp": "WebP",
+  "image/bmp": "BMP",
+  "image/tiff": "TIFF",
+  "image/heic": "HEIC",
+  "image/heif": "HEIF",
+};
+
+/**
+ * 許可された MIME タイプの配列から対応フォーマットの表示ラベルを生成する
+ * RAW の MIME 群（10 種以上）は列挙するとラベルが冗長になるため、
+ * 最初に登場した位置で単一トークン "RAW" に集約する
+ * @param acceptedTypes - 許可されたMIMEタイプの配列
+ * @returns カンマ区切りの表示ラベル（例: "JPG, PNG, WebP, RAW"）
+ */
+export const formatAcceptedTypesLabel = (
+  acceptedTypes: readonly string[],
+): string => {
+  const rawFormats = SUPPORTED_IMAGE_FORMATS.RAW_FORMATS as readonly string[];
+  const labels: string[] = [];
+  for (const type of acceptedTypes) {
+    if (rawFormats.includes(type)) {
+      if (!labels.includes("RAW")) {
+        labels.push("RAW");
+      }
+      continue;
+    }
+    labels.push(
+      MIME_DISPLAY_NAMES[type] ?? type.replace("image/", "").toUpperCase(),
+    );
+  }
+  return labels.join(", ");
+};
+
+/**
+ * ファイルタイプバッジの表示ラベルを生成する
+ * MIME タイプが特定できない場合（HEIC 等）は isHeicFile と同じ基準で
+ * 拡張子によるフォールバック表示を行う。RAW も MIME 由来のラベルが
+ * "X-ADOBE-DNG" のように冗長になるため拡張子で表示する（例: "NEF" / "DNG"）
+ * @param file - 対象のファイル
+ * @returns バッジに表示するラベル（例: "HEIC" / "PNG" / "FILE"）
+ */
+export const getFileTypeBadgeLabel = (file: File): string => {
+  if (isUnknownMimeType(file) || isRawFile(file)) {
+    return getFileExtension(file.name).replace(".", "").toUpperCase() || "FILE";
+  }
+  return file.type.split("/")[1]?.toUpperCase() || "FILE";
 };
 
 /**

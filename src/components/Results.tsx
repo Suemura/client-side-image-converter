@@ -3,11 +3,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { downloadMultiple, downloadSingle } from "../utils/fileDownloader";
 import { formatFileSize, truncateFileName } from "../utils/fileName";
+import {
+  isFolderSaveSupported,
+  saveResultsToFolder,
+} from "../utils/folderExport";
+import {
+  conversionResultsToFiles,
+  cropResultsToFiles,
+  type ToolId,
+} from "../utils/handoff";
 import type { ConversionResult } from "../utils/imageConverter";
 import { calculateCompressionRatio } from "../utils/imageConverter";
 import type { CropResult } from "../utils/imageCropper";
+import { createJxlPreviewUrl } from "../utils/jxlPreview";
 import { Button } from "./Button";
+import { ErrorNotice } from "./ErrorNotice";
 import { FileDetailModal } from "./FileDetailModal";
+import { HandoffSend } from "./HandoffSend";
 import { ImageComparisonModal } from "./ImageComparisonModal";
 import styles from "./Results.module.css";
 
@@ -17,6 +29,8 @@ interface ConversionResultsProps {
   originalFiles?: File[];
   onClear: () => void;
   showComparison?: boolean;
+  /** 指定するとハンドオフの送出コントロール（この結果を次のツールへ）を表示する */
+  handoffOrigin?: ToolId;
 }
 
 export const ConversionResults: React.FC<ConversionResultsProps> = ({
@@ -25,6 +39,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   originalFiles = [],
   onClear,
   showComparison = true,
+  handoffOrigin,
 }) => {
   const { t } = useTranslation();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -33,23 +48,69 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
   );
   const [selectedCropResult, setSelectedCropResult] =
     useState<CropResult | null>(null);
+  // 比較モーダルで URL マップ（fileName-index キー）を引くための選択インデックス
+  const [selectedCropIndex, setSelectedCropIndex] = useState<number | null>(
+    null,
+  );
   const [originalImageUrls, setOriginalImageUrls] = useState<
     Record<string, string>
   >({});
   const [cropPreviewUrls, setCropPreviewUrls] = useState<
     Record<string, string>
   >({});
+  // JXL は Chrome / Firefox の <img> で表示できないため、WASM デコードで生成した
+  // PNG のプレビュー URL を結果ごとに保持する（キーは `${filename}-${index}`）
+  const [jxlPreviewUrls, setJxlPreviewUrls] = useState<Record<string, string>>(
+    {},
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // File System Access API の feature detection（SSG hydration 差異を避けるため useEffect で判定）
+  const [canSaveToFolder, setCanSaveToFolder] = useState(false);
+  const [isSavingToFolder, setIsSavingToFolder] = useState(false);
+  const [folderSaveMessage, setFolderSaveMessage] = useState<string | null>(
+    null,
+  );
+  // ZIP ダウンロード失敗の通知（次の試行開始でクリアする）
+  const [downloadError, setDownloadError] = useState(false);
+
+  useEffect(() => {
+    setCanSaveToFolder(isFolderSaveSupported());
+  }, []);
+
+  // 新しい結果セットに変わったら、前回のダウンロード/フォルダ保存の通知は残さない
+  useEffect(() => {
+    if (!results && !cropResults) return;
+    setDownloadError(false);
+    setFolderSaveMessage(null);
+  }, [results, cropResults]);
 
   // シンプルな条件チェック
   const isConversionMode = results && results.length > 0;
   const isCropMode = cropResults && cropResults.length > 0;
 
-  // 元画像のURL生成（変換モードのみ）
+  // 元画像のURL生成（比較モーダル用）。
+  // 変換モードは originalFiles（ファイル名キー）、CropResult 系モードは
+  // 各結果の originalFile（fileName-index キー。プレビュー URL と同じ規則）から生成する。
   useEffect(() => {
-    // トリミングモードでは元画像のURL生成をスキップ
     if (isCropMode) {
-      return;
+      if (!showComparison || !cropResults) {
+        setOriginalImageUrls({});
+        return;
+      }
+      const urls: Record<string, string> = {};
+      cropResults.forEach((result, index) => {
+        if (result.success && result.originalFile.type.startsWith("image/")) {
+          urls[`${result.fileName}-${index}`] = URL.createObjectURL(
+            result.originalFile,
+          );
+        }
+      });
+      setOriginalImageUrls(urls);
+      return () => {
+        for (const url of Object.values(urls)) {
+          URL.revokeObjectURL(url);
+        }
+      };
     }
 
     if (!isConversionMode || !originalFiles.length) {
@@ -71,7 +132,13 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
         URL.revokeObjectURL(url);
       }
     };
-  }, [originalFiles, isConversionMode, isCropMode]);
+  }, [
+    originalFiles,
+    isConversionMode,
+    isCropMode,
+    cropResults,
+    showComparison,
+  ]);
 
   // トリミング結果のプレビューURL生成（トリミングモードのみ）
   useEffect(() => {
@@ -98,6 +165,49 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     };
   }, [cropResults, isCropMode]);
 
+  // JXL 結果のプレビュー URL 生成（変換モードのみ。cropPreviewUrls と同じライフサイクル）。
+  // 生成失敗時は当該エントリを持たないままにし、<img> は元 URL のまま（プレビュー不可でも
+  // 変換結果自体には影響させない）
+  useEffect(() => {
+    if (!results || results.length === 0) {
+      setJxlPreviewUrls({});
+      return;
+    }
+    const jxlResults = results
+      .map((result, index) => ({ result, index }))
+      .filter(({ result }) => result.blob.type === "image/jxl");
+    if (jxlResults.length === 0) {
+      setJxlPreviewUrls({});
+      return;
+    }
+
+    let cancelled = false;
+    const urls: Record<string, string> = {};
+    (async () => {
+      // WASM デコードのため逐次実行し、CPU / メモリの同時圧迫を避ける
+      for (const { result, index } of jxlResults) {
+        try {
+          const url = await createJxlPreviewUrl(result.blob);
+          if (cancelled) {
+            URL.revokeObjectURL(url);
+            return;
+          }
+          urls[`${result.filename}-${index}`] = url;
+          setJxlPreviewUrls({ ...urls });
+        } catch (error) {
+          console.warn("Failed to create JXL preview:", error);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      for (const url of Object.values(urls)) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [results]);
+
   const handleDownloadSingle = useCallback((result: ConversionResult) => {
     downloadSingle(result);
   }, []);
@@ -111,6 +221,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
     if (isDownloading) return;
 
     setIsDownloading(true);
+    setDownloadError(false);
     try {
       if (isCropMode && cropResults) {
         // トリミング結果の一括ダウンロード（ZIPファイル作成）
@@ -119,32 +230,99 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
         await downloadMultiple(results);
       }
     } catch (error) {
-      console.error("ダウンロードエラー:", error);
-      alert("ファイルのダウンロードに失敗しました。");
+      console.error("Download error:", error);
+      setDownloadError(true);
     } finally {
       setIsDownloading(false);
     }
   }, [results, cropResults, isCropMode, isDownloading]);
+
+  // 選択したローカルフォルダへ結果を直接書き込む（ZIP を経由しない）
+  const handleSaveToFolder = useCallback(async () => {
+    if (isSavingToFolder) return;
+
+    setIsSavingToFolder(true);
+    setFolderSaveMessage(null);
+    try {
+      const targets = isCropMode && cropResults ? cropResults : (results ?? []);
+      const outcome = await saveResultsToFolder(targets);
+      if (outcome.status === "saved") {
+        setFolderSaveMessage(
+          t("results.savedToFolder", { count: outcome.writtenCount }),
+        );
+      } else if (outcome.status === "no-entries") {
+        setFolderSaveMessage(t("results.noEntriesToSave"));
+      } else if (outcome.status === "error") {
+        setFolderSaveMessage(
+          t("results.saveToFolderError", {
+            written: outcome.writtenCount,
+            total: outcome.totalCount,
+          }),
+        );
+      }
+      // cancelled（picker のユーザーキャンセル）は何も表示しない
+    } catch (error) {
+      console.error("Folder save error:", error);
+      setFolderSaveMessage(t("results.saveToFolderFailed"));
+    } finally {
+      setIsSavingToFolder(false);
+    }
+  }, [results, cropResults, isCropMode, isSavingToFolder, t]);
 
   const handleImageClick = useCallback((result: ConversionResult) => {
     setSelectedResult(result);
     setIsModalOpen(true);
   }, []);
 
-  const handleCropImageClick = useCallback((result: CropResult) => {
-    if (!result.success) return;
-    setSelectedCropResult(result);
-    setIsModalOpen(true);
-  }, []);
+  const handleCropImageClick = useCallback(
+    (result: CropResult, index: number) => {
+      if (!result.success) return;
+      setSelectedCropResult(result);
+      setSelectedCropIndex(index);
+      setIsModalOpen(true);
+    },
+    [],
+  );
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedResult(null);
     setSelectedCropResult(null);
+    setSelectedCropIndex(null);
   }, []);
 
   const resultsToShow = useMemo(() => results || [], [results]);
   const cropResultsToShow = useMemo(() => cropResults || [], [cropResults]);
+
+  // ハンドオフ送出用: 成功結果の MIME タイプ一覧（送り先候補の絞り込みに使う）。
+  // crop は croppedFile.type（元ファイルの MIME）ではなく実エンコード結果の
+  // croppedBlob.type を使う（BMP 入力の PNG フォールバック等で乖離するため）。
+  const handoffMimeTypes = useMemo(() => {
+    if (isCropMode && cropResults) {
+      return [
+        ...new Set(
+          cropResults
+            .filter((result) => result.success)
+            .map((result) => result.croppedBlob.type),
+        ),
+      ];
+    }
+    if (results) {
+      return [...new Set(results.map((result) => result.blob.type))];
+    }
+    return [];
+  }, [isCropMode, cropResults, results]);
+
+  // ハンドオフ送出用: File[] の生成（送出クリック時にのみ実行される）
+  const getHandoffFiles = useCallback(() => {
+    if (isCropMode && cropResults) {
+      return cropResultsToFiles(cropResults);
+    }
+    if (results) {
+      return conversionResultsToFiles(results);
+    }
+    return [];
+  }, [isCropMode, cropResults, results]);
 
   // 統計情報の計算を最適化
   const statistics = useMemo(() => {
@@ -205,10 +383,43 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
         >
           {isDownloading ? t("results.creating") : t("results.downloadZip")}
         </Button>
+        {canSaveToFolder && (
+          <Button
+            variant="secondary"
+            onClick={handleSaveToFolder}
+            disabled={isSavingToFolder}
+          >
+            {isSavingToFolder
+              ? t("results.savingToFolder")
+              : t("results.saveToFolder")}
+          </Button>
+        )}
         <Button variant="secondary" onClick={onClear}>
           {t("results.clear")}
         </Button>
       </div>
+
+      {/* ZIP ダウンロード失敗の通知 */}
+      <ErrorNotice
+        message={downloadError ? t("results.downloadError") : null}
+      />
+
+      {/* フォルダ保存の完了 / 失敗フィードバック */}
+      {folderSaveMessage && (
+        <p className={styles.folderSaveMessage} role="status">
+          {folderSaveMessage}
+        </p>
+      )}
+
+      {/* ハンドオフ送出コントロール（結果をダウンロードせず次のツールへ） */}
+      {handoffOrigin && (
+        <HandoffSend
+          origin={handoffOrigin}
+          mimeTypes={handoffMimeTypes}
+          getFiles={getHandoffFiles}
+          onSent={onClear}
+        />
+      )}
 
       {/* 統計情報（コンバージョンモードのみ） */}
       {isConversionMode && (
@@ -256,8 +467,13 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                     <button
                       type="button"
                       className={styles.previewImage}
-                      onClick={() => handleCropImageClick(result)}
-                      aria-label={`${result.fileName}の詳細を表示`}
+                      onClick={() => handleCropImageClick(result, index)}
+                      aria-label={t(
+                        showComparison
+                          ? "results.viewComparison"
+                          : "results.viewDetails",
+                        { name: result.fileName },
+                      )}
                     >
                       {result.success &&
                       cropPreviewUrls[`${result.fileName}-${index}`] ? (
@@ -285,7 +501,7 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                           </span>
                         ) : (
                           <span className={styles.errorText}>
-                            {result.error || "処理エラー"}
+                            {result.error || t("results.processingError")}
                           </span>
                         )}
                       </div>
@@ -325,13 +541,26 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                         type="button"
                         className={styles.previewImage}
                         onClick={() => handleImageClick(result)}
-                        aria-label={`${result.filename}の変換前後比較を表示`}
+                        aria-label={t("results.viewComparison", {
+                          name: result.filename,
+                        })}
                       >
-                        <img
-                          src={result.url}
-                          alt={result.filename}
-                          className={styles.previewImageImg}
-                        />
+                        {result.blob.type === "image/jxl" &&
+                        !jxlPreviewUrls[`${result.filename}-${index}`] ? (
+                          // JXL のプレビュー生成中（または失敗時）のプレースホルダー
+                          <div className={styles.previewImagePlaceholder}>
+                            📷
+                          </div>
+                        ) : (
+                          <img
+                            src={
+                              jxlPreviewUrls[`${result.filename}-${index}`] ??
+                              result.url
+                            }
+                            alt={result.filename}
+                            className={styles.previewImageImg}
+                          />
+                        )}
                       </button>
 
                       {/* ファイル情報 */}
@@ -353,6 +582,12 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
                             {Math.abs(compressionRatio)}%
                           </span>
                         </div>
+                        {/* 目標ファイルサイズに到達できなかった場合の警告（最小サイズで出力） */}
+                        {result.targetSizeAchieved === false && (
+                          <p className={styles.targetWarningText} role="alert">
+                            ⚠️ {t("results.targetSizeNotAchieved")}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -371,17 +606,54 @@ export const ConversionResults: React.FC<ConversionResultsProps> = ({
             })}
       </div>
 
-      {/* モーダル表示 */}
+      {/* モーダル表示（変換結果の比較） */}
       {showComparison && selectedResult && isModalOpen && (
         <ImageComparisonModal
-          result={selectedResult}
+          fileName={selectedResult.filename}
           originalImageUrl={
             originalImageUrls[selectedResult.originalFilename] || ""
           }
+          resultImageUrl={
+            // JXL は <img> で直接表示できないため、WASM デコード済みの
+            // プレビュー URL があればそちらを表示する（未生成時は元 URL）
+            jxlPreviewUrls[
+              `${selectedResult.filename}-${resultsToShow.indexOf(selectedResult)}`
+            ] ?? selectedResult.url
+          }
+          originalSize={selectedResult.originalSize}
+          resultSize={selectedResult.convertedSize}
+          onDownload={() => handleDownloadSingle(selectedResult)}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
         />
       )}
+
+      {/* CropResult 系（拡大等）の比較モーダル。サイズ増が前提のツールのため削減率バッジは出さない */}
+      {showComparison &&
+        selectedCropResult &&
+        selectedCropIndex !== null &&
+        isModalOpen && (
+          <ImageComparisonModal
+            fileName={selectedCropResult.fileName}
+            originalImageUrl={
+              originalImageUrls[
+                `${selectedCropResult.fileName}-${selectedCropIndex}`
+              ] || ""
+            }
+            resultImageUrl={
+              cropPreviewUrls[
+                `${selectedCropResult.fileName}-${selectedCropIndex}`
+              ] || ""
+            }
+            originalSize={selectedCropResult.originalFile.size}
+            resultSize={selectedCropResult.croppedBlob.size}
+            showCompressionRatio={false}
+            resultLabel={t("comparison.processed")}
+            onDownload={() => handleCropDownload(selectedCropResult)}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+          />
+        )}
 
       {/* トリミング結果用のFileDetailModal */}
       {!showComparison && selectedCropResult && isModalOpen && (

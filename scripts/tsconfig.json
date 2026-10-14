@@ -1,0 +1,17 @@
+{
+  // ビルドパイプライン用スクリプトの型チェック専用 tsconfig。
+  // ルート tsconfig.json は scripts を exclude している（generate-sw.ts が
+  // Node の型ストリップ実行向けに .ts 拡張子付き import を使い、通常の解決では
+  // エラーになるため）。その型崩れが CI で検出されなくなる副作用を避けるため、
+  // scripts の .ts を allowImportingTsExtensions を有効にして別途型チェックする。
+  // npm run typecheck から `tsc -p scripts/tsconfig.json` として実行される。
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false,
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules"]
+}

@@ -1,7 +1,12 @@
 import piexif from "piexifjs";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { dataUrlToBlob } from "../imageUtils";
-import { assessPrivacyRisk, removeMetadataFromImage } from "../metadataManager";
+import {
+  assessPrivacyRisk,
+  decimalToGpsRationals,
+  gpsRationalsToDecimal,
+  removeMetadataFromImage,
+} from "../metadataManager";
 
 // 1x1 ピクセルの最小 JPEG（EXIF なし）
 const BASE_JPEG_DATA_URL =
@@ -32,6 +37,17 @@ const createJpegFileWithExif = (): File => {
         [45, 1],
         [0, 1],
       ],
+      // 緯度・経度以外の GPS サブタグ（標高・撮影時刻・撮影方向）。
+      // 丸めモードでこれらが削除されることの検証に使う
+      [piexif.GPSIFD.GPSAltitudeRef]: 0,
+      [piexif.GPSIFD.GPSAltitude]: [100, 1] as unknown as number[],
+      [piexif.GPSIFD.GPSTimeStamp]: [
+        [12, 1],
+        [30, 1],
+        [0, 1],
+      ],
+      [piexif.GPSIFD.GPSDateStamp]: "2024:01:01",
+      [piexif.GPSIFD.GPSImgDirection]: [90, 1] as unknown as number[],
     },
   };
   const exifBytes = piexif.dump(exifObj);
@@ -124,6 +140,11 @@ describe("removeMetadataFromImage", () => {
       "GPSLatitudeRef",
       "GPSLongitude",
       "GPSLongitudeRef",
+      "GPSAltitudeRef",
+      "GPSAltitude",
+      "GPSTimeStamp",
+      "GPSDateStamp",
+      "GPSImgDirection",
     ]);
     const exif = await loadExifFromFile(result);
 
@@ -144,5 +165,142 @@ describe("removeMetadataFromImage", () => {
     const result = await removeMetadataFromImage(file, ["GPS"]);
     expect(result.name).toBe("test.jpg");
     expect(result.type).toBe("image/jpeg");
+  });
+
+  it("GPS 丸めモードでは緯度・経度は丸めて残し、副次 GPS タグと非 GPS タグは削除される", async () => {
+    const file = createJpegFileWithExif();
+    const result = await removeMetadataFromImage(
+      file,
+      [
+        "GPSLatitude",
+        "GPSLatitudeRef",
+        "GPSLongitude",
+        "GPSLongitudeRef",
+        "GPSAltitude",
+        "GPSTimeStamp",
+        "GPSDateStamp",
+        "GPSImgDirection",
+        "Make",
+      ],
+      {
+        roundGpsInsteadOfRemove: true,
+      },
+    );
+    const exif = await loadExifFromFile(result);
+
+    // 緯度・経度（と Ref）は残っている（完全削除されていない）
+    expect(exif.GPS?.[piexif.GPSIFD.GPSLatitude]).toBeDefined();
+    expect(exif.GPS?.[piexif.GPSIFD.GPSLatitudeRef]).toBe("N");
+    expect(exif.GPS?.[piexif.GPSIFD.GPSLongitude]).toBeDefined();
+    // 緯度は元の 35.6667 が 2 桁（35.67）に丸められている
+    const lat = gpsRationalsToDecimal(
+      exif.GPS?.[piexif.GPSIFD.GPSLatitude] as unknown as number[][],
+      exif.GPS?.[piexif.GPSIFD.GPSLatitudeRef] as string,
+    );
+    expect(lat).toBeCloseTo(35.67, 2);
+    // 緯度・経度以外の GPS サブタグ（標高・撮影時刻・日付・撮影方向）は
+    // 丸めモードでも削除され、位置以外の情報が残存しない
+    expect(exif.GPS?.[piexif.GPSIFD.GPSAltitude]).toBeUndefined();
+    expect(exif.GPS?.[piexif.GPSIFD.GPSTimeStamp]).toBeUndefined();
+    expect(exif.GPS?.[piexif.GPSIFD.GPSDateStamp]).toBeUndefined();
+    expect(exif.GPS?.[piexif.GPSIFD.GPSImgDirection]).toBeUndefined();
+    // 非 GPS タグ（Make）は削除されている
+    expect(exif["0th"]?.[piexif.ImageIFD.Make]).toBeUndefined();
+    // 選択されていない Model は残る
+    expect(exif["0th"]?.[piexif.ImageIFD.Model]).toBe("TestModel");
+  });
+});
+
+describe("analyzeMetadata の失敗記録", () => {
+  afterEach(() => {
+    vi.doUnmock("exif-js");
+    vi.resetModules();
+  });
+
+  /** ファイル読み取り（arrayBuffer）が失敗する WebP ファイルを作る（解析失敗の再現用） */
+  const createUnreadableWebpFile = (name: string): File => {
+    const file = new File(["x"], name, { type: "image/webp" });
+    Object.defineProperty(file, "arrayBuffer", {
+      value: () => Promise.reject(new Error("read failed")),
+    });
+    return file;
+  };
+
+  it("exif-js の読み込みに失敗した場合、reject せず analysisFailures に記録する", async () => {
+    // 動的 import の失敗（デプロイ直後のチャンクハッシュ入れ替わり等）を再現する。
+    // vitest のモジュールモックは並列の動的 import と競合するため 1 ファイルで検証する
+    vi.doMock("exif-js", () => {
+      throw new Error("chunk load failed");
+    });
+    vi.resetModules();
+    const { analyzeMetadata } = await import("../metadataManager");
+
+    const result = await analyzeMetadata([
+      new File(["a"], "a.jpg", { type: "image/jpeg" }),
+    ]);
+
+    expect(result.analysisFailures).toEqual(["a.jpg"]);
+    // 失敗ファイルも fileMetadata に残る（後段の削除処理の対象から外さない）
+    expect(result.fileMetadata).toHaveLength(1);
+    expect(result.fileMetadata[0].exifData).toEqual({});
+    expect(result.allTags.size).toBe(0);
+  });
+
+  it("一部ファイルのみ解析に失敗した場合、成功分の結果と失敗ファイル名の両方を返す", async () => {
+    const { analyzeMetadata } = await import("../metadataManager");
+
+    const files = [
+      createJpegFileWithExif(),
+      createUnreadableWebpFile("bad.webp"),
+    ];
+    const result = await analyzeMetadata(files);
+
+    expect(result.analysisFailures).toEqual(["bad.webp"]);
+    expect(result.fileMetadata).toHaveLength(2);
+    expect(
+      result.fileMetadata.find((fm) => fm.file.name === "bad.webp")?.exifData,
+    ).toEqual({});
+  });
+
+  it("全ファイルの解析に成功した場合、analysisFailures は空になる", async () => {
+    const { analyzeMetadata } = await import("../metadataManager");
+
+    const result = await analyzeMetadata([
+      createJpegFileWithExif(),
+      createJpegFileWithExif(),
+    ]);
+
+    expect(result.analysisFailures).toEqual([]);
+    expect(result.fileMetadata).toHaveLength(2);
+  });
+});
+
+describe("GPS 座標の十進変換", () => {
+  it("度分秒と Ref から十進度に変換する（N は正、S/W は負）", () => {
+    expect(
+      gpsRationalsToDecimal(
+        [
+          [35, 1],
+          [40, 1],
+          [0, 1],
+        ],
+        "N",
+      ),
+    ).toBeCloseTo(35.6667, 3);
+    expect(
+      gpsRationalsToDecimal(
+        [
+          [139, 1],
+          [45, 1],
+          [0, 1],
+        ],
+        "W",
+      ),
+    ).toBeCloseTo(-139.75, 3);
+  });
+
+  it("十進度→度分秒→十進度の往復で値が保持される", () => {
+    const dms = decimalToGpsRationals(35.67);
+    expect(gpsRationalsToDecimal(dms, "N")).toBeCloseTo(35.67, 4);
   });
 });

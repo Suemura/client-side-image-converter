@@ -1,4 +1,4 @@
-import JSZip from "jszip";
+import { createFileNameUniquifier } from "./fileName";
 import type { ConversionResult } from "./imageConverter";
 import type { CropResult } from "./imageCropper";
 
@@ -58,8 +58,10 @@ export const downloadAsZip = async (
   if (results.length === 0) return;
 
   try {
+    // ZIP 生成時のみロードし、初期バンドルへ影響させない
+    const { default: JSZip } = await import("jszip");
     const zip = new JSZip();
-    const fileNameCounts = new Map<string, number>();
+    const uniquify = createFileNameUniquifier();
 
     for (const result of results) {
       let blob: Blob;
@@ -78,21 +80,8 @@ export const downloadAsZip = async (
         continue;
       }
 
-      // 重複ファイル名の処理
-      if (fileNameCounts.has(filename)) {
-        const count = (fileNameCounts.get(filename) || 0) + 1;
-        fileNameCounts.set(filename, count);
-
-        const nameWithoutExt =
-          filename.substring(0, filename.lastIndexOf(".")) || filename;
-        const extension = filename.substring(filename.lastIndexOf(".")) || "";
-        filename = `${nameWithoutExt}_${count}${extension}`;
-      } else {
-        fileNameCounts.set(filename, 1);
-      }
-
-      // Blobをzipに追加
-      zip.file(filename, blob);
+      // 重複ファイル名を一意化して Blob を zip に追加
+      zip.file(uniquify(filename), blob);
     }
 
     // Zipファイルを生成
@@ -178,52 +167,46 @@ export const downloadMultipleFiles = async (
     downloadFile(files[0]);
   } else {
     // 複数ファイルの場合はZIPファイルを作成
-    const zip = new JSZip();
-    const fileNameCounts = new Map<string, number>();
+    // （downloadAsZip と同様に、jszip チャンクのロード失敗を含む ZIP 生成エラーを
+    //   ユーザー向けエラーへ変換して呼び出し元に伝える）
+    try {
+      // JSZip は ZIP 生成時のみロードし、初期バンドルへ影響させない
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      const uniquify = createFileNameUniquifier();
 
-    for (const file of files) {
-      let filename = file.name;
-
-      // 重複ファイル名の処理
-      if (fileNameCounts.has(filename)) {
-        const count = (fileNameCounts.get(filename) || 0) + 1;
-        fileNameCounts.set(filename, count);
-
-        const nameWithoutExt =
-          filename.substring(0, filename.lastIndexOf(".")) || filename;
-        const extension = filename.substring(filename.lastIndexOf(".")) || "";
-        filename = `${nameWithoutExt}_${count}${extension}`;
-      } else {
-        fileNameCounts.set(filename, 1);
+      for (const file of files) {
+        // 重複ファイル名を一意化してファイルを zip に追加
+        zip.file(uniquify(file.name), file);
       }
 
-      // ファイルをzipに追加
-      zip.file(filename, file);
+      // Zipファイルを生成
+      const zipBlob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 },
+      });
+
+      // デフォルトのZipファイル名を生成
+      const defaultZipFilename =
+        zipFilename ||
+        `files_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.zip`;
+
+      // Zipファイルをダウンロード
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = defaultZipFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // URLを解放
+      setTimeout(() => {
+        URL.revokeObjectURL(link.href);
+      }, 1000);
+    } catch (error) {
+      console.error("Zipファイルの作成に失敗しました:", error);
+      throw new Error("Zipファイルの作成に失敗しました");
     }
-
-    // Zipファイルを生成
-    const zipBlob = await zip.generateAsync({
-      type: "blob",
-      compression: "DEFLATE",
-      compressionOptions: { level: 6 },
-    });
-
-    // デフォルトのZipファイル名を生成
-    const defaultZipFilename =
-      zipFilename ||
-      `files_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.zip`;
-
-    // Zipファイルをダウンロード
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(zipBlob);
-    link.download = defaultZipFilename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // URLを解放
-    setTimeout(() => {
-      URL.revokeObjectURL(link.href);
-    }, 1000);
   }
 };

@@ -31,7 +31,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           </span>
         </div>
 
-        {/* プログレスバー */}
+        {/* プログレスバー。バー幅は実行時に計算される進捗率（動的値）のため
+            style 属性で渡す（DESIGN.md「例外: 動的値の style 属性渡し」準拠） */}
         <div className={styles.progressBarContainer}>
           <div
             className={styles.progressBarFill}

@@ -1,9 +1,16 @@
+// 本番 URL の単一の source of truth は site.config.json（canonical を出力する
+// src/utils/pageMetadata.ts と共有し、sitemap.xml と canonical の URL 不整合を防ぐ）。
+const { siteUrl } = require("./site.config.json");
+
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: "https://image-converter.suemura.app",
+  siteUrl,
   generateRobotsTxt: true,
   generateIndexSitemap: false,
   outDir: "./out",
+  // /share は共有シート専用の機能的エンドポイントのため検索対象にしない
+  // （ページ側でも robots noindex を出している）
+  exclude: ["/share"],
   transform: async (config, path) => {
     // デフォルトの優先度とページごとの設定
     const priorities = {

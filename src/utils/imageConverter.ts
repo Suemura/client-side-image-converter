@@ -1,24 +1,48 @@
-import piexif from "piexifjs";
-import { dataUrlToBlob } from "./imageUtils";
+import {
+  convertFilesWithWorkerPool,
+  isOffscreenPipelineSupported,
+} from "../workers/imageProcessingPool";
+import { encodeCanvasToAvifBlob } from "./avifEncoder";
+import {
+  type BatchConversionResult,
+  type ConversionFailure,
+  type ConversionOptions,
+  type ConversionResult,
+  calculateTargetSize,
+  canPreserveExifForFormat,
+  resolveFlattenBackground,
+  searchQualityForTargetSize,
+} from "./conversionCore";
+import { buildConversionResult } from "./conversionResult";
+import { insertExifIntoBlob, readExifTiffFromDataUrl } from "./exifTransfer";
+import { isHeicFile, isRawFile, isTiffFile } from "./fileUtils";
+import { decodeHeicToCanvas } from "./heicDecoder";
+import { optimizeImage } from "./imageOptimizer";
+import { encodeCanvasToJxlBlob } from "./jxlEncoder";
+import { PNG_COMPRESSED_QUALITY_HINT, pngQualityStrategy } from "./pngQuality";
+import { decodeRawToCanvas } from "./rawDecoder";
+import { decodeTiffToCanvas } from "./tiffDecoder";
 
-export interface ConversionOptions {
-  format: "jpeg" | "png" | "webp";
-  quality: number; // 0-100
-  width?: number;
-  height?: number;
-  maintainAspectRatio: boolean;
-  preserveExif?: boolean;
-}
-
-export interface ConversionResult {
-  blob: Blob;
-  url: string;
-  originalSize: number;
-  convertedSize: number;
-  filename: string;
-  originalFilename: string;
-  file: File;
-}
+// 型・純粋ロジックは Canvas 非依存の conversionCore に集約している。
+// 既存のインポート経路を壊さないよう imageConverter からも再エクスポートする。
+export type {
+  BatchConversionResult,
+  ConversionFailure,
+  ConversionFormat,
+  ConversionMode,
+  ConversionOptions,
+  ConversionResult,
+  QualitySearchOptions,
+  QualitySearchResult,
+} from "./conversionCore";
+export {
+  calculateTargetSize,
+  canPreserveExifForFormat,
+  FLATTEN_BACKGROUND_COLOR,
+  resolveFlattenBackground,
+  searchQualityForTargetSize,
+} from "./conversionCore";
+export { optimizeImage } from "./imageOptimizer";
 
 /**
  * 画像を指定されたオプションで変換する
@@ -28,160 +52,220 @@ export const convertImage = async (
   options: ConversionOptions,
 ): Promise<ConversionResult> => {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith("image/")) {
+    if (
+      !file.type.startsWith("image/") &&
+      !isHeicFile(file) &&
+      !isTiffFile(file) &&
+      !isRawFile(file)
+    ) {
       reject(new Error("選択されたファイルは画像ではありません"));
       return;
     }
 
-    // Exifデータを読み込む（JPEGの場合のみ）
-    let exifData: string | null = null;
-    const shouldPreserveExif =
-      options.preserveExif &&
-      (file.type.includes("jpeg") || file.type.includes("jpg")) &&
-      options.format === "jpeg";
+    // デコード済みの画像ソースを Canvas に描画してエンコードする（全フォーマット共通の変換経路）
+    const processSource = (
+      source: CanvasImageSource,
+      srcWidth: number,
+      srcHeight: number,
+      exifTiff: Uint8Array | null,
+    ) => {
+      try {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (shouldPreserveExif) {
-        try {
-          const imageData = e.target?.result as string;
-          exifData = piexif.dump(piexif.load(imageData));
-        } catch (error) {
-          console.warn("Failed to read EXIF data:", error);
+        if (!ctx) {
+          reject(new Error("Canvas context を取得できませんでした"));
+          return;
         }
-      }
 
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
+        // サイズ計算
+        const { width, height } = calculateTargetSize(
+          srcWidth,
+          srcHeight,
+          options,
+        );
 
-          if (!ctx) {
-            reject(new Error("Canvas context を取得できませんでした"));
+        canvas.width = width;
+        canvas.height = height;
+
+        // アルファ非対応出力（JPEG / PNG 低品質ティア）では透過部分が黒くならないよう
+        // 描画前に背景色を合成する（Issue #108。Worker 経路と同じ純粋関数で判定する）
+        const background = resolveFlattenBackground(
+          options.format,
+          options.quality,
+        );
+        if (background) {
+          ctx.fillStyle = background;
+          ctx.fillRect(0, 0, width, height);
+        }
+
+        // 画像を描画
+        ctx.drawImage(source, 0, 0, width, height);
+
+        // 変換後の処理を共通化
+        // targetSizeAchieved は目標サイズ探索を行った場合のみ渡す（未指定時は undefined）
+        const handleBlob = (
+          blob: Blob | null,
+          targetSizeAchieved?: boolean,
+        ) => {
+          if (!blob) {
+            reject(
+              new Error(
+                `${options.format.toUpperCase()}画像の変換に失敗しました`,
+              ),
+            );
             return;
           }
 
-          // サイズ計算
-          let { width, height } = img;
-
-          if (options.width || options.height) {
-            if (options.maintainAspectRatio) {
-              const aspectRatio = width / height;
-
-              if (options.width && options.height) {
-                // 両方指定されている場合、アスペクト比を維持して小さい方に合わせる
-                const targetRatio = options.width / options.height;
-                if (aspectRatio > targetRatio) {
-                  width = options.width;
-                  height = options.width / aspectRatio;
-                } else {
-                  height = options.height;
-                  width = options.height * aspectRatio;
-                }
-              } else if (options.width) {
-                width = options.width;
-                height = options.width / aspectRatio;
-              } else if (options.height) {
-                height = options.height;
-                width = options.height * aspectRatio;
-              }
-            } else {
-              width = options.width || width;
-              height = options.height || height;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          // 画像を描画
-          ctx.drawImage(img, 0, 0, width, height);
-
-          // 変換後の処理を共通化
-          const handleBlob = (blob: Blob | null) => {
-            if (!blob) {
-              reject(
-                new Error(
-                  `${options.format.toUpperCase()}画像の変換に失敗しました`,
-                ),
-              );
-              return;
-            }
-
-            // Exifデータを挿入する処理
-            const processBlob = async (finalBlob: Blob) => {
-              const url = URL.createObjectURL(finalBlob);
-              const originalFilename = file.name;
-              const nameWithoutExt =
-                originalFilename.substring(
-                  0,
-                  originalFilename.lastIndexOf("."),
-                ) || originalFilename;
-              const filename = `${nameWithoutExt}.${options.format}`;
-
-              // ファイルオブジェクトを作成
-              const resultFile = new File([finalBlob], filename, {
-                type: finalBlob.type,
-              });
-
-              resolve({
-                blob: finalBlob,
-                url,
-                originalSize: file.size,
-                convertedSize: finalBlob.size,
-                filename,
-                originalFilename: file.name,
-                file: resultFile,
-              });
-            };
-
-            // ExifデータをBlobに挿入（JPEGのみ）
-            if (exifData && options.format === "jpeg") {
-              const reader2 = new FileReader();
-              reader2.onload = (e2) => {
-                try {
-                  const dataUrl = e2.target?.result as string;
-                  if (!dataUrl || !exifData) {
-                    console.warn("Failed to read data URL for EXIF insertion");
-                    processBlob(blob);
-                    return;
-                  }
-                  const newDataUrl = piexif.insert(exifData, dataUrl);
-                  const newBlob = dataUrlToBlob(newDataUrl, blob.type);
-                  processBlob(newBlob);
-                } catch (error) {
-                  console.warn("Failed to insert EXIF data:", error);
-                  processBlob(blob);
-                }
-              };
-              reader2.readAsDataURL(blob);
-            } else {
-              processBlob(blob);
-            }
+          // Exif データを挿入し ConversionResult を組み立てて解決する
+          const processBlob = (finalBlob: Blob) => {
+            resolve(
+              buildConversionResult(
+                file,
+                finalBlob,
+                options.format,
+                targetSizeAchieved,
+              ),
+            );
           };
 
-          // 変換
-          if (options.format === "png") {
-            // PNG専用の品質制御
-            convertToPngWithQuality(canvas, options.quality, handleBlob);
+          // Exif データを出力形式（JPEG / PNG / WebP）に応じて Blob に挿入する
+          if (exifTiff && canPreserveExifForFormat(options.format)) {
+            insertExifIntoBlob(blob, exifTiff, options.format, width, height)
+              .then(processBlob)
+              .catch((error) => {
+                console.warn("Failed to insert EXIF data:", error);
+                processBlob(blob);
+              });
           } else {
-            // JPEG/WebP用の標準品質制御
-            const quality = options.quality / 100;
-            const mimeType = `image/${options.format}`;
+            processBlob(blob);
+          }
+        };
 
+        // 変換
+        if (options.format === "png") {
+          // PNG専用の品質制御
+          convertToPngWithQuality(canvas, options.quality, handleBlob);
+        } else if (options.format === "avif") {
+          // AVIF は Canvas ネイティブ未対応のため WASM エンコーダーを使用
+          encodeCanvasToAvifBlob(canvas, options.quality)
+            .then(handleBlob)
+            .catch(reject);
+        } else if (options.format === "jxl") {
+          // JPEG XL も Canvas ネイティブ未対応のため WASM エンコーダーを使用
+          encodeCanvasToJxlBlob(canvas, options.quality)
+            .then(handleBlob)
+            .catch(reject);
+        } else {
+          // JPEG/WebP用の標準品質制御
+          const mimeType = `image/${options.format}`;
+
+          // 目標ファイルサイズが指定されていれば品質を二分探索する（JPEG/WebP のみ）
+          // 既知の制限: JPEG / WebP で preserveExif も有効な場合、探索は EXIF 挿入前のサイズに
+          // 対して行われるため（EXIF は handleBlob 内で後挿入する）、最終物は EXIF 分だけ目標を
+          // わずかに超えうる。preserveExif は既定 false かつ超過幅は小さいため許容する。
+          // if 条件に直接展開することで TS が targetFileSizeKB を number に絞り込む
+          // （別変数に切り出すと絞り込みが効かず型アサーションが必要になる）
+          if (
+            options.targetFileSizeKB !== undefined &&
+            options.targetFileSizeKB > 0
+          ) {
+            const targetSizeBytes = options.targetFileSizeKB * 1024;
+            // Canvas.toBlob を品質可変の Promise 化エンコード関数として探索に注入する
+            const encode = (quality: number): Promise<Blob> =>
+              new Promise((resolveEncode, rejectEncode) => {
+                canvas.toBlob(
+                  (blob) => {
+                    if (blob) {
+                      resolveEncode(blob);
+                    } else {
+                      rejectEncode(
+                        new Error(
+                          `${options.format.toUpperCase()}画像の変換に失敗しました`,
+                        ),
+                      );
+                    }
+                  },
+                  mimeType,
+                  quality / 100,
+                );
+              });
+
+            searchQualityForTargetSize(encode, targetSizeBytes)
+              .then((result) => handleBlob(result.blob, result.achieved))
+              .catch(reject);
+          } else {
+            const quality = options.quality / 100;
             canvas.toBlob(handleBlob, mimeType, quality);
           }
-        } catch (error) {
-          reject(error);
         }
-      };
+      } catch (error) {
+        reject(error);
+      }
+    };
 
-      img.onerror = () => {
-        reject(new Error("画像の読み込みに失敗しました"));
-      };
+    // HEIC はブラウザの Image でデコードできないため WASM デコーダーで Canvas に展開する
+    if (isHeicFile(file)) {
+      decodeHeicToCanvas(file)
+        .then((decoded) =>
+          processSource(decoded, decoded.width, decoded.height, null),
+        )
+        .catch(reject);
+      return;
+    }
 
-      img.src = e.target?.result as string;
+    // RAW もブラウザの Image でデコードできないため LibRaw（WASM）デコーダーで Canvas に展開する。
+    // NEF / DNG 等は MIME が image/tiff に誤報告されることがあるため isTiffFile より先に判定する
+    if (isRawFile(file)) {
+      decodeRawToCanvas(file, options.rawDevelopParams)
+        .then((decoded) =>
+          processSource(decoded, decoded.width, decoded.height, null),
+        )
+        .catch(reject);
+      return;
+    }
+
+    // TIFF もブラウザの Image でデコードできないため utif2 デコーダーで Canvas に展開する
+    if (isTiffFile(file)) {
+      decodeTiffToCanvas(file)
+        .then((decoded) =>
+          processSource(decoded, decoded.width, decoded.height, null),
+        )
+        .catch(reject);
+      return;
+    }
+
+    // EXIF 保持は書き込み対応形式（JPEG / PNG / WebP）への出力でのみ有効（AVIF / JXL は対象外）。
+    // ソース側は JPEG / WebP / PNG から EXIF を読み取れる（readSourceExifTiff）
+    const shouldPreserveExif =
+      options.preserveExif === true && canPreserveExifForFormat(options.format);
+
+    const reader = new FileReader();
+    // EXIF 読み取り（piexifjs の動的 import を含む）のため async ハンドラにする。
+    // 例外は外側 Promise の reject へ接続し、unhandled rejection を防ぐ
+    reader.onload = async (e) => {
+      try {
+        let exifTiff: Uint8Array | null = null;
+        if (shouldPreserveExif) {
+          exifTiff = await readExifTiffFromDataUrl(
+            e.target?.result as string,
+            file.type,
+          );
+        }
+
+        const img = new Image();
+        img.onload = () => {
+          processSource(img, img.width, img.height, exifTiff);
+        };
+
+        img.onerror = () => {
+          reject(new Error("画像の読み込みに失敗しました"));
+        };
+
+        img.src = e.target?.result as string;
+      } catch (error) {
+        reject(error);
+      }
     };
 
     reader.onerror = () => {
@@ -194,26 +278,49 @@ export const convertImage = async (
 
 /**
  * 複数の画像を一括変換する
+ * 変換に失敗したファイルがあっても処理を続行し、失敗情報を failures として返す
+ *
+ * 対応環境では Web Worker + OffscreenCanvas のプールで並列処理し、メインスレッド（UI）の
+ * ブロックを避ける（Issue #32・#47）。非対応環境ではメインスレッドで逐次処理する。
  */
 export const convertMultipleImages = async (
   files: File[],
   options: ConversionOptions,
   onProgress?: (current: number, total: number) => void,
-): Promise<ConversionResult[]> => {
+): Promise<BatchConversionResult> => {
+  const isOptimize = options.mode === "optimize";
+  // 最適化はメインスレッドの `optimizeImage`、変換は `convertImage` をフォールバック/逐次処理に使う
+  const processFile = isOptimize ? optimizeImage : convertImage;
+
+  // ワーカープールで並列処理できるかの判定。
+  // - convert: OffscreenCanvas パイプラインが必要（描画・リサイズ・エンコードを Worker 内で行う）
+  // - optimize: jsquash がバッファを直接処理し OffscreenCanvas 不要なため Worker があれば並列化する
+  const canUseWorkerPool = isOptimize
+    ? typeof Worker !== "undefined"
+    : isOffscreenPipelineSupported();
+
+  // Worker が個別に失敗した場合は processFile（メインスレッド）でフォールバックする。
+  if (canUseWorkerPool) {
+    return convertFilesWithWorkerPool(files, options, onProgress, processFile);
+  }
+
+  // フォールバック: メインスレッドで逐次処理する（従来挙動）
   const results: ConversionResult[] = [];
+  const failures: ConversionFailure[] = [];
 
   for (let i = 0; i < files.length; i++) {
     try {
-      const result = await convertImage(files[i], options);
+      const result = await processFile(files[i], options);
       results.push(result);
-      onProgress?.(i + 1, files.length);
     } catch (error) {
-      console.error(`ファイル ${files[i].name} の変換に失敗:`, error);
-      // エラーが発生しても他のファイルの変換を続行
+      console.error(`ファイル ${files[i].name} の処理に失敗:`, error);
+      // エラーが発生しても他のファイルの処理を続行し、失敗として記録する
+      failures.push({ fileName: files[i].name });
     }
+    onProgress?.(i + 1, files.length);
   }
 
-  return results;
+  return { results, failures };
 };
 
 /**
@@ -259,13 +366,14 @@ export const convertToPngWithQuality = (
   callback: (blob: Blob | null) => void,
 ): void => {
   // PNG品質制御: Canvas APIの標準的なPNG出力を使用
-  // 品質値に基づいて出力戦略を変更
-  if (quality >= 95) {
+  // 品質ティア判定は Worker（OffscreenCanvas 版）と共有する純粋関数に集約している
+  const strategy = pngQualityStrategy(quality);
+  if (strategy === "lossless") {
     // 高品質: 標準PNG出力
     canvas.toBlob(callback, "image/png");
-  } else if (quality >= 70) {
+  } else if (strategy === "compressed") {
     // 中品質: 少し圧縮
-    canvas.toBlob(callback, "image/png", 0.92);
+    canvas.toBlob(callback, "image/png", PNG_COMPRESSED_QUALITY_HINT);
   } else {
     // 低品質: より積極的な圧縮のため、一度JPEGに変換してからPNGに
     const tempCanvas = document.createElement("canvas");

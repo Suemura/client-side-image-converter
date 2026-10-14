@@ -1,8 +1,18 @@
+---
+description: >-
+  GitHub PR のコードレビューを実施し、インラインコメントを投稿する。
+  「PR #N をレビューして」「この PR 見て」とレビューを依頼されたら使う
+  （通常は PR 作成フックから pr-reviewer エージェント経由で自動実行される）。
+argument-hint: <PR番号>
+---
+
 Github Pull Requestのコードレビューを行ってください。
 
 PR: $ARGUMENTS
 
 ## 手順
+
+※ 呼び出しプロンプトに変更概要（タスクの要約・変更ファイル一覧・実装意図）が含まれる場合はそれを起点にし、レビューは diff 範囲とその直接の参照元 / 参照先に集中する。diff 範囲外のコードベース探索はしない。
 
 1. `gh pr view $ARGUMENTS` でPRの概要を確認
 2. `gh pr diff $ARGUMENTS` でdiffを取得し、変更内容を把握

@@ -36,7 +36,8 @@ npm run e2e
 # E2E テストの UI モード
 npm run e2e:ui
 
-# 本番用ビルド（静的エクスポート）
+# 本番用ビルド（静的エクスポート。webpack ビルド、下記注記参照）
+# postbuild で sitemap（next-sitemap）・Service Worker（scripts/generate-sw.ts → out/sw.js）・セキュリティヘッダー / CSP（scripts/generate-headers.ts → out/_headers）を続けて生成する
 npm run build
 
 # Cloudflare Pages へのデプロイ
@@ -45,6 +46,8 @@ npm run deploy
 # デプロイ版のローカルプレビュー
 npm run preview
 ```
+
+※ Next.js 16 はデフォルトで Turbopack を本番ビルドに使うが、本プロジェクトでは「Creating an optimized production build ...」で無限ハングする上流の既知問題（vercel/next.js discussion #77102 と同症状）があるため、`build` スクリプトは `next build --webpack` にオプトアウトしている。dev サーバー（`next dev --turbopack`）は正常動作するため Turbopack のまま。**上流修正後に Turbopack ビルドへ戻す暫定対応**。
 
 ## 完了条件（Definition of Done）
 
@@ -56,10 +59,28 @@ npm run preview
 
 これらが失敗したまま作業を終了しないこと。なお、応答終了時（Stop フック）に TS/TSX ファイルの変更があると上記 3 つが自動実行され、失敗した場合はエラー内容が差し戻される。
 
+## ドキュメントマップ
+
+このファイルは「毎セッション必要な横断規約 + ポインタ」に絞っている。領域別の詳細は、必要になったときに以下を読むこと：
+
+- `docs/ARCHITECTURE.md` — ディレクトリ / ファイル別の詳細な責務・関数一覧と、コア機能の詳細仕様
+- `docs/PATTERNS.md` — 重要な実装パターンの詳細（Worker 構成・最適化エンジン・EXIF バイナリ・編集パイプライン・ツール連携・ファイル投入・PWA キャッシュ戦略等）
+- `docs/TESTING.md` — テスト方針の詳細（機能別の単体テスト / E2E 対象一覧）
+- `docs/HARNESS.md` — Claude Code ハーネスの全体像・設計意図・運用上の注意
+- `DESIGN.md`（リポジトリルート） — デザイン規定（トークン・タイポグラフィ・コンポーネント規定。UI・スタイルに触れる前に読む）
+
+### 本ファイルの編集ルール（肥大化防止・厳守）
+
+本ファイルは毎セッション全文がコンテキストに載る。編集時は以下を守ること：
+
+- **書いてよいもの**: 開発コマンド・完了条件・パスエイリアス・ハーネス構成・コードスタイル、およびディレクトリ / コア機能 / 設計原則 / テスト方針の**ダイジェスト（1 項目 = 1 行）**
+- **書いてはいけないもの**（分割ファイルへ）: ファイル別の関数名・型名・props の列挙 → `docs/ARCHITECTURE.md`、実装パターンの詳細 → `docs/PATTERNS.md`、テスト対象の列挙 → `docs/TESTING.md`、タスクの変更ログ → コミットメッセージ / PR 説明（ドキュメントファイルには記録しない）
+- **サイズ予算 20KB**: 編集後に `wc -c CLAUDE.md` が 20480 バイトを超える場合は、直近の追記を分割ファイルへ移して縮めること
+
 ## アーキテクチャ
 
 ### 技術スタック
-- **フレームワーク**: Next.js 15 with App Router
+- **フレームワーク**: Next.js 16 with App Router
 - **言語**: TypeScript（strict モード）
 - **スタイリング**: CSS Modules
 - **i18n**: react-i18next（日本語/英語サポート）
@@ -68,18 +89,20 @@ npm run preview
 - **デプロイ**: Cloudflare Pages（静的エクスポート）
 
 ### 主要ディレクトリ構造
-- `src/app/` - Next.js App Router ページ
-  - `convert/` - 画像フォーマット変換ページ
-  - `crop/` - 画像トリミングツールページ  
-  - `metadata/` - EXIF メタデータエディターページ
-- `src/components/` - 再利用可能な React コンポーネント
-- `src/utils/` - コアユーティリティクラス
-  - `imageConverter.ts` - 画像フォーマット変換処理
-  - `imageCropper.ts` - 画像トリミング処理
-  - `metadataManager.ts` - EXIF データ管理
+
+各ファイルの詳細な責務・関数一覧は `docs/ARCHITECTURE.md` を参照。
+
+- `src/app/` - Next.js App Router ページ（`convert/` 変換、`crop/` トリミング、`edit/` 画像編集、`redact/` モザイク / ぼかしレタッチ、`upscale/` AI 超解像、`remove-bg/` AI 背景除去、`metadata/` EXIF エディター、`studio/` 統合ワークスペース、`share/` 共有シート受け口、`manifest.ts` PWA マニフェスト。ページ固有の UI 部品は `src/app/<page>/components/` 配下）
+- `src/components/` - 再利用可能な React コンポーネント（PWA 関連・ツール連携（ハンドオフ）の送出/到着 UI・汎用スライダー等）
+- `src/contexts/` - React Context（テーマ・ツール連携の共有ストア）
+- `src/utils/` - コアユーティリティ。Canvas / WebGL / WASM 依存のオーケストレーションと、Canvas 非依存の純粋ロジック（単体テスト対象）をファイル単位で分離して配置する
   - `__tests__/` - 単体テスト
+- `src/hooks/` - カスタム React フック
+- `src/workers/` - Web Worker（変換ページのバッチ処理を並列化）
 - `src/i18n/` - 国際化設定
-- `src/types/` - 外部ライブラリの型定義（piexifjs / exif-js）
+- `src/types/` - 外部ライブラリの型定義（piexifjs / exif-js / heic-decode）
+- `scripts/` - ビルド補助スクリプト（`tsconfig.json` の `exclude` に含め tsc 対象外。Service Worker 生成・PWA アイコン / LUT 生成）
+- `public/` - 静的アセット（PWA アイコン・同梱プリセット LUT・Cloudflare Pages 用 `_headers`。ビルド時に `out/` へコピーされ配信される）
 
 ### パスエイリアス
 プロジェクトでは `tsconfig.json` で設定された TypeScript パスエイリアスを使用：
@@ -90,29 +113,41 @@ npm run preview
 ※ vitest 用のエイリアスは `vitest.config.ts` にも定義されている。エイリアスを追加する場合は両方を更新すること。
 
 ### コア機能
-1. **画像フォーマット変換** - JPEG、PNG、WebP 形式間の変換（品質制御付き）
-2. **画像トリミング** - プレビュー付きのビジュアルトリミングインターフェース
-3. **EXIF メタデータ管理** - EXIF データの表示、編集、選択的削除
-4. **バッチ処理** - 複数画像の一括処理
-5. **プライバシーファースト** - Canvas API を使用したクライアントサイドでの全処理
 
-### 重要なパターン
-- すべての画像処理はクライアントサイド操作のために Canvas API を使用
-- EXIF データ処理は保存に `piexifjs`、読み取りに `exif-js` を使用
-- テーマ切り替え（ライト/ダーク）は CSS カスタムプロパティで処理
-- 言語設定は localStorage に保存
-- ファイルダウンロードはバッチ操作に `JSZip` を使用
+詳細仕様（対応形式・制限・UI 挙動）は `docs/ARCHITECTURE.md` の「コア機能」を参照。
+
+1. **画像フォーマット変換 / 最適化**（`/convert`）- JPEG / PNG / WebP / AVIF / JPEG XL への変換（品質・目標ファイルサイズ指定）と、形式を維持した再圧縮による「最適化」モード。HEIC / TIFF / RAW（CR2 / NEF / ARW / DNG 等）は変換ページのみ入力可
+2. **画像トリミング**（`/crop`）- アスペクト比プリセット・回転 / 反転・適用範囲切替（全画像一括 / 画像ごと）。EXIF Orientation は焼き込みで補正
+3. **画像編集**（`/edit`）- ライト / カラー / ディテール（シャープネス / 明瞭度 / ビネット / グレイン）調整・効果（モノクロ / ガンマ）・自動補正（WB スポイト含む）・トーンカーブ・LUT フィルタ・ヒストグラム表示。WebGL2 プレビュー + Canvas2D CPU フォールバック（WYSIWYG）。長押しで編集前表示（/studio と共通フック）
+4. **モザイク / ぼかしレタッチ**（`/redact`）- 複数の矩形領域をドラッグ指定してモザイク / ぼかし / 塗りつぶしを焼き込む（既定はモザイク。領域は画像ごとに保持・出力は `_redacted` サフィックスで元形式維持）
+5. **AI 超解像（アップスケール）**（`/upscale`）- Real-ESRGAN モデルを ONNX Runtime Web（WebGPU 優先・WASM フォールバック）でブラウザ内実行し、画像を 2x/4x に拡大。モデル・WASM は初回実行時に取得してキャッシュ。タイル分割・フェザー合成で大画像対応（長辺 4096px まで）。出力は `_upscaled` サフィックスで元形式維持
+6. **背景除去（AI セグメンテーション）**（`/remove-bg`）- U²-Net モデルを ONNX Runtime Web（WebGPU 優先・WASM フォールバック）でブラウザ内実行し、背景を除去して透過 PNG / WebP を出力（既定 PNG、`_nobg` サフィックス）。モデルは初回実行時に取得してキャッシュ。長辺 8192px まで対応。オフラインキャッシュ利用は upscale 同様
+7. **EXIF メタデータ管理**（`/metadata`）- 表示（JPEG / PNG / WebP）・編集・選択的削除・GPS 丸め（約 1km 精度）
+8. **ツール連携（ハンドオフ）** - 各ツールの処理結果をダウンロードせずに次のツールへ引き継いで続けて処理できる（全 7 ツールの相互連携。送り先候補は「現在のツール以外」かつ「全結果 MIME を受理できるツール」）
+9. **バッチ処理・ファイル保存** - 複数画像の一括処理（投入上限 `MAX_INPUT_FILES` = 200 件。変換はワーカープールで並列）。結果は ZIP ダウンロードまたは Chromium 系では File System Access API でフォルダへ直接保存可
+10. **プライバシーファースト** - Canvas API / WASM / WebGL によるクライアントサイドでの全処理（サーバー送信なし）
+11. **PWA** - オフライン対応・ホーム画面 / デスクトップへインストール可能。インストール済み PWA はスマホの共有シートから画像を直接受け取れる（Web Share Target、受け口 `/share`）
+12. **統合ワークスペース「Image Studio」**（`/studio`）- 6 ツール（トリミング・編集・レタッチ・AI拡大・背景除去・メタデータ）を同一画面で操作する Photoshop ライク。線形パイプライン + 20 コミット undo/redo + 履歴パネル（`editHistory.ts`）。組み込み export（リネーム規則対応）。レタッチは顔・ナンバーの AI 自動検出→領域変換可
+
+### 重要な設計原則
+
+領域別の詳細パターン（Worker 構成・最適化エンジン・EXIF バイナリ・LUT / トーンカーブ / 自動補正のミラー構造・ツール連携・ファイル投入・PWA キャッシュ戦略等）は `docs/PATTERNS.md` を参照。**該当領域に触れる前に必ず読むこと**。
+
+- **クライアントサイド完結**: 画像処理は Canvas API / WASM / WebGL のみで行い、画像をサーバーへ送信しない
+- **純粋ロジックの分離**: Canvas / WebGL / DOM 依存のオーケストレーションから Canvas 非依存の純粋ロジックを別ファイルへ切り出し、単体テスト対象にする（例: `conversionCore.ts` / `cropGeometry.ts` / `adjustments.ts` / `handoff.ts` / `precache.ts`）
+- **WYSIWYG**: プレビューと出力は同一の描画経路を通す。GPU（GLSL）と CPU（TS）で同じ処理を持つ場合は TS 側の関数を「唯一の真実」とし、GLSL は同順序・同係数でミラーする
+- **動的 import**: WASM コーデック（`@jsquash/*` / libheif / utif2 / libraw-wasm 等）と重量 JS ライブラリ（jszip / piexifjs / exif-js）は使用時のみロードし、初期バンドルへ影響させない
+- **dual-store**: 適用範囲（全画像一括 / 画像ごと）は汎用フック `useApplyScopeStore` で管理（`applyScope.resolveScopedValueForIndex` 提供）
+- **i18n**: ユーザー向け文言はすべて react-i18next 経由（日英）。ページ別 SEO メタデータのみ静的 HTML（主言語は日本語）
 
 ## テスト方針
 
-- テストランナーは vitest、DOM 環境は happy-dom（`File` / `FileReader` / `localStorage` などのブラウザ API を使用するため）
-- テストファイルはテスト対象と同じディレクトリの `__tests__/` に `<対象ファイル名>.test.ts` として配置する
+機能別の単体テスト / E2E の対象一覧は `docs/TESTING.md` を参照。
+
+- テストランナーは vitest、DOM 環境は happy-dom。テストファイルはテスト対象と同じディレクトリの `__tests__/` に `<対象ファイル名>.test.ts` として配置する
 - `src/utils/` のロジックを追加・変更した場合は、対応する単体テストを追加・更新すること
-- EXIF 処理のテストは piexifjs でフィクスチャ（EXIF 入り JPEG）を生成して実データで検証する（`metadataManager.test.ts` 参照）
-- Canvas API に依存する処理（描画・変換）は happy-dom では動作しないため、単体テストの対象外とする（純粋ロジック部分を切り出してテストする）
-- Canvas 依存の動作は Playwright E2E（`e2e/`）で実ブラウザ検証する。ダウンロード物はマジックナンバーや piexifjs のバイナリ解析で中身まで検証する（`e2e/metadata.spec.ts` 参照）
-- E2E のフィクスチャはバイナリを置かず `e2e/helpers/fixtures.ts` で実行時生成する
-- E2E は本番同等の静的エクスポート（`npm run build` + `serve out`、ポート 3100）に対して実行される。ローカルで高速に回したい場合は `npm run dev -- --port 3100` を別途起動しておけば `reuseExistingServer` により再利用される（CI では常に build + 静的配信）
+- Canvas API / WASM / WebGL に依存する処理（描画・変換・エンコード）は happy-dom では動作しないため単体テストの対象外とし、純粋ロジック部分を切り出してテストする。実描画・実ブラウザ動作は Playwright E2E（`e2e/`）で検証し、ダウンロード物はバイナリ解析で中身まで検証する
+- E2E のフィクスチャはバイナリを置かず `e2e/helpers/fixtures.ts` で実行時生成する。E2E は本番同等の静的エクスポート（`npm run build` + `serve out`、ポート 3100）に対して実行される
 
 ## Claude Code ハーネス
 
@@ -133,39 +168,48 @@ npm run preview
 ### フック・権限（`.claude/settings.json`）
 
 - **PostToolUse (Write|Edit)**: ファイル編集後に Biome で自動フォーマット。編集直後にファイルが書き換わることがあるため、編集が失敗する場合はファイルを読み直すこと
-- **PostToolUse (Bash: gh pr create)**: PR 作成を検知し、自動レビューフロー（下記）の開始を指示（スクリプト: `.claude/hooks/pr-created.sh`）
+- **PostToolUse (Bash: gh pr create)**: PR 作成を検知し、自動レビューフロー（下記）の開始を指示 + mergeable を確認しコンフリクト時は `/resolve-conflicts` を案内（スクリプト: `.claude/hooks/pr-created.sh`）
+- **SessionStart**: マージ済み PR に対応する残存 worktree を検知し、`/land` での後片付けを促す（スクリプト: `.claude/hooks/session-start-worktrees.sh`）
 - **Stop**: 応答終了時、TS/TSX ファイルに未コミットの変更があれば lint + typecheck + test を自動実行（スクリプト: `.claude/hooks/check-on-stop.sh`）。失敗するとエラー内容が差し戻されるので修正して再度終了すること
 - **permissions**: 危険操作のガード。deny（`sudo` / `git push --force` / `.env` 系・`.dev.vars` 系ファイルの読み書き）、ask（`gh pr merge` / `git reset --hard` / `git clean` / `npm run deploy` / `wrangler pages deploy`）
 
 ### サブエージェント（`.claude/agents/`）
 
+起動時は差分（`git diff --stat` 等）と変更概要をプロンプトに手渡す（探索削減。`self-review.md` 参照）。
+
 - **planner**: 非自明なタスク（3ステップ以上）の実装計画を策定し、Sprint Contract（完了条件）を返す
-- **docs-sync**: reviewer の前に起動するドキュメント同期。コード変更に合わせて CLAUDE.md / docs/HARNESS.md / README（日英セット）を更新する。変更がドキュメント記載事項（コマンド・構成・ワークフロー・ユーザー向け機能）に触れる場合のみ
-- **reviewer**: タスク完了前の独立コンテキストレビュー。Pass/Fail 判定を返す。Fail があれば修正して再レビュー
+- **docs-sync**（haiku）: ドキュメント同期。起動条件は `self-review.md` のホワイトリスト（ユーザー向け機能 / コマンド・CI / ハーネス / 構造・テスト方針の変更）のみ
+- **reviewer**（sonnet）: **PR を作らないタスク専用**の完了前独立レビュー。Pass/Fail 判定を返す。PR を作るタスクでは起動しない（PR 自動レビューに一本化）
+- **pr-reviewer / pr-comment-resolver**（sonnet）: PR 自動レビューフロー用。command の手順（review-pr / resolve-pr-comments）に従う薄いラッパー
 
 ### コマンド（`.claude/commands/`）
 
-- **/start-issue <Issue番号>**: GitHub Issue を起点にタスクを開始。ブランチ作成 → planner → 実装 → 検証 → docs-sync → reviewer → PR 作成（自動レビューフロー起動）まで自走
+- **/create-issue [要望]**: 要望・不具合報告を整理し、受け入れ条件付きの GitHub Issue を作成（/start-issue の入口）
+- **/start-issue <Issue番号>**: GitHub Issue を起点にタスクを開始。Issue 専用 worktree（`.claude/worktrees/issue-{番号}/`）とブランチの作成 → planner → 実装 → 検証（lint / typecheck / test + Sprint Contract 自己チェック）→ docs-sync → PR 作成（自動レビューフロー起動）まで自走。worktree で作業するため複数 Issue の並列作業が可能
 - **/review-pr <PR番号>**: PR のコードレビューを実施し、インラインコメントを投稿
 - **/resolve-pr-comments <PR番号>**: PR のレビューコメントを読み取り、修正対応・返信を実施
+- **/feedback <番号> <内容>**: 動作確認フィードバックを受け、該当 worktree で原因特定 → 修正 → 検証 → push まで自走
+- **/resolve-conflicts [PR番号]**: origin/main をマージ方式で取り込み、コンフリクト解消 → lint / typecheck / test → push
+- **/land <Issue/PR番号>**: PR マージ（ask 権限で承認ダイアログ）→ worktree・ローカルブランチ削除 → main 更新（/start-issue の出口）
 
 ### PR 自動レビューフロー
 
 `gh pr create` で PR を作成すると、フックが以下のフローを自動起動する：
 
-1. サブエージェントが `/review-pr` の手順で PR をレビューし、インラインコメントを投稿
-2. 別のサブエージェントが `/resolve-pr-comments` の手順でコメントに対応（修正・返信）
+1. **pr-reviewer** が `/review-pr` の手順で PR をレビューし、インラインコメントを投稿
+2. **pr-comment-resolver** が `/resolve-pr-comments` の手順でコメントに対応（修正・返信。TS/TSX 修正時は lint / typecheck / test 必須）
 3. 対応結果のサマリーを報告
 
 ※ PR 作成コマンドは単独で実行すること（`git push && gh pr create` のような複合コマンドではフックが発火しない）
 
 ### ルール（`.claude/rules/`）
 
-- **workflow-orchestration**: Issue 起点のタスク開始（/start-issue）、planner / docs-sync / reviewer / サブエージェントの使い分けと完了前検証の指針
-- **self-review**: タスク完了前に docs-sync によるドキュメント同期と reviewer エージェントによるレビューを必須とするルール
+- **workflow-orchestration**: Issue 起点のタスク開始（/start-issue）、サブエージェントの使い分け・コンテキスト手渡しと完了前検証の指針
+- **self-review**: 完了前の独立レビューの二本立て（PR あり = PR 自動レビュー / PR なし = reviewer）と docs-sync 起動条件ホワイトリストを定義するルール
 
 ## コードスタイルガイドライン
 - コードは TypeScript で記述する
+- UI・スタイルの追加/変更はリポジトリルートの `DESIGN.md`（デザイン規定）に準拠する。色は必ず CSS カスタムプロパティ（トークン）を参照し、ハードコードしない
 - CSS は CSS Modules を使用する（インラインスタイルは使用しない）
 - コンポーネントは React の関数コンポーネントを使用する
 - コンポーネントの命名は PascalCase を使用する
@@ -176,7 +220,3 @@ npm run preview
 - コードのフォーマット&Lintチェックには Biome を使用する（2スペースインデント、ダブルクォート）
 - コードの可読性を重視し、コメントは必要に応じて記述し、記述する場合は日本語で記述する
 - 実装前に既存のコンポーネントの再利用を検討する
-
-## 最近の更新
-- 開発ハーネスを整備（詳細は `docs/HARNESS.md`）: vitest による単体テスト、Claude Code フック（自動フォーマット / 完了時チェック）、サブエージェント（planner / docs-sync / reviewer）、PR 自動レビューフロー、GitHub Actions CI
-- `feat/exif-editor` ブランチで EXIF メタデータの選択的削除機能を実装

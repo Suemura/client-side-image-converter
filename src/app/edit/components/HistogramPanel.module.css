@@ -1,0 +1,94 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* DESIGN.md「Typography」小見出し（カード見出し）規定。
+   同一カラムの AdjustmentPanel / LutPicker の見出しと揃える */
+.title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.buttonRow {
+  display: flex;
+  gap: 8px;
+}
+
+/* DESIGN.md「RadioButtonGroup」の配色を踏襲したコンパクトなチップ型トグル */
+.chip {
+  padding: 4px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.chip:hover {
+  border-color: var(--border-strong);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.chipActive {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chipActive:hover {
+  border-color: var(--accent);
+}
+
+.chart {
+  width: 100%;
+  height: 100px;
+  display: block;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* ヒストグラムの R/G/B 波形はデータ可視化色のためテーマ非依存の固定色
+   （DESIGN.md「Do's and Don'ts」のデータ可視化色例外）。
+   半透明 fill の重畳（重なりは加法的に見える）とし、--surface / --surface-muted の
+   背景上でライト/ダーク両テーマとも視認できる不透明度にする */
+.pathR {
+  fill: rgb(235 70 70 / 45%);
+}
+
+.pathG {
+  fill: rgb(70 200 90 / 45%);
+}
+
+.pathB {
+  fill: rgb(70 130 235 / 45%);
+}
+
+.pathLuminance {
+  fill: color-mix(in srgb, var(--foreground) 60%, transparent);
+}

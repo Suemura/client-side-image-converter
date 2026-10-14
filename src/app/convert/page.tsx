@@ -1,27 +1,39 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ErrorNotice } from "../../components/ErrorNotice";
+import { HandoffNotice } from "../../components/HandoffNotice";
 import { Header } from "../../components/Header";
 import { LayoutContainer } from "../../components/LayoutContainer";
 import { MainContent } from "../../components/MainContent";
 import { ConversionResults } from "../../components/Results";
+import { useHandoffReceiver } from "../../hooks/useHandoffReceiver";
+import { SUPPORTED_IMAGE_FORMATS } from "../../utils/constants";
+import { isRawFile } from "../../utils/fileUtils";
 import {
+  type ConversionFailure,
   type ConversionResult,
   convertMultipleImages,
 } from "../../utils/imageConverter";
+import {
+  DEFAULT_RAW_DEVELOP_PARAMS,
+  type RawDevelopParams,
+} from "../../utils/rawDevelopment";
 import {
   ConversionSettings,
   type ConversionSettings as ConversionSettingsType,
 } from "./components/ConversionSettings";
 import { ImageUploadSection } from "./components/ImageUploadSection";
 import { ProgressBar } from "./components/ProgressBar";
+import { RawDevelopPanel } from "./components/RawDevelopPanel";
 
 export default function Home() {
   const { t } = useTranslation();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [conversionSettings, setConversionSettings] =
     useState<ConversionSettingsType>({
+      mode: "convert",
       targetFormat: "jpeg",
       quality: 90,
       maintainAspectRatio: true,
@@ -30,6 +42,15 @@ export default function Home() {
   const [conversionResults, setConversionResults] = useState<
     ConversionResult[]
   >([]);
+  const [conversionFailures, setConversionFailures] = useState<
+    ConversionFailure[]
+  >([]);
+  // RAW 現像パラメータ（Issue #132）。RAW ファイル投入時のみ UI に現れ、全 RAW ファイルへ一括適用する
+  const [rawDevelopParams, setRawDevelopParams] = useState<RawDevelopParams>(
+    DEFAULT_RAW_DEVELOP_PARAMS,
+  );
+  // バッチ全体が失敗した場合などのページレベルのエラー（i18n キーを保持し表示時に翻訳する）
+  const [pageErrorKey, setPageErrorKey] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [conversionProgress, setConversionProgress] = useState({
     current: 0,
@@ -38,12 +59,28 @@ export default function Home() {
 
   const handleFilesSelected = (files: File[]) => {
     setSelectedFiles(files);
-    console.log("Selected files:", files);
+    // RAW ファイルが 1 件もなくなったら現像パラメータをリセットする
+    // （個別削除後の再投入で前回の調整値が意図せず適用されるのを防ぐ）
+    if (!files.some(isRawFile)) {
+      setRawDevelopParams(DEFAULT_RAW_DEVELOP_PARAMS);
+    }
   };
+
+  // 他ツールからのハンドオフ（処理結果の引き継ぎ）を mount 時に取り込む
+  const { notice: handoffNotice, clearNotice: clearHandoffNotice } =
+    useHandoffReceiver(
+      SUPPORTED_IMAGE_FORMATS.CONVERT_UPLOAD_FORMATS,
+      handleFilesSelected,
+    );
 
   const handleClearFiles = () => {
     setSelectedFiles([]);
-    console.log("Files cleared");
+    // ファイルを選び直す際は前回の失敗通知も不要になるためリセットする
+    setConversionFailures([]);
+    // RAW 現像パラメータもファイルに紐づく調整のためリセットする
+    setRawDevelopParams(DEFAULT_RAW_DEVELOP_PARAMS);
+    setPageErrorKey(null);
+    clearHandoffNotice();
   };
 
   const handleSettingsChange = (settings: ConversionSettingsType) => {
@@ -52,24 +89,29 @@ export default function Home() {
 
   const handleConvert = useCallback(async () => {
     if (selectedFiles.length === 0) {
-      alert(t("convert.pleaseSelectFiles"));
+      setPageErrorKey("convert.pleaseSelectFiles");
       return;
     }
 
     setIsConverting(true);
     setConversionProgress({ current: 0, total: selectedFiles.length });
     setConversionResults([]);
+    setConversionFailures([]);
+    setPageErrorKey(null);
 
     try {
-      const results = await convertMultipleImages(
+      const { results, failures } = await convertMultipleImages(
         selectedFiles,
         {
+          mode: conversionSettings.mode,
           format: conversionSettings.targetFormat,
           quality: conversionSettings.quality,
           width: conversionSettings.width,
           height: conversionSettings.height,
           maintainAspectRatio: conversionSettings.maintainAspectRatio,
           preserveExif: conversionSettings.preserveExif,
+          targetFileSizeKB: conversionSettings.targetFileSizeKB,
+          rawDevelopParams,
         },
         (current, total) => {
           setConversionProgress({ current, total });
@@ -77,17 +119,29 @@ export default function Home() {
       );
 
       setConversionResults(results);
+      setConversionFailures(failures);
     } catch (error) {
       console.error("Conversion error:", error);
-      alert(t("convert.conversionError"));
+      setPageErrorKey("convert.conversionError");
     } finally {
       setIsConverting(false);
       setConversionProgress({ current: 0, total: 0 });
     }
-  }, [selectedFiles, conversionSettings, t]);
+  }, [selectedFiles, conversionSettings, rawDevelopParams]);
+
+  // RAW 現像パネルは convert モードで RAW ファイルが投入されているときのみ表示する。
+  // プレビュー対象は先頭の RAW ファイル 1 件（パラメータは全 RAW ファイルへ一括適用）
+  const firstRawFile = useMemo(
+    () =>
+      conversionSettings.mode === "convert"
+        ? selectedFiles.find(isRawFile)
+        : undefined,
+    [selectedFiles, conversionSettings.mode],
+  );
 
   const handleClearResults = useCallback(() => {
     setConversionResults([]);
+    setConversionFailures([]);
     // URLの解放
     for (const result of conversionResults) {
       URL.revokeObjectURL(result.url);
@@ -98,11 +152,20 @@ export default function Home() {
     <LayoutContainer>
       <Header />
       <MainContent>
+        <HandoffNotice notice={handoffNotice} onDismiss={clearHandoffNotice} />
         <ImageUploadSection
           files={selectedFiles}
           onFilesSelected={handleFilesSelected}
           onClearFiles={handleClearFiles}
+          acceptedTypes={SUPPORTED_IMAGE_FORMATS.CONVERT_UPLOAD_FORMATS}
         />
+        {firstRawFile && (
+          <RawDevelopPanel
+            file={firstRawFile}
+            params={rawDevelopParams}
+            onParamsChange={setRawDevelopParams}
+          />
+        )}
         <ConversionSettings
           settings={conversionSettings}
           onSettingsChange={handleSettingsChange}
@@ -115,10 +178,20 @@ export default function Home() {
           total={conversionProgress.total}
           isVisible={isConverting}
         />
+        <ErrorNotice message={pageErrorKey ? t(pageErrorKey) : null} />
+        <ErrorNotice
+          message={
+            conversionFailures.length > 0
+              ? t("convert.conversionFailures")
+              : null
+          }
+          fileNames={conversionFailures.map((failure) => failure.fileName)}
+        />
         <ConversionResults
           results={conversionResults}
           originalFiles={selectedFiles}
           onClear={handleClearResults}
+          handoffOrigin="convert"
         />
       </MainContent>
     </LayoutContainer>

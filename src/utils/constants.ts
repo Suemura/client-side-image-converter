@@ -25,20 +25,95 @@ export const IMAGE_CONSTANTS = {
 // サポートされる画像フォーマット
 export const SUPPORTED_IMAGE_FORMATS = {
   // 変換でサポートされる形式
-  CONVERSION_FORMATS: ["image/jpeg", "image/png", "image/webp"],
+  CONVERSION_FORMATS: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/avif",
+    "image/jxl",
+  ],
 
-  // アップロードでサポートされる形式
-  UPLOAD_FORMATS: [
+  // アップロードでサポートされる形式（crop / metadata ページ用。
+  // TIFF はブラウザの Image がデコードできずプレビュー描画できないため HEIC 同様に対象外）
+  UPLOAD_FORMATS: ["image/jpeg", "image/png", "image/webp", "image/bmp"],
+
+  // 変換ページのアップロードでサポートされる形式（TIFF / HEIC / HEIF / RAW はデコード専用の入力として受理）
+  CONVERT_UPLOAD_FORMATS: [
     "image/jpeg",
     "image/png",
     "image/webp",
     "image/bmp",
     "image/tiff",
+    "image/heic",
+    "image/heif",
+    "image/x-adobe-dng",
+    "image/x-canon-cr2",
+    "image/x-canon-cr3",
+    "image/x-nikon-nef",
+    "image/x-sony-arw",
+    "image/x-fujifilm-raf",
+    "image/x-olympus-orf",
+    "image/x-panasonic-rw2",
+    "image/x-pentax-pef",
+    "image/x-samsung-srw",
+  ],
+
+  // HEIC/HEIF 形式（ブラウザの Image ではデコードできず WASM デコーダーを使用する）
+  // sequence 系（image/heic-sequence / image/heif-sequence、バースト写真等）は
+  // 実ファイルでのデコード検証ができていないため意図的に対象外とする
+  // （対応する場合はフィクスチャの用意と E2E 検証をセットで行うこと）
+  HEIC_FORMATS: ["image/heic", "image/heif"],
+
+  // TIFF 形式（ブラウザの Image ではデコードできず utif2 デコーダーを使用する）
+  TIFF_FORMATS: ["image/tiff"],
+
+  // RAW 形式（ブラウザの Image ではデコードできず LibRaw の WASM デコーダーを使用する）
+  // RAW の MIME はブラウザ / OS によって空・application/octet-stream・image/tiff（TIFF ベース
+  // 形式のため）と揺れるため、判定は拡張子（RAW_EXTENSIONS）を優先する（isRawFile 参照）
+  RAW_FORMATS: [
+    "image/x-adobe-dng",
+    "image/x-canon-cr2",
+    "image/x-canon-cr3",
+    "image/x-nikon-nef",
+    "image/x-sony-arw",
+    "image/x-fujifilm-raf",
+    "image/x-olympus-orf",
+    "image/x-panasonic-rw2",
+    "image/x-pentax-pef",
+    "image/x-samsung-srw",
   ],
 
   // JPEG形式の別名
   JPEG_VARIANTS: ["image/jpeg", "image/jpg"],
 } as const;
+
+// 一度に取り込めるファイルの上限件数
+// フォルダドロップ（サブフォルダ再帰取込）や multiple 選択で巨大なツリーを誤投入すると、
+// サムネイル生成（各画像を readAsDataURL でメモリ展開し一斉デコード）でタブがフリーズ/
+// メモリ圧迫する。真のボトルネックを有界化するためのハード上限（超過分は取り込まず警告する）。
+export const MAX_INPUT_FILES = 200;
+
+// HEIC/HEIF の拡張子（MIME タイプが空になるブラウザ向けのフォールバック判定に使用）
+export const HEIC_EXTENSIONS = [".heic", ".heif"] as const;
+
+// TIFF の拡張子（MIME タイプが特定されない環境向けのフォールバック判定に使用）
+export const TIFF_EXTENSIONS = [".tif", ".tiff"] as const;
+
+// RAW の拡張子。MIME が image/tiff 等に誤報告される環境があるため、
+// RAW は MIME より拡張子を優先して判定する（isRawFile 参照）
+export const RAW_EXTENSIONS = [
+  ".dng",
+  ".cr2",
+  ".cr3",
+  ".nef",
+  ".nrw",
+  ".arw",
+  ".raf",
+  ".orf",
+  ".rw2",
+  ".pef",
+  ".srw",
+] as const;
 
 // ファイルサイズ表示用の単位
 export const FILE_SIZE_UNITS = ["Bytes", "KB", "MB", "GB", "TB"] as const;
@@ -48,6 +123,8 @@ export const IMAGE_FORMATS = {
   JPEG: "jpeg",
   PNG: "png",
   WEBP: "webp",
+  AVIF: "avif",
+  JXL: "jxl",
 } as const;
 
 // MIME タイプマッピング
@@ -55,6 +132,8 @@ export const MIME_TYPE_MAPPING = {
   [IMAGE_FORMATS.JPEG]: "image/jpeg",
   [IMAGE_FORMATS.PNG]: "image/png",
   [IMAGE_FORMATS.WEBP]: "image/webp",
+  [IMAGE_FORMATS.AVIF]: "image/avif",
+  [IMAGE_FORMATS.JXL]: "image/jxl",
 } as const;
 
 // UI関連の定数
